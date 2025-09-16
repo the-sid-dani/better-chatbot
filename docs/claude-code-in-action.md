@@ -368,4 +368,208 @@ Best applications = helper commands, scripts, hooks within existing projects rat
 
 Output format = conversational messages with final response from Claude as last message.
 </note>
+
+<note title="MCP Servers in GitHub Actions">
+**Model Context Protocol (MCP) Integration for Remote Agents**
+
+MCP servers transform GitHub Actions workflows into powerful remote agents capable of complex automation, web interaction, research, and API integration.
+
+**Core Configuration Pattern:**
+```yaml
+claude_args: |
+  --mcp-config .mcp.json
+  --allowed-tools "mcp__server__tool"
+  --max-turns 10
+
+env:
+  SERVER_API_KEY: ${{ secrets.SERVER_API_KEY }}
+```
+
+**Project-Scoped MCP Configuration (.mcp.json):**
+- Shared team configuration committed to source control
+- Environment variable expansion for secure API key management
+- Automatic server discovery and tool binding
+
+**Key Benefits:**
+- **Web Automation**: Browser control for UI testing, screenshots, and interaction validation
+- **Research Capabilities**: Deep web search, company analysis, and technical documentation
+- **API Integration**: OpenAPI documentation analysis and endpoint testing
+- **Library Documentation**: Up-to-date framework and library reference access
+
+**Remote Agent Workflow:**
+1. GitHub event triggers action (PR, issue, comment)
+2. MCP servers initialize with secure environment variables
+3. Claude Code gains access to extended tool capabilities
+4. Agent performs complex, multi-step tasks autonomously
+5. Results integrated back into GitHub (comments, commits, status checks)
+</note>
+
+<note title="Available MCP Servers and Capabilities">
+**Comprehensive MCP Server Ecosystem for Better Chatbot Project**
+
+**1. Browserbase MCP (browserbasehq-mcp-browserbase)**
+- **Purpose**: Cloud-based browser automation and testing
+- **Key Tools**:
+  - `multi_browserbase_stagehand_navigate`: Navigate to URLs
+  - `multi_browserbase_stagehand_act`: Perform UI actions (click, type, scroll)
+  - `multi_browserbase_stagehand_observe`: Analyze page elements
+  - `multi_browserbase_stagehand_extract`: Extract structured data
+- **Use Cases**:
+  - Automated UI testing for feature validation
+  - Screenshot capture for design reviews
+  - User flow testing and regression detection
+  - Cross-browser compatibility testing
+
+**2. Exa MCP (exa)**
+- **Purpose**: Advanced web search and research capabilities
+- **Key Tools**:
+  - `web_search_exa`: Real-time web search with content scraping
+  - `company_research_exa`: Business intelligence and company analysis
+  - `deep_researcher_start/check`: Comprehensive AI-powered research
+  - `crawling_exa`: Extract content from specific URLs
+- **Use Cases**:
+  - Competitive analysis and market research
+  - Technical documentation discovery
+  - Library and framework comparison
+  - Industry trend analysis
+
+**3. OpenAPI MCP (janwilmake-openapi-mcp-server)**
+- **Purpose**: API documentation analysis and integration support
+- **Key Tools**:
+  - `getApiOverview`: Analyze API structure and capabilities
+  - `getApiOperation`: Detailed endpoint analysis
+- **Supported APIs**: 150+ popular services (OpenAI, GitHub, Stripe, AWS, etc.)
+- **Use Cases**:
+  - API integration planning and implementation
+  - Third-party service evaluation
+  - API compatibility analysis
+  - Documentation generation for integrations
+
+**4. Context-7 MCP (upstash-context-7-mcp)**
+- **Purpose**: Up-to-date library documentation and code examples
+- **Key Tools**:
+  - `resolve-library-id`: Find correct library identifiers
+  - `get-library-docs`: Retrieve current documentation with code examples
+- **Coverage**: 10,000+ libraries with trust scoring and version tracking
+- **Use Cases**:
+  - Current best practices for framework usage
+  - Migration guides and upgrade paths
+  - Code example generation
+  - Architecture decision support
+
+**5. Playwright MCP (cloudflare-playwright-mcp)**
+- **Purpose**: Direct browser automation and testing
+- **Key Tools**:
+  - `browser_navigate`: URL navigation
+  - `browser_click`: Element interaction
+  - `browser_type`: Form input and text entry
+  - `browser_snapshot`: Accessibility analysis
+  - `browser_take_screenshot`: Visual validation
+- **Use Cases**:
+  - Local development testing
+  - Accessibility auditing
+  - Performance testing
+  - Visual regression testing
+</note>
+
+<note title="Remote Agent Tool Permissions and Security">
+**Enterprise-Grade Permission Management for MCP Tools**
+
+**Permission Hierarchy:**
+1. **Server-Level**: `mcp__server_name` (grants all tools from server)
+2. **Tool-Level**: `mcp__server__specific_tool` (granular control)
+3. **Pattern-Based**: `Bash(git*)` (wildcard matching for related tools)
+
+**Security Configuration Pattern:**
+```yaml
+--allowed-tools "Read" "Write" "Edit"                           # Core file operations
+--allowed-tools "Bash(git*)" "Bash(npm*)" "Bash(gh*)"         # Safe development commands
+--allowed-tools "mcp__exa__web_search_exa"                    # Specific research tools
+--allowed-tools "mcp__browserbasehq-mcp-browserbase"          # Full browser server access
+```
+
+**Risk Assessment by Tool Category:**
+- **Low Risk**: Documentation access, web search, API analysis
+- **Medium Risk**: Browser automation, file system operations
+- **High Risk**: Shell commands, external API calls with credentials
+
+**Best Practices:**
+- **Principle of Least Privilege**: Grant minimum required permissions
+- **Environment Variable Security**: Never commit API keys to repository
+- **Tool-Specific Approval**: Use granular permissions over server-wide access
+- **Audit Trail**: Enable telemetry for permission and tool usage monitoring
+
+**GitHub Secrets Required:**
+```
+ANTHROPIC_API_KEY          # Claude Code authentication
+EXA_API_KEY               # Web search and research capabilities
+BROWSERBASE_API_KEY       # Cloud browser automation
+BROWSERBASE_PROJECT_ID    # Browser session management
+UPSTASH_REDIS_REST_URL    # Context-7 documentation cache
+UPSTASH_REDIS_REST_TOKEN  # Context-7 authentication
+```
+</note>
+
+<note title="Advanced GitHub Workflow Patterns">
+**Sophisticated Remote Agent Automation Scenarios**
+
+**Pattern 1: Intelligent PR Review with Research**
+```yaml
+# Triggered on PR creation
+# Agent performs:
+# 1. Code analysis with Context-7 for best practices
+# 2. API compatibility check with OpenAPI MCP
+# 3. Web research for security vulnerabilities
+# 4. Browser testing of changed UI components
+# 5. Comprehensive review comment with findings
+```
+
+**Pattern 2: Feature Development Validation**
+```yaml
+# Triggered on feature branch push
+# Agent performs:
+# 1. Automated UI testing with Playwright
+# 2. Cross-browser compatibility testing with Browserbase
+# 3. Performance impact analysis
+# 4. Documentation gap identification
+# 5. Integration test recommendations
+```
+
+**Pattern 3: Issue Triage and Research**
+```yaml
+# Triggered on issue creation
+# Agent performs:
+# 1. Similar issue research across GitHub
+# 2. Stack Overflow and documentation search
+# 3. Library version compatibility analysis
+# 4. Reproduction step generation
+# 5. Solution proposal with code examples
+```
+
+**Pattern 4: Dependency Update Assessment**
+```yaml
+# Triggered on dependency update PR
+# Agent performs:
+# 1. Breaking change analysis via API documentation
+# 2. Migration guide research and summarization
+# 3. Impact assessment on existing codebase
+# 4. Test coverage verification
+# 5. Rollback plan generation
+```
+
+**Configuration for Advanced Patterns:**
+```yaml
+claude_args: |
+  --model claude-sonnet-4-20250514
+  --max-turns 15                    # Extended turns for complex workflows
+  --mcp-config .mcp.json
+  --system-prompt "You are a senior technical lead with expertise in full-stack development, DevOps, and software architecture. Use your MCP tools strategically to provide comprehensive analysis and actionable recommendations."
+```
+
+**Monitoring and Observability:**
+- **Telemetry**: Tool usage tracking and performance metrics
+- **Cost Control**: Token usage monitoring per workflow
+- **Success Metrics**: Issue resolution rate and PR approval efficiency
+- **Error Handling**: Graceful degradation when MCP services unavailable
+</note>
 </notes>
