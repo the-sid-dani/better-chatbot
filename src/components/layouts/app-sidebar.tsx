@@ -22,6 +22,7 @@ import { AppSidebarUser } from "./app-sidebar-user";
 import { PanelLeft } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Session, User } from "better-auth";
+import Image from "next/image";
 
 export function AppSidebar({
   session,
@@ -72,7 +73,16 @@ export function AppSidebar({
                   router.refresh();
                 }}
               >
-                <h4 className="font-bold">better-chatbot</h4>
+                <div className="flex items-center gap-2">
+                  <Image
+                    src="/samba-resources/logos/samba-logo-2024.png"
+                    alt="Samba Orion Logo"
+                    width={28}
+                    height={28}
+                    className="flex-shrink-0 rounded-sm"
+                  />
+                  <h4 className="font-bold">samba-orion</h4>
+                </div>
                 <div
                   className="ml-auto block sm:hidden"
                   onClick={(e) => {

@@ -70,33 +70,11 @@
       "Bash(dd:*)",
       "Bash(mkfs:*)",
       "Bash(fdisk:*)"
-    ],
-    "confirm": [
-      "Bash(git push origin main)",
-      "Bash(git push origin master)",
-      "Bash(git reset --hard:*)",
-      "Bash(git clean -fd:*)",
-      "Bash(npm publish:*)",
-      "Bash(pnpm publish:*)",
-      "Bash(docker build:*)",
-      "Bash(docker push:*)"
     ]
   },
   "env": {
-    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "0",
     "MAX_MCP_OUTPUT_TOKENS": "50000",
-    "OTEL_METRICS_EXPORTER": "console",
     "NODE_ENV": "development"
-  },
-  "mcp": {
-    "approvedServers": [
-      "browserbasehq-mcp-browserbase",
-      "exa",
-      "janwilmake-openapi-mcp-server",
-      "upstash-context-7-mcp",
-      "cloudflare-playwright-mcp"
-    ],
-    "rejectedServers": [],
-    "autoApprove": false
   }
 }
