@@ -19,11 +19,12 @@ jobs:
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      pull-requests: read
-      issues: read
+      contents: write # Enhanced for file operations
+      pull-requests: write # Enhanced for PR management
+      issues: write # Enhanced for issue management
       id-token: write
       actions: read # Required for Claude to read CI results on PRs
+      checks: write # Required for MCP tools to update check status
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -35,16 +36,30 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          
-          # This is an optional setting that allows Claude to read CI results on PRs
-          additional_permissions: |
-            actions: read
 
-          # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
-          # prompt: 'Update the pull request description to include a summary of changes.'
+          # Enhanced configuration for MCP server integration and remote agent capabilities
+          claude_args: |
+            --model claude-sonnet-4-20250514
+            --max-turns 10
+            --mcp-config .mcp.json
+            --allowed-tools "Read" "Write" "Edit" "Bash(git*)" "Bash(npm*)" "Bash(pnpm*)" "Bash(gh*)"
+            --allowed-tools "mcp__browserbasehq-mcp-browserbase" "mcp__exa" "mcp__janwilmake-openapi-mcp-server" "mcp__upstash-context-7-mcp" "mcp__cloudflare-playwright-mcp"
+            --allowed-tools "mcp__browserbasehq-mcp-browserbase__multi_browserbase_stagehand_navigate" "mcp__browserbasehq-mcp-browserbase__multi_browserbase_stagehand_act"
+            --allowed-tools "mcp__exa__web_search_exa" "mcp__exa__company_research_exa" "mcp__exa__deep_researcher_start"
+            --allowed-tools "mcp__janwilmake-openapi-mcp-server__getApiOverview" "mcp__janwilmake-openapi-mcp-server__getApiOperation"
+            --allowed-tools "mcp__upstash-context-7-mcp__resolve-library-id" "mcp__upstash-context-7-mcp__get-library-docs"
+            --allowed-tools "mcp__cloudflare-playwright-mcp__browser_navigate" "mcp__cloudflare-playwright-mcp__browser_click" "mcp__cloudflare-playwright-mcp__browser_type"
+            --system-prompt "You are a senior software engineer with expertise in Next.js, TypeScript, and modern development practices. You have access to powerful MCP tools for web automation, research, and API documentation. Use these tools strategically to provide comprehensive assistance with development tasks, testing, and code analysis."
 
-          # Optional: Add claude_args to customize behavior and configuration
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://docs.anthropic.com/en/docs/claude-code/sdk#command-line for available options
-          # claude_args: '--model claude-opus-4-1-20250805 --allowed-tools Bash(gh pr:*)'
+        env:
+          # MCP Server Environment Variables
+          EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
+          BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
+          BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+
+          # Additional Claude Code Configuration
+          CLAUDE_CODE_ENABLE_TELEMETRY: "1"
+          MAX_MCP_OUTPUT_TOKENS: "50000"
 

@@ -1,0 +1,41 @@
+{
+  "mcpServers": {
+    "browserbasehq-mcp-browserbase": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@browserbasehq/mcp-browserbase"],
+      "env": {
+        "BROWSERBASE_API_KEY": "${BROWSERBASE_API_KEY}",
+        "BROWSERBASE_PROJECT_ID": "${BROWSERBASE_PROJECT_ID}"
+      }
+    },
+    "exa": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@exa-labs/mcp-server-exa"],
+      "env": {
+        "EXA_API_KEY": "${EXA_API_KEY}"
+      }
+    },
+    "janwilmake-openapi-mcp-server": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@janwilmake/openapi-mcp-server"]
+    },
+    "upstash-context-7-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@upstash/context-7-mcp"],
+      "env": {
+        "UPSTASH_REDIS_REST_URL": "${UPSTASH_REDIS_REST_URL}",
+        "UPSTASH_REDIS_REST_TOKEN": "${UPSTASH_REDIS_REST_TOKEN}"
+      }
+    },
+    "cloudflare-playwright-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@cloudflare/mcp-server-playwright"],
+      "env": {}
+    }
+  }
+}
