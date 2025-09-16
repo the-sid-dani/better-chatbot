@@ -216,6 +216,46 @@ FILE_BASED_MCP_CONFIG=false # MCP config storage
 - **File Naming:** kebab-case for files, PascalCase for components
 - **Comments:** Use intelligently for learning purposes (per user config)
 
+## 📋 GitHub Workflow Conventions
+
+### Pull Request Title Format (REQUIRED)
+All PR titles MUST follow Conventional Commit format enforced by automated checks:
+
+**Format:** `type(scope): description`
+
+**Supported Types:**
+- `feat` - new features
+- `fix` - bug fixes
+- `chore` - maintenance tasks
+- `docs` - documentation changes
+- `style` - formatting changes
+- `refactor` - code refactoring
+- `test` - test additions/changes
+- `perf` - performance improvements
+- `build` - build system changes
+- `ci` - CI configuration changes
+- `revert` - reverting changes
+
+**Examples:**
+- ✅ `feat: add user authentication system`
+- ✅ `fix: correct database connection timeout`
+- ✅ `chore: update dependencies`
+- ✅ `feat(auth): add OAuth integration`
+- ❌ `Add new feature` (missing type)
+- ❌ `Fix bug` (too generic)
+
+### Automated Quality Checks
+PRs must pass these automated workflows:
+- **Lint Check:** Code formatting with Biome (`pnpm lint`)
+- **Type Check:** TypeScript validation (`pnpm check-types`)
+- **Unit Tests:** All tests must pass (`pnpm test`)
+- **PR Title:** Conventional commit format validation
+
+### Additional CI/CD Workflows
+- **E2E Tests:** Full end-to-end testing with Playwright on main/develop branches
+- **Container Publishing:** Docker images published to GitHub Container Registry on releases
+- **Release Management:** Automated with release-please for changelog generation
+
 ## 🚀 Production Deployment
 
 ### Build Process
