@@ -4,7 +4,7 @@ import { removeMcpClientAction } from "../actions";
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await getSession();
   if (!session?.user?.id) {
@@ -12,7 +12,8 @@ export async function DELETE(
   }
 
   try {
-    await removeMcpClientAction(params.id);
+    const { id } = await params;
+    await removeMcpClientAction(id);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json(
@@ -24,7 +25,7 @@ export async function DELETE(
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await getSession();
   if (!session?.user?.id) {
@@ -32,8 +33,9 @@ export async function GET(
   }
 
   try {
+    const { id } = await params;
     const { selectMcpClientAction } = await import("../actions");
-    const client = await selectMcpClientAction(params.id);
+    const client = await selectMcpClientAction(id);
     return NextResponse.json(client);
   } catch (error: any) {
     return NextResponse.json(
