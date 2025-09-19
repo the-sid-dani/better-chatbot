@@ -8,23 +8,26 @@
 - **Criticality**: Essential - Core application structure
 
 ### Purpose Statement
-This folder contains the complete Next.js 15 App Router application structure for "better-chatbot", an advanced AI chatbot platform that integrates with Model Context Protocol (MCP) servers, provides agent management, workflow automation, and multi-modal chat capabilities. It serves as both the frontend React application and the backend API endpoints in a unified full-stack architecture.
+This folder contains the complete Next.js 15 App Router application structure for "better-chatbot", an advanced AI chatbot platform built entirely on **Vercel AI SDK** as the foundational AI framework. It provides unified access to multiple LLM providers through Vercel AI SDK abstractions, integrates with Model Context Protocol (MCP) servers through Vercel AI SDK tool conversion, provides agent management, workflow automation, and comprehensive observability through Langfuse SDK v4 integration. It serves as both the frontend React application and the backend API endpoints in a unified full-stack architecture optimized for Vercel AI SDK streaming patterns and experimental_telemetry.
 
 ## Architectural Context
 
 ### Position in Project Hierarchy
 ```
 better-chatbot/
+├── instrumentation.ts        # 🔍 Langfuse SDK v4 observability (CRITICAL)
 ├── src/
 │   ├── app/ ← YOU ARE HERE (Next.js App Router Core)
 │   │   ├── (auth)/           # Authentication routes (route groups)
-│   │   ├── (chat)/           # Main chat application routes
-│   │   ├── api/              # Backend API endpoints
+│   │   ├── (chat)/           # Main chat application routes (Vercel AI SDK streaming)
+│   │   ├── api/              # Backend API endpoints (Vercel AI SDK-powered)
+│   │   │   └── chat/         # Core AI streaming endpoints with observability
 │   │   ├── store/            # Client-side state management
 │   │   ├── layout.tsx        # Root layout component
 │   │   └── globals.css       # Global styles
-│   ├── components/           # Reusable React components
+│   ├── components/           # Reusable React components (handle Vercel AI SDK streams)
 │   ├── lib/                  # Utility libraries and configurations
+│   │   └── ai/               # Vercel AI SDK-centric AI functionality
 │   └── ...
 ```
 
@@ -206,26 +209,32 @@ External AI/MCP Services
 ## Technology & Patterns
 
 ### Technology Stack
+- **AI Framework**: Vercel AI SDK 5.0.26 (FOUNDATIONAL - all AI operations built on this)
 - **Framework**: Next.js 15.3.2 with App Router
 - **Language**: TypeScript 5.9.2 (Strict mode)
+- **Observability**: Langfuse SDK v4 with OpenTelemetry integration
 - **React**: React 19.1.1 with Server Components
 - **State Management**: Zustand 5.0.8 with persistence middleware
 - **Styling**: Tailwind CSS 4.1.12 with custom design system
-- **AI Integration**: Vercel AI SDK 5.0.26 with multiple providers
+- **AI Providers**: Multiple providers via Vercel AI SDK abstractions (OpenAI, Anthropic, Google, xAI, Ollama, OpenRouter)
 - **Authentication**: Better Auth 1.3.7
 - **Database**: Drizzle ORM 0.41.0 with PostgreSQL
-- **Real-time**: Server-Sent Events (SSE) for streaming responses
+- **Real-time**: Vercel AI SDK streaming with experimental_telemetry observability
 - **Internationalization**: next-intl 4.3.5
 
 ### Design Patterns Detected
+- **Vercel AI SDK Pattern**: All AI operations built on `streamText`/`generateText` foundations
+- **Unified Provider Pattern**: Single interface for multiple LLM providers via Vercel AI SDK
+- **Tool Conversion Pattern**: MCP, Workflow, and App tools converted to Vercel AI SDK tool interface
+- **Observability Integration Pattern**: `experimental_telemetry` enables automatic tracing
 - **App Router Pattern**: Next.js 13+ file-based routing with layouts, loading, and error boundaries
 - **Route Groups**: Using (auth) and (chat) for logical grouping without URL impact
 - **Server Components**: Leveraging React Server Components for performance
-- **Streaming Responses**: Real-time AI chat using streaming APIs
+- **Streaming Responses**: Vercel AI SDK streaming with real-time observability
 - **Repository Pattern**: Centralized database operations via repository classes
 - **Provider Pattern**: Context providers for themes, internationalization, and global state
 - **Middleware Pattern**: Better Auth integration with route protection
-- **Tool Execution Pattern**: Modular tool system for MCP and workflow integration
+- **Instrumentation Pattern**: OpenTelemetry instrumentation with Langfuse integration
 
 ### Coding Standards Applied
 - **File Naming**: kebab-case for directories, PascalCase for React components, camelCase for utilities

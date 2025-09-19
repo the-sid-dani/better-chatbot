@@ -1,12 +1,16 @@
 import { MCPServerInfo } from "app-types/mcp";
 import { mcpClientsManager } from "lib/ai/mcp/mcp-manager";
 import { mcpRepository } from "lib/db/repository";
+import { FILE_BASED_MCP_CONFIG } from "lib/const";
+import { createFileBasedMCPConfigsStorage } from "lib/ai/mcp/fb-mcp-config-storage";
 
 export async function GET() {
-  const [servers, memoryClients] = await Promise.all([
-    mcpRepository.selectAll(),
-    mcpClientsManager.getClients(),
-  ]);
+  // Use file-based storage when FILE_BASED_MCP_CONFIG is true
+  const servers = FILE_BASED_MCP_CONFIG
+    ? await createFileBasedMCPConfigsStorage().loadAll()
+    : await mcpRepository.selectAll();
+
+  const memoryClients = await mcpClientsManager.getClients();
 
   const memoryMap = new Map(
     memoryClients.map(({ id, client }) => [id, client] as const),

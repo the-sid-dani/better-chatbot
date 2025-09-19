@@ -1,3 +1,4 @@
+// after import removed - not needed in SDK v4 approach
 import {
   convertToModelMessages,
   createUIMessageStream,
@@ -7,6 +8,14 @@ import {
   streamText,
   UIMessage,
 } from "ai";
+import {
+  observe,
+  updateActiveObservation,
+  updateActiveTrace,
+} from "@langfuse/tracing";
+import { trace } from "@opentelemetry/api";
+
+// Import will be available after we fix the instrumentation export
 
 import { customModelProvider, isToolCallUnsupportedModel } from "lib/ai/models";
 
@@ -47,245 +56,302 @@ const logger = globalLogger.withDefaults({
   message: colorize("blackBright", `Chat API: `),
 });
 
-export async function POST(request: Request) {
-  try {
-    const json = await request.json();
+// Following the exact pattern from docs/langfuse-vercel-ai-sdk.md
+const handler = async (request: Request) => {
+  const json = await request.json();
 
-    const session = await getSession();
+  const session = await getSession();
 
-    if (!session?.user.id) {
-      return new Response("Unauthorized", { status: 401 });
-    }
-    const {
+  if (!session?.user.id) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  const {
+    id,
+    message,
+    chatModel,
+    toolChoice,
+    allowedAppDefaultToolkit,
+    allowedMcpServers,
+    mentions = [],
+  } = chatApiSchemaRequestBodySchema.parse(json);
+
+  const model = customModelProvider.getModel(chatModel);
+
+  let thread = await chatRepository.selectThreadDetails(id);
+
+  if (!thread) {
+    logger.info(`create chat thread: ${id}`);
+    const newThread = await chatRepository.insertThread({
       id,
-      message,
-      chatModel,
-      toolChoice,
-      allowedAppDefaultToolkit,
-      allowedMcpServers,
-      mentions = [],
-    } = chatApiSchemaRequestBodySchema.parse(json);
-
-    const model = customModelProvider.getModel(chatModel);
-
-    let thread = await chatRepository.selectThreadDetails(id);
-
-    if (!thread) {
-      logger.info(`create chat thread: ${id}`);
-      const newThread = await chatRepository.insertThread({
-        id,
-        title: "",
-        userId: session.user.id,
-      });
-      thread = await chatRepository.selectThreadDetails(newThread.id);
-    }
-
-    if (thread!.userId !== session.user.id) {
-      return new Response("Forbidden", { status: 403 });
-    }
-
-    const messages: UIMessage[] = (thread?.messages ?? []).map((m) => {
-      return {
-        id: m.id,
-        role: m.role,
-        parts: m.parts,
-        metadata: m.metadata,
-      };
+      title: "",
+      userId: session.user.id,
     });
+    thread = await chatRepository.selectThreadDetails(newThread.id);
+  }
 
-    if (messages.at(-1)?.id == message.id) {
-      messages.pop();
-    }
-    messages.push(message);
+  if (thread!.userId !== session.user.id) {
+    return new Response("Forbidden", { status: 403 });
+  }
 
-    const supportToolCall = !isToolCallUnsupportedModel(model);
-
-    const agentId = mentions.find((m) => m.type === "agent")?.agentId;
-
-    const agent = await rememberAgentAction(agentId, session.user.id);
-
-    if (agent?.instructions?.mentions) {
-      mentions.push(...agent.instructions.mentions);
-    }
-
-    const isToolCallAllowed =
-      supportToolCall && (toolChoice != "none" || mentions.length > 0);
-
-    const metadata: ChatMetadata = {
-      agentId: agent?.id,
-      toolChoice: toolChoice,
-      toolCount: 0,
-      chatModel: chatModel,
+  const messages: UIMessage[] = (thread?.messages ?? []).map((m) => {
+    return {
+      id: m.id,
+      role: m.role,
+      parts: m.parts,
+      metadata: m.metadata,
     };
+  });
 
-    const stream = createUIMessageStream({
-      execute: async ({ writer: dataStream }) => {
-        const mcpClients = await mcpClientsManager.getClients();
-        const mcpTools = await mcpClientsManager.tools();
-        logger.info(
-          `mcp-server count: ${mcpClients.length}, mcp-tools count :${Object.keys(mcpTools).length}`,
-        );
-        const MCP_TOOLS = await safe()
-          .map(errorIf(() => !isToolCallAllowed && "Not allowed"))
-          .map(() =>
-            loadMcpTools({
-              mentions,
-              allowedMcpServers,
-            }),
-          )
-          .orElse({});
+  if (messages.at(-1)?.id == message.id) {
+    messages.pop();
+  }
+  messages.push(message);
 
-        const WORKFLOW_TOOLS = await safe()
-          .map(errorIf(() => !isToolCallAllowed && "Not allowed"))
-          .map(() =>
-            loadWorkFlowTools({
-              mentions,
-              dataStream,
-            }),
-          )
-          .orElse({});
+  const supportToolCall = !isToolCallUnsupportedModel(model);
 
-        const APP_DEFAULT_TOOLS = await safe()
-          .map(errorIf(() => !isToolCallAllowed && "Not allowed"))
-          .map(() =>
-            loadAppDefaultTools({
-              mentions,
-              allowedAppDefaultToolkit,
-            }),
-          )
-          .orElse({});
-        const inProgressToolParts = extractInProgressToolPart(message);
-        if (inProgressToolParts.length) {
-          await Promise.all(
-            inProgressToolParts.map(async (part) => {
-              const output = await manualToolExecuteByLastMessage(
-                part,
-                { ...MCP_TOOLS, ...WORKFLOW_TOOLS, ...APP_DEFAULT_TOOLS },
-                request.signal,
-              );
-              part.output = output;
+  const agentId = mentions.find((m) => m.type === "agent")?.agentId;
 
-              dataStream.write({
-                type: "tool-output-available",
-                toolCallId: part.toolCallId,
-                output,
-              });
-            }),
-          );
-        }
+  const agent = await rememberAgentAction(agentId, session.user.id);
 
-        const userPreferences = thread?.userPreferences || undefined;
+  // Set session id and user id on active trace (following docs pattern)
+  const inputText =
+    message.parts?.find((part) => "text" in part && part.type === "text")
+      ?.text || "";
 
-        const mcpServerCustomizations = await safe()
-          .map(() => {
-            if (Object.keys(MCP_TOOLS ?? {}).length === 0)
-              throw new Error("No tools found");
-            return rememberMcpServerCustomizationsAction(session.user.id);
-          })
-          .map((v) => filterMcpServerCustomizations(MCP_TOOLS!, v))
-          .orElse({});
+  updateActiveObservation({
+    input: inputText,
+  });
 
-        const systemPrompt = mergeSystemPrompt(
-          buildUserSystemPrompt(session.user, userPreferences, agent),
-          buildMcpServerCustomizationsSystemPrompt(mcpServerCustomizations),
-          !supportToolCall && buildToolCallUnsupportedModelSystemPrompt,
-        );
+  updateActiveTrace({
+    name: "better-chatbot-conversation",
+    sessionId: id,
+    userId: session.user.id,
+    input: inputText,
+    metadata: {
+      agentId: agent?.id,
+      agentName: agent?.name,
+      provider: chatModel?.provider,
+      model: chatModel?.model,
+      toolChoice,
+      environment: "development",
+    },
+  });
 
-        const vercelAITooles = safe({ ...MCP_TOOLS, ...WORKFLOW_TOOLS })
-          .map((t) => {
-            const bindingTools =
-              toolChoice === "manual" ||
-              (message.metadata as ChatMetadata)?.toolChoice === "manual"
-                ? excludeToolExecution(t)
-                : t;
-            return {
-              ...bindingTools,
-              ...APP_DEFAULT_TOOLS, // APP_DEFAULT_TOOLS Not Supported Manual
-            };
-          })
-          .unwrap();
-        metadata.toolCount = Object.keys(vercelAITooles).length;
+  if (agent?.instructions?.mentions) {
+    mentions.push(...agent.instructions.mentions);
+  }
 
-        const allowedMcpTools = Object.values(allowedMcpServers ?? {})
-          .map((t) => t.tools)
-          .flat();
+  const isToolCallAllowed =
+    supportToolCall && (toolChoice != "none" || mentions.length > 0);
 
-        logger.info(
-          `${agent ? `agent: ${agent.name}, ` : ""}tool mode: ${toolChoice}, mentions: ${mentions.length}`,
-        );
+  const metadata: ChatMetadata = {
+    agentId: agent?.id,
+    toolChoice: toolChoice,
+    toolCount: 0,
+    chatModel: chatModel,
+  };
 
-        logger.info(
-          `allowedMcpTools: ${allowedMcpTools.length ?? 0}, allowedAppDefaultToolkit: ${allowedAppDefaultToolkit?.length ?? 0}`,
-        );
-        logger.info(
-          `binding tool count APP_DEFAULT: ${Object.keys(APP_DEFAULT_TOOLS ?? {}).length}, MCP: ${Object.keys(MCP_TOOLS ?? {}).length}, Workflow: ${Object.keys(WORKFLOW_TOOLS ?? {}).length}`,
-        );
-        logger.info(`model: ${chatModel?.provider}/${chatModel?.model}`);
+  const stream = createUIMessageStream({
+    execute: async ({ writer: dataStream }) => {
+      const mcpClients = await mcpClientsManager.getClients();
+      const mcpTools = await mcpClientsManager.tools();
+      logger.info(
+        `mcp-server count: ${mcpClients.length}, mcp-tools count :${Object.keys(mcpTools).length}`,
+      );
+      const MCP_TOOLS = await safe()
+        .map(errorIf(() => !isToolCallAllowed && "Not allowed"))
+        .map(() =>
+          loadMcpTools({
+            mentions,
+            allowedMcpServers,
+          }),
+        )
+        .orElse({});
 
-        const result = streamText({
-          model,
-          system: systemPrompt,
-          messages: convertToModelMessages(messages),
-          experimental_transform: smoothStream({ chunking: "word" }),
-          maxRetries: 2,
-          tools: vercelAITooles,
-          stopWhen: stepCountIs(10),
-          toolChoice: "auto",
-          abortSignal: request.signal,
-        });
-        result.consumeStream();
-        dataStream.merge(
-          result.toUIMessageStream({
-            messageMetadata: ({ part }) => {
-              if (part.type == "finish") {
-                metadata.usage = part.totalUsage;
-                return metadata;
-              }
-            },
+      const WORKFLOW_TOOLS = await safe()
+        .map(errorIf(() => !isToolCallAllowed && "Not allowed"))
+        .map(() =>
+          loadWorkFlowTools({
+            mentions,
+            dataStream,
+          }),
+        )
+        .orElse({});
+
+      const APP_DEFAULT_TOOLS = await safe()
+        .map(errorIf(() => !isToolCallAllowed && "Not allowed"))
+        .map(() =>
+          loadAppDefaultTools({
+            mentions,
+            allowedAppDefaultToolkit,
+          }),
+        )
+        .orElse({});
+      const inProgressToolParts = extractInProgressToolPart(message);
+      if (inProgressToolParts.length) {
+        await Promise.all(
+          inProgressToolParts.map(async (part) => {
+            const output = await manualToolExecuteByLastMessage(
+              part,
+              { ...MCP_TOOLS, ...WORKFLOW_TOOLS, ...APP_DEFAULT_TOOLS },
+              request.signal,
+            );
+            part.output = output;
+
+            dataStream.write({
+              type: "tool-output-available",
+              toolCallId: part.toolCallId,
+              output,
+            });
           }),
         );
-      },
+      }
 
-      generateId: generateUUID,
-      onFinish: async ({ responseMessage }) => {
-        if (responseMessage.id == message.id) {
-          await chatRepository.upsertMessage({
-            threadId: thread!.id,
-            ...responseMessage,
-            parts: responseMessage.parts.map(convertToSavePart),
-            metadata,
-          });
-        } else {
-          await chatRepository.upsertMessage({
-            threadId: thread!.id,
-            role: message.role,
-            parts: message.parts.map(convertToSavePart),
-            id: message.id,
-          });
-          await chatRepository.upsertMessage({
-            threadId: thread!.id,
-            role: responseMessage.role,
-            id: responseMessage.id,
-            parts: responseMessage.parts.map(convertToSavePart),
-            metadata,
-          });
-        }
+      const userPreferences = thread?.userPreferences || undefined;
 
-        if (agent) {
-          agentRepository.updateAgent(agent.id, session.user.id, {
-            updatedAt: new Date(),
-          } as any);
-        }
-      },
-      onError: handleError,
-      originalMessages: messages,
-    });
+      const mcpServerCustomizations = await safe()
+        .map(() => {
+          if (Object.keys(MCP_TOOLS ?? {}).length === 0)
+            throw new Error("No tools found");
+          return rememberMcpServerCustomizationsAction(session.user.id);
+        })
+        .map((v) => filterMcpServerCustomizations(MCP_TOOLS!, v))
+        .orElse({});
 
-    return createUIMessageStreamResponse({
-      stream,
-    });
-  } catch (error: any) {
-    logger.error(error);
-    return Response.json({ message: error.message }, { status: 500 });
-  }
-}
+      const systemPrompt = mergeSystemPrompt(
+        buildUserSystemPrompt(session.user, userPreferences, agent),
+        buildMcpServerCustomizationsSystemPrompt(mcpServerCustomizations),
+        !supportToolCall && buildToolCallUnsupportedModelSystemPrompt,
+      );
+
+      const vercelAITooles = safe({ ...MCP_TOOLS, ...WORKFLOW_TOOLS })
+        .map((t) => {
+          const bindingTools =
+            toolChoice === "manual" ||
+            (message.metadata as ChatMetadata)?.toolChoice === "manual"
+              ? excludeToolExecution(t)
+              : t;
+          return {
+            ...bindingTools,
+            ...APP_DEFAULT_TOOLS, // APP_DEFAULT_TOOLS Not Supported Manual
+          };
+        })
+        .unwrap();
+      metadata.toolCount = Object.keys(vercelAITooles).length;
+
+      const allowedMcpTools = Object.values(allowedMcpServers ?? {})
+        .map((t) => t.tools)
+        .flat();
+
+      logger.info(
+        `${agent ? `agent: ${agent.name}, ` : ""}tool mode: ${toolChoice}, mentions: ${mentions.length}`,
+      );
+
+      logger.info(
+        `allowedMcpTools: ${allowedMcpTools.length ?? 0}, allowedAppDefaultToolkit: ${allowedAppDefaultToolkit?.length ?? 0}`,
+      );
+      logger.info(
+        `binding tool count APP_DEFAULT: ${Object.keys(APP_DEFAULT_TOOLS ?? {}).length}, MCP: ${Object.keys(MCP_TOOLS ?? {}).length}, Workflow: ${Object.keys(WORKFLOW_TOOLS ?? {}).length}`,
+      );
+      logger.info(`model: ${chatModel?.provider}/${chatModel?.model}`);
+
+      const result = streamText({
+        model,
+        system: systemPrompt,
+        messages: convertToModelMessages(messages),
+        experimental_transform: smoothStream({ chunking: "word" }),
+        // Following the exact pattern from docs/langfuse-vercel-ai-sdk.md
+        experimental_telemetry: {
+          isEnabled: true,
+        },
+        maxRetries: 2,
+        tools: vercelAITooles,
+        stopWhen: stepCountIs(10),
+        toolChoice: "auto",
+        abortSignal: request.signal,
+        onFinish: async (result) => {
+          updateActiveObservation({
+            output: result.content,
+          });
+          updateActiveTrace({
+            output: result.content,
+          });
+
+          // End span manually after stream has finished
+          trace.getActiveSpan()?.end();
+        },
+        onError: async (error) => {
+          updateActiveObservation({
+            output: error,
+            level: "ERROR",
+          });
+          updateActiveTrace({
+            output: error,
+          });
+
+          // End span manually after stream has finished
+          trace.getActiveSpan()?.end();
+        },
+      });
+      result.consumeStream();
+      dataStream.merge(
+        result.toUIMessageStream({
+          messageMetadata: ({ part }) => {
+            if (part.type == "finish") {
+              metadata.usage = part.totalUsage;
+              return metadata;
+            }
+          },
+        }),
+      );
+    },
+
+    generateId: generateUUID,
+    onFinish: async ({ responseMessage }) => {
+      if (responseMessage.id == message.id) {
+        await chatRepository.upsertMessage({
+          threadId: thread!.id,
+          ...responseMessage,
+          parts: responseMessage.parts.map(convertToSavePart),
+          metadata,
+        });
+      } else {
+        await chatRepository.upsertMessage({
+          threadId: thread!.id,
+          role: message.role,
+          parts: message.parts.map(convertToSavePart),
+          id: message.id,
+        });
+        await chatRepository.upsertMessage({
+          threadId: thread!.id,
+          role: responseMessage.role,
+          id: responseMessage.id,
+          parts: responseMessage.parts.map(convertToSavePart),
+          metadata,
+        });
+      }
+
+      if (agent) {
+        agentRepository.updateAgent(agent.id, session.user.id, {
+          updatedAt: new Date(),
+        } as any);
+      }
+    },
+    onError: handleError,
+    originalMessages: messages,
+  });
+
+  // Important in serverless environments: schedule flush after request is finished
+  // Note: In SDK v4, the flush is handled automatically by the NodeTracerProvider
+
+  return createUIMessageStreamResponse({
+    stream,
+  });
+};
+
+// Export the wrapped handler following docs pattern
+export const POST = observe(handler, {
+  name: "handle-chat-message",
+  endOnExit: false, // end observation _after_ stream has finished
+});

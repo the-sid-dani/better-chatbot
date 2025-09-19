@@ -8,7 +8,7 @@
 - **Criticality**: Essential
 
 ### Purpose Statement
-This folder implements the complete backend API layer for the Better Chatbot application using Next.js 15 App Router conventions. It provides authenticated API endpoints for chat functionality, MCP protocol integration, user management, agent systems, workflow execution, and real-time AI interactions.
+This folder implements the complete backend API layer for the Better Chatbot application using Next.js 15 App Router conventions, built entirely on **Vercel AI SDK** as the foundational AI framework. It provides authenticated API endpoints for chat functionality with comprehensive **Langfuse observability**, MCP protocol integration through Vercel AI SDK tool conversion, user management, agent systems, workflow execution, and real-time AI interactions with automatic tracing via `experimental_telemetry`.
 
 ## Architectural Context
 

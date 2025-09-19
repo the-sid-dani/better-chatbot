@@ -17,6 +17,8 @@ export default () => {
     },
     experimental: {
       taint: true,
+      // Note: instrumentationHook is not needed in Next.js 15+
+      // Instrumentation is enabled by default when instrumentation.ts exists
     },
   };
   const withNextIntl = createNextIntlPlugin();

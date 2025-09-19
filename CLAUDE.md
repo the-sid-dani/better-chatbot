@@ -4,15 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 🎯 Project Overview
 
-**Better Chatbot** is an open-source AI chatbot platform built with Next.js 15 and TypeScript. It integrates multiple LLM providers (OpenAI, Anthropic, Google, xAI, Ollama) with powerful features like MCP protocol support, custom agents, visual workflows, and real-time voice chat.
+**Better Chatbot** is an open-source AI chatbot platform built entirely on **Vercel AI SDK** as the foundational AI framework, with Next.js 15 and TypeScript. It provides a unified interface to multiple LLM providers (OpenAI, Anthropic, Google, xAI, Ollama, OpenRouter) through Vercel AI SDK abstractions, enhanced with MCP protocol support, custom agents, visual workflows, and comprehensive observability.
 
-**Key Technologies:**
+**Foundational Architecture:**
+- **AI Framework:** Vercel AI SDK (foundational - all AI operations built on this)
 - **Framework:** Next.js 15 with App Router
 - **Language:** TypeScript
+- **Observability:** Langfuse SDK v4 with OpenTelemetry
 - **Database:** PostgreSQL with Drizzle ORM
 - **Authentication:** Better-Auth
 - **UI:** React with Tailwind CSS, Radix UI, Framer Motion
-- **AI SDK:** Vercel AI SDK
 - **Testing:** Vitest (unit), Playwright (e2e)
 - **Linting/Formatting:** Biome
 
@@ -78,19 +79,36 @@ pnpm clean
 
 ### Core System Architecture
 
+**Vercel AI SDK Foundation:**
+- **All AI operations** built on `streamText`, `generateText`, and tool abstractions
+- **Unified Provider Interface:** OpenAI, Anthropic, Google, xAI, Ollama, OpenRouter through SDK
+- **Streaming-First:** Real-time responses with `experimental_telemetry` for observability
+- **Tool Integration:** MCP, Workflow, and App tools conform to Vercel AI SDK tool interface
+- **Observability:** Automatic tracing through Langfuse SDK v4 integration
+
+**Chat System Flow (Vercel AI SDK-Centric):**
+1. **Request:** `/api/chat/route.ts` handles chat requests with observability
+2. **Tool Loading:** MCP, workflow, and app tools loaded as Vercel AI SDK tools
+3. **Model Provider:** `customModelProvider.getModel()` returns Vercel AI SDK models
+4. **AI Processing:** `streamText()` with `experimental_telemetry` for comprehensive tracing
+5. **Tool Execution:** Automatic tool calls through Vercel AI SDK abstractions
+6. **Observability:** Real-time trace capture via Langfuse integration
+7. **Response:** Streaming UI components handle Vercel AI SDK message streams
+8. **Database:** Messages and metadata stored via `chatRepository`
+
+**Observability Architecture (Langfuse SDK v4):**
+- **Instrumentation:** `instrumentation.ts` with `NodeTracerProvider` and `LangfuseSpanProcessor`
+- **Tracing:** Automatic via Vercel AI SDK `experimental_telemetry`
+- **Scope:** Complete conversations, tool executions, streaming responses, costs
+- **Integration:** Built-in compatibility with Vercel AI SDK patterns
+
 **MCP (Model Context Protocol) Integration:**
 - Central to the application's extensibility
 - Located in `src/lib/ai/mcp/`
 - `mcpClientsManager` manages all MCP server connections
+- **Vercel AI SDK Integration:** MCP tools converted to Vercel AI SDK tool interface
 - Supports both file-based and database-based configurations
-- Tools are dynamically loaded and bound to chat sessions
-
-**Chat System Flow:**
-1. **Request:** `/api/chat/route.ts` handles chat requests
-2. **Tool Loading:** MCP tools, workflow tools, and app default tools are loaded
-3. **Model Provider:** `customModelProvider` routes to appropriate LLM
-4. **Response:** Streaming responses with tool execution
-5. **Database:** Messages stored via `chatRepository`
+- Tools dynamically loaded and bound through Vercel AI SDK abstractions
 
 **Database Layer (Drizzle ORM):**
 - Schema: `src/lib/db/pg/schema.pg.ts`
@@ -105,43 +123,98 @@ pnpm clean
 - Client hooks: `src/lib/auth/client.ts`
 - Supports OAuth (Google, GitHub, Microsoft) and email/password
 
-**Multi-Model Support:**
-- Provider abstraction in `src/lib/ai/models.ts`
-- Static models + dynamic OpenAI-compatible providers
-- Tool call support detection per model
+**Multi-Provider Support (Vercel AI SDK):**
+- **Unified Interface:** All providers accessed through Vercel AI SDK abstractions in `src/lib/ai/models.ts`
+- **Provider Coverage:** OpenAI, Anthropic, Google, xAI, Ollama, OpenRouter via `@ai-sdk/*` packages
+- **Dynamic Models:** Static models + dynamic OpenAI-compatible providers
+- **Consistent API:** All providers use `streamText`/`generateText` with identical interfaces
+- **Tool Call Support:** Universal tool calling across all supported providers
+- **Observability:** Automatic tracing via `experimental_telemetry` across all providers
 
 **Agent System:**
 - Custom AI agents with specific instructions and tool access
 - Database schema: `AgentSchema` in schema.pg.ts
 - UI: `src/components/agent/`
 
-**Workflow Engine:**
+**Workflow Engine (Vercel AI SDK Integration):**
 - Visual workflow builder using XYFlow
 - Located in `src/lib/ai/workflow/`
-- Workflows become callable tools in chat
-- Node types: LLM nodes and Tool nodes
+- **Vercel AI SDK Integration:** Workflows converted to Vercel AI SDK tool interface
+- **Tool Abstraction:** Workflows become callable tools through `createTool()`
+- **Streaming Support:** Workflow execution integrated with Vercel AI SDK streaming
+- **Node Types:** LLM nodes (using `generateText`) and Tool nodes (MCP/App tools)
+- **Observability:** Workflow execution automatically traced via `experimental_telemetry`
+
+## 🔍 Observability Architecture
+
+**Langfuse SDK v4 Integration:**
+- **Framework:** Built on OpenTelemetry with Langfuse SDK v4 packages
+- **Packages:** `@langfuse/otel`, `@langfuse/tracing`, `@opentelemetry/sdk-trace-node`
+- **Pattern:** `NodeTracerProvider` with `LangfuseSpanProcessor` (not `@vercel/otel` due to compatibility)
+- **Instrumentation:** `instrumentation.ts` automatically loaded by Next.js
+
+**Vercel AI SDK Observability:**
+- **Automatic Tracing:** All `streamText`/`generateText` calls automatically traced
+- **Tool Execution:** Individual tool calls captured as nested spans
+- **Streaming Support:** Real-time response tracing without blocking
+- **Multi-Provider:** Consistent tracing across all AI providers
+- **Configuration:** `experimental_telemetry` enables comprehensive observability
+
+**Trace Structure:**
+```
+handle-chat-message (observe wrapper)
+├── better-chatbot-conversation (trace)
+│   ├── ai.streamText (automatic Vercel AI SDK span)
+│   ├── tool.execution (automatic for each tool call)
+│   │   ├── mcp.toolCall (MCP server interactions)
+│   │   ├── workflow.execute (workflow node execution)
+│   │   └── app.defaultTool (built-in tool execution)
+│   ├── provider.generateText (OpenAI/Anthropic/Google/etc.)
+│   └── streaming.response (real-time response chunks)
+└── metadata: userId, sessionId, costs, tokens, performance
+```
+
+**Captured Metrics:**
+- **User Analytics:** Session tracking, user journeys, engagement patterns
+- **AI Performance:** Token usage, costs, latency per provider and model
+- **Tool Analytics:** MCP server health, tool execution success rates, workflow performance
+- **System Health:** Error rates, response times, resource utilization
+- **Business Intelligence:** Feature usage, agent effectiveness, cost optimization
+
+**Production Benefits:**
+- **Cost Optimization:** Real-time token and cost tracking across all providers
+- **Performance Monitoring:** Identify bottlenecks in AI processing and tool execution
+- **User Experience:** Track conversation quality and user satisfaction patterns
+- **Debugging:** Complete trace visibility for troubleshooting complex AI interactions
+- **A/B Testing:** Compare model performance and feature effectiveness
 
 ### Directory Structure
 
 ```
-src/
-├── app/                    # Next.js App Router
-│   ├── (auth)/            # Authentication pages
-│   ├── (chat)/            # Main chat interface
-│   └── api/               # API routes
-├── components/            # React components
-│   ├── agent/            # Agent management UI
-│   ├── layouts/          # App layout components
-│   ├── tool-invocation/  # Tool result components
-│   └── ui/               # Reusable UI components
-└── lib/                  # Core business logic
-    ├── ai/               # AI-related functionality
-    │   ├── mcp/          # MCP protocol implementation
-    │   ├── tools/        # Built-in tools (web search, code execution)
-    │   └── workflow/     # Workflow engine
-    ├── auth/             # Authentication logic
-    ├── db/               # Database layer
-    └── cache/            # Caching (Redis/memory)
+better-chatbot/
+├── instrumentation.ts      # 🔍 Langfuse SDK v4 observability setup (critical)
+├── src/
+│   ├── app/               # Next.js App Router
+│   │   ├── (auth)/        # Authentication pages
+│   │   ├── (chat)/        # Main chat interface
+│   │   └── api/           # API routes (Vercel AI SDK streaming endpoints)
+│   ├── components/        # React components
+│   │   ├── agent/         # Agent management UI
+│   │   ├── layouts/       # App layout components
+│   │   ├── tool-invocation/ # Tool result components (Vercel AI SDK tool results)
+│   │   └── ui/            # Reusable UI components
+│   └── lib/               # Core business logic
+│       ├── ai/            # AI-related functionality (Vercel AI SDK-centric)
+│       │   ├── mcp/       # MCP protocol → Vercel AI SDK tool conversion
+│       │   ├── tools/     # Built-in tools (web search, code execution)
+│       │   ├── workflow/  # Workflow engine → Vercel AI SDK tool integration
+│       │   └── models.ts  # Vercel AI SDK provider configurations
+│       ├── auth/          # Authentication logic
+│       ├── db/            # Database layer
+│       └── cache/         # Caching (Redis/memory)
+└── docs/                  # Documentation
+    ├── langfuse-vercel-ai-sdk.md # Observability integration guide
+    └── tips-guides/       # Setup and configuration guides
 ```
 
 ## 🔧 Development Patterns
@@ -157,16 +230,26 @@ src/
 - **UI Components:** Use Radix UI primitives in `src/components/ui/`
 - **Styling:** Tailwind CSS with custom design system
 
-### API Route Patterns
+### Vercel AI SDK Patterns
+- **AI Operations:** All AI calls use `streamText`/`generateText` from Vercel AI SDK
+- **Tool Integration:** Convert all tools (MCP, Workflow, App) to Vercel AI SDK tool interface
+- **Streaming:** Leverage `createUIMessageStream` and `experimental_telemetry` for observability
+- **Provider Management:** Use `customModelProvider.getModel()` for unified model access
+- **Observability:** Enable `experimental_telemetry` on all AI operations for comprehensive tracing
+
+### API Route Patterns (Vercel AI SDK-Centric)
 - **Authentication:** Use `getSession()` from `auth/server`
 - **Error Handling:** Use `ts-safe` for safe error handling
 - **Validation:** Zod schemas in `app-types/` directory
-- **Streaming:** Use Vercel AI SDK's streaming utilities
+- **AI Streaming:** Use Vercel AI SDK's `streamText` with `experimental_telemetry`
+- **Tool Execution:** Leverage Vercel AI SDK tool abstractions for all tool types
+- **Observability:** Automatic tracing via Langfuse integration with zero additional code
 
-### MCP Development
-- **Adding Tools:** Create in `src/lib/ai/tools/`
+### MCP Development (Vercel AI SDK Integration)
+- **Tool Conversion:** Convert MCP tools to Vercel AI SDK tool interface in `shared.chat.ts`
 - **MCP Servers:** Configure in database or JSON files
-- **Tool Binding:** Happens dynamically in chat routes
+- **Tool Binding:** Dynamic loading as Vercel AI SDK tools in chat routes
+- **Observability:** MCP tool calls automatically traced via `experimental_telemetry`
 - **Testing:** Use `src/app/(chat)/mcp/test/[id]/page.tsx`
 
 ## 🧪 Testing
@@ -296,13 +379,21 @@ pnpm build               # Production build with HTTPS
 
 ## 📚 Key Files for Understanding
 
-- `src/app/api/chat/route.ts` - Main chat API logic
-- `src/lib/ai/mcp/mcp-manager.ts` - MCP client management
+### Core Architecture Files
+- `instrumentation.ts` - **🔍 Langfuse observability setup (CRITICAL)** - NodeTracerProvider with LangfuseSpanProcessor
+- `src/app/api/chat/route.ts` - **Main chat API** - Vercel AI SDK streaming with experimental_telemetry
+- `src/lib/ai/models.ts` - **Vercel AI SDK provider configuration** - Unified model interface
+- `src/components/chat-bot.tsx` - **Main chat interface** - Handles Vercel AI SDK streaming responses
+
+### Integration Files
+- `src/lib/ai/mcp/mcp-manager.ts` - **MCP → Vercel AI SDK conversion** - Converts MCP tools to SDK tools
+- `src/app/api/chat/shared.chat.ts` - **Tool loading pipeline** - Loads all tools as Vercel AI SDK tools
+- `src/lib/ai/workflow/` - **Workflow → Vercel AI SDK integration** - Converts workflows to SDK tools
+
+### Configuration Files
 - `src/lib/db/pg/schema.pg.ts` - Database schema
-- `src/lib/ai/models.ts` - LLM provider configuration
-- `src/components/chat-bot.tsx` - Main chat interface
 - `drizzle.config.ts` - Database configuration
-- `next.config.ts` - Next.js configuration
+- `next.config.ts` - Next.js configuration (includes instrumentation hook)
 - `biome.json` - Code formatting rules
 
 ## 🎯 Development Workflows
