@@ -23,10 +23,9 @@ const staticModels = {
     "gpt-4.1-mini": openai("gpt-4.1-mini"),
     "o4-mini": openai("o4-mini"),
     o3: openai("o3"),
-    // Future models - uncomment when available
-    // "gpt-5": openai("gpt-5"),
-    // "gpt-5-mini": openai("gpt-5-mini"),
-    // "gpt-5-nano": openai("gpt-5-nano"),
+    "gpt-5": openai("gpt-5"),
+    "gpt-5-mini": openai("gpt-5-mini"),
+    "gpt-5-nano": openai("gpt-5-nano"),
   },
   google: {
     "gemini-2.5-flash-lite": google("gemini-2.5-flash-lite"),
