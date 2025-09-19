@@ -8,7 +8,7 @@
 - **Criticality**: Essential
 
 ### Purpose Statement
-This folder contains the complete UI component library for the Better Chatbot platform, serving as the visual and interactive foundation that enables users to communicate with AI models, manage agents, configure MCP tools, and design workflows. It implements a sophisticated design system built on Radix UI primitives with custom styling, animations, and specialized AI-focused components.
+This folder contains the complete UI component library for the Better Chatbot platform, serving as the visual and interactive foundation that enables users to communicate with AI models through **Vercel AI SDK streaming patterns**, manage agents, configure MCP tools, and design workflows. It implements a sophisticated design system built on Radix UI primitives with custom styling, animations, and specialized AI-focused components optimized for **Vercel AI SDK data structures** and **Langfuse observability integration**.
 
 ## Architectural Context
 
@@ -43,15 +43,19 @@ graph TD
 
 ### Integration Points
 - **Upstream Dependencies**:
-  - `src/lib/` for business logic, utilities, AI integration
+  - `src/lib/ai/` for Vercel AI SDK-centric AI integration and tool conversion
   - `src/hooks/` for React state management
-  - `app-types/` for TypeScript definitions
+  - `app-types/` for TypeScript definitions (includes Vercel AI SDK types)
   - External UI libraries (Radix, Framer Motion, Lucide)
+  - **Vercel AI SDK**: Components handle streaming responses, tool results, and UI message streams
 - **Downstream Consumers**:
-  - `src/app/` Next.js pages and layouts
+  - `src/app/` Next.js pages and layouts (consume Vercel AI SDK streaming data)
   - Self-referential (components import other components)
 - **Sibling Interactions**: Heavy cross-component communication within folder
-- **External Integrations**: Radix UI (accessibility), Framer Motion (animations), Recharts (data visualization)
+- **External Integrations**:
+  - Radix UI (accessibility), Framer Motion (animations), Recharts (data visualization)
+  - **Vercel AI SDK**: Direct integration with streaming patterns and tool execution results
+  - **Langfuse**: Components may display observability data and trace information
 
 ## Complete Content Inventory
 
@@ -110,12 +114,18 @@ src/components/
 
 ### File Categories and Purposes
 
-#### Core Chat Components (Essential for chat functionality)
-- **chat-bot.tsx**: Main chat interface with message streaming, tool execution, state management
-- **chat-bot-voice.tsx**: Voice chat integration with real-time audio processing
-- **message-parts.tsx**: Complex message rendering with tool results, markdown, editing capabilities
-- **prompt-input.tsx**: Advanced input component with mentions, tool selection, keyboard shortcuts
-- **message.tsx**: Individual message component with user/assistant differentiation
+#### Core Chat Components (Essential for Vercel AI SDK integration)
+- **chat-bot.tsx**: Main chat interface handling **Vercel AI SDK streaming responses** with real-time observability
+  - Processes `createUIMessageStream` responses from Vercel AI SDK
+  - Handles tool execution results from MCP, Workflow, and App tools
+  - Integrates with Langfuse trace context for user feedback collection
+- **chat-bot-voice.tsx**: Voice chat integration with **OpenAI Realtime API** through Vercel AI SDK
+- **message-parts.tsx**: Complex message rendering optimized for **Vercel AI SDK message structures**
+  - Handles streaming tool execution results
+  - Renders Vercel AI SDK tool call outputs with rich formatting
+  - Supports editing and re-execution through Vercel AI SDK patterns
+- **prompt-input.tsx**: Advanced input component with **Vercel AI SDK tool mentions** and selection
+- **message.tsx**: Individual message component handling **Vercel AI SDK message types** and observability metadata
 
 #### MCP Integration Components (Model Context Protocol)
 - **mcp-card.tsx**: Individual MCP server configuration card

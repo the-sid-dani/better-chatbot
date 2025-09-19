@@ -23,9 +23,10 @@ const staticModels = {
     "gpt-4.1-mini": openai("gpt-4.1-mini"),
     "o4-mini": openai("o4-mini"),
     o3: openai("o3"),
-    "gpt-5": openai("gpt-5"),
-    "gpt-5-mini": openai("gpt-5-mini"),
-    "gpt-5-nano": openai("gpt-5-nano"),
+    // Future models - uncomment when available
+    // "gpt-5": openai("gpt-5"),
+    // "gpt-5-mini": openai("gpt-5-mini"),
+    // "gpt-5-nano": openai("gpt-5-nano"),
   },
   google: {
     "gemini-2.5-flash-lite": google("gemini-2.5-flash-lite"),
@@ -36,6 +37,8 @@ const staticModels = {
     "claude-4-sonnet": anthropic("claude-4-sonnet-20250514"),
     "claude-4-opus": anthropic("claude-4-opus-20250514"),
     "claude-3-7-sonnet": anthropic("claude-3-7-sonnet-20250219"),
+    // Add new models here if needed
+    // "claude-5-haiku": anthropic("claude-5-haiku-20250601"),
   },
   xai: {
     "grok-4": xai("grok-4"),
@@ -68,6 +71,7 @@ const staticUnsupportedModels = new Set([
   staticModels.openRouter["qwen3-14b:free"],
   staticModels.openRouter["deepseek-r1:free"],
   staticModels.openRouter["gemini-2.0-flash-exp:free"],
+  // Note: Add future models to this list if they don't support tool calls
 ]);
 
 const openaiCompatibleProviders = openaiCompatibleModelsSafeParse(
@@ -90,7 +94,7 @@ export const isToolCallUnsupportedModel = (model: LanguageModel) => {
   return allUnsupportedModels.has(model);
 };
 
-const fallbackModel = staticModels.openai["gpt-4.1"];
+const fallbackModel = staticModels.anthropic["claude-4-sonnet"];
 
 export const customModelProvider = {
   modelsInfo: Object.entries(allModels).map(([provider, models]) => ({

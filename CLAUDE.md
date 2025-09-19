@@ -415,6 +415,42 @@ pnpm build               # Production build with HTTPS
 
 ### Debugging Performance
 1. Check database queries in Studio
-2. Monitor API response times
+2. Monitor API response times via Langfuse dashboard
 3. Use React DevTools for component performance
 4. Check MCP server connection health
+5. Monitor Vercel AI SDK streaming performance in Langfuse traces
+6. Check `/api/health/langfuse` for observability system status
+
+## 🔧 Langfuse + Vercel AI SDK Troubleshooting
+
+### Common Observability Issues
+- **Missing Traces**: Check Langfuse credentials in `.env` and verify instrumentation.ts loading
+- **Incomplete Traces**: Ensure `experimental_telemetry` is enabled in all `streamText` calls
+- **Tool Calls Not Traced**: Verify tools are properly converted to Vercel AI SDK interface
+- **Streaming Issues**: Check `observe` wrapper with `endOnExit: false` for streaming routes
+
+### Debugging Commands
+```bash
+# Check Langfuse connectivity
+curl http://localhost:3000/api/health/langfuse
+
+# Enable debug logging
+export NODE_ENV=development
+
+# Check server logs for instrumentation
+pnpm dev  # Look for "✅ Langfuse instrumentation setup complete!"
+
+# Verify trace export
+# Look for "🔍 Span filter: ai -> EXPORT" in server logs
+```
+
+### Version Compatibility
+- **Critical**: Use `NodeTracerProvider` not `@vercel/otel` due to OpenTelemetry JS SDK v2 compatibility
+- **Packages**: Ensure `@langfuse/otel`, `@langfuse/tracing`, `@opentelemetry/sdk-trace-node`
+- **Next.js**: Instrumentation hook automatically enabled in Next.js 15+
+
+### Production Deployment
+- **Environment Variables**: Ensure Langfuse credentials are set in production
+- **Health Monitoring**: Use `/api/health/langfuse` endpoint for uptime monitoring
+- **Cost Management**: Monitor token usage and costs in Langfuse dashboard
+- **Performance**: Track response latencies and optimization opportunities

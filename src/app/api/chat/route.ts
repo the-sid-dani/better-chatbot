@@ -124,7 +124,7 @@ const handler = async (request: Request) => {
   });
 
   updateActiveTrace({
-    name: "better-chatbot-conversation",
+    name: "samba-orion",
     sessionId: id,
     userId: session.user.id,
     input: inputText,
@@ -352,6 +352,6 @@ const handler = async (request: Request) => {
 
 // Export the wrapped handler following docs pattern
 export const POST = observe(handler, {
-  name: "handle-chat-message",
+  name: "samba-orion-chat-handler",
   endOnExit: false, // end observation _after_ stream has finished
 });

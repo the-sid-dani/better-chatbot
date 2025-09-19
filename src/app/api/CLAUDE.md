@@ -103,8 +103,17 @@ api/
 ### File Categories and Purposes
 
 #### Core Chat System Files (Mission Critical)
-- **chat/route.ts:292 lines** - Central chat API handling AI streaming, tool integration, message persistence. Contains complex logic for MCP tools, workflows, and multi-model support
-- **chat/shared.chat.ts:487 lines** - Extensive shared utilities for tool loading, filtering, execution. Handles MCP tool binding, workflow conversion, manual tool confirmation
+- **chat/route.ts** - **Central Vercel AI SDK streaming endpoint** with comprehensive Langfuse observability
+  - Uses `streamText()` with `experimental_telemetry` for automatic tracing
+  - Wrapped with `observe()` decorator for complete conversation tracking
+  - Integrates `updateActiveTrace()` and `updateActiveObservation()` for rich metadata
+  - Handles all tool execution through Vercel AI SDK tool abstractions
+  - Captures user context, model performance, costs, and token usage automatically
+- **chat/shared.chat.ts** - **Vercel AI SDK tool conversion pipeline** - Converts all tool types to SDK interface
+  - `loadMcpTools()` - Converts MCP tools to Vercel AI SDK tool format
+  - `loadWorkFlowTools()` - Converts workflows to Vercel AI SDK tools
+  - `loadAppDefaultTools()` - Built-in tools as Vercel AI SDK tools
+  - Tool execution abstraction for unified observability
 - **chat/actions.ts** - Server actions for chat-related operations including agent and MCP server customizations
 
 #### Authentication & Authorization Files
@@ -127,6 +136,12 @@ api/
 - **workflow/[id]/execute/route.ts** - Workflow execution engine integration
 - **workflow/tools/route.ts** - Available workflow tools
 
+#### Observability & Monitoring Files
+- **health/langfuse/route.ts** - **Langfuse connectivity health check** - Verifies observability system status
+  - Validates Langfuse credentials and connectivity
+  - Provides endpoint for monitoring trace delivery health
+  - Returns detailed status for production monitoring
+
 #### Supporting System Files
 - **archive/** - Complete archiving system with hierarchical items
 - **bookmark/route.ts** - Simple bookmark CRUD operations
@@ -135,32 +150,42 @@ api/
 
 ### File Relationships and Dependencies
 ```
-[chat/route.ts] - MAIN CHAT ENDPOINT
+[../../../instrumentation.ts] - LANGFUSE OBSERVABILITY FOUNDATION
+  ↓ enables tracing for
+[chat/route.ts] - MAIN CHAT ENDPOINT (Vercel AI SDK + Langfuse)
+  ↓ wrapped with observe() decorator for complete conversation tracking
+  ↓ uses streamText() with experimental_telemetry for automatic tracing
   ↓ imports heavily from
-[chat/shared.chat.ts] - SHARED CHAT UTILITIES
-  ↓ loads tools from
+[chat/shared.chat.ts] - VERCEL AI SDK TOOL CONVERSION PIPELINE
+  ↓ converts tools from
 [lib/ai/mcp/mcp-manager.ts] + [lib/ai/workflow/] + [lib/ai/tools/]
+  ↓ to Vercel AI SDK tool interface
   ↓ uses types from
 [app-types/chat] + [app-types/mcp] + [app-types/workflow]
   ↓ persists via
 [lib/db/repository] → [PostgreSQL Database]
   ↓ authenticates via
 [auth/server.getSession()] → [Better-Auth]
+  ↓ observes via
+[Langfuse Cloud/Self-hosted] ← [OpenTelemetry traces]
 ```
 
 ## Technology & Patterns
 
 ### Technology Stack
+- **AI Framework**: Vercel AI SDK (FOUNDATIONAL - all AI operations built on this)
+- **Observability**: Langfuse SDK v4 with OpenTelemetry (`@langfuse/otel`, `@langfuse/tracing`)
 - **Runtime**: Node.js with Next.js 15 App Router
 - **Language**: TypeScript with strict configuration
 - **Framework**: Next.js App Router API Routes (route.ts convention)
 - **Authentication**: Better-Auth with session-based auth
 - **Database**: PostgreSQL with Drizzle ORM
-- **AI Integration**: Vercel AI SDK with multiple providers
+- **AI Providers**: Multiple providers via Vercel AI SDK abstractions (OpenAI, Anthropic, Google, xAI, Ollama, OpenRouter)
+- **Streaming**: Vercel AI SDK streaming with `experimental_telemetry` for observability
 - **Validation**: Zod schemas from app-types/
 - **Error Handling**: ts-safe library for functional error handling
 - **Caching**: Redis and in-memory caching via lib/cache
-- **Logging**: Custom logger with consola
+- **Logging**: Custom logger with consola + OpenTelemetry trace logging
 
 ### Design Patterns Detected
 
@@ -194,15 +219,25 @@ const data = SchemaName.parse(body); // Zod validation
 - Runtime type validation for all API inputs
 - Type inference for TypeScript safety
 
-#### **Streaming AI Response Pattern**
-- Used in chat/route.ts for real-time AI responses
-- Vercel AI SDK's `createUIMessageStream` and `streamText`
-- Progressive tool execution with streaming updates
+#### **Vercel AI SDK Streaming Pattern**
+- **Foundation**: All AI operations use `streamText()` from Vercel AI SDK
+- **Observability**: `experimental_telemetry` enables automatic tracing
+- **Tool Integration**: All tools converted to Vercel AI SDK tool interface
+- **Real-time**: `createUIMessageStream` with built-in observability
+- **Multi-Provider**: Consistent streaming across all AI providers
 
-#### **Tool Loading Strategy**
-- Dynamic tool loading based on mentions and permissions
-- Three tool types: MCP tools, Workflow tools, App default tools
+#### **Langfuse Observability Pattern**
+- **Wrapper Pattern**: API routes wrapped with `observe()` decorator
+- **Trace Management**: `updateActiveTrace()` and `updateActiveObservation()` for rich metadata
+- **Automatic Tracing**: Vercel AI SDK automatically traces tool calls and LLM interactions
+- **Context Propagation**: User sessions, agent context, and performance metrics captured
+- **Error Boundaries**: Observability failures don't break core functionality
+
+#### **Tool Loading Strategy (Vercel AI SDK Integration)**
+- Dynamic tool loading converted to Vercel AI SDK tool interface
+- Three tool types: MCP tools, Workflow tools, App default tools (all as Vercel AI SDK tools)
 - Filtering based on user permissions and mentions
+- Automatic tool call tracing via `experimental_telemetry`
 
 ### Coding Standards Applied
 - **Naming**: kebab-case for files, camelCase for variables
