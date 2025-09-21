@@ -4,7 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 🎯 Project Overview
 
-**Better Chatbot** is an open-source AI chatbot platform built entirely on **Vercel AI SDK** as the foundational AI framework, with Next.js 15 and TypeScript. It provides a unified interface to multiple LLM providers (OpenAI, Anthropic, Google, xAI, Ollama, OpenRouter) through Vercel AI SDK abstractions, enhanced with MCP protocol support, custom agents, visual workflows, and comprehensive observability.
+**Samba-Orion** is an AI chatbot platform built entirely on **Vercel AI SDK** as the foundational AI framework, with Next.js 15 and TypeScript. This project is a branded fork of the open-source "better-chatbot" project, strategically rebranded to maintain upstream compatibility while providing a unique user experience.
+
+### 🎨 Dual Branding Strategy
+- **User-Facing Elements:** "Samba-Orion" branding (UI, page titles, app names, user-visible text)
+- **Backend/Infrastructure:** "better-chatbot" structure preserved (file paths, git history, documentation references)
+- **Upstream Compatibility:** Enables easy merging of updates from the open-source better-chatbot project
+
+**Core Features:** Unified interface to multiple LLM providers (OpenAI, Anthropic, Google, xAI, Ollama, OpenRouter) through Vercel AI SDK abstractions, enhanced with MCP protocol support, custom agents, visual workflows, and comprehensive observability.
 
 **Foundational Architecture:**
 - **AI Framework:** Vercel AI SDK (foundational - all AI operations built on this)
