@@ -2,7 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { toast } from "sonner";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import PromptInput from "./prompt-input";
 import clsx from "clsx";
 import { appStore } from "@/app/store";
@@ -16,6 +16,7 @@ import {
   isToolUIPart,
   lastAssistantMessageIsCompleteWithToolCalls,
   UIMessage,
+  getToolName,
 } from "ai";
 
 import { safe } from "ts-safe";
@@ -42,12 +43,195 @@ import dynamic from "next/dynamic";
 import { useMounted } from "@/hooks/use-mounted";
 import { getStorageManager } from "lib/browser-stroage";
 import { AnimatePresence, motion } from "framer-motion";
+import { CanvasPanel, useCanvas } from "./canvas-panel";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "ui/resizable";
+// getToolName already imported above, isToolUIPart already imported above
 
 type Props = {
   threadId: string;
   initialMessages: Array<UIMessage>;
   selectedChatModel?: string;
 };
+
+// Props interface for ChatContent component
+interface ChatContentProps {
+  emptyMessage: boolean;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  handleScroll: () => void;
+  messages: UIMessage[];
+  threadId: string;
+  status: any;
+  addToolResult: (result: any) => Promise<void>;
+  isLoading: boolean;
+  isPendingToolCall: boolean;
+  setMessages: React.Dispatch<React.SetStateAction<UIMessage[]>>;
+  sendMessage: any;
+  space: any;
+  error: Error | undefined;
+  isAtBottom: boolean;
+  scrollToBottom: () => void;
+  input: string;
+  setInput: React.Dispatch<React.SetStateAction<string>>;
+  stop: () => void;
+  isFirstTime: boolean;
+  handleFocus: () => void;
+  isDeleteThreadPopupOpen: boolean;
+  setIsDeleteThreadPopupOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+// Props interface for ScrollToBottomButton component
+interface ScrollToBottomButtonProps {
+  show: boolean;
+  onClick: () => void;
+  className?: string;
+}
+
+// Memoized ScrollToBottomButton component - moved outside to prevent recreation
+const ScrollToBottomButton = memo(function ScrollToBottomButton({
+  show,
+  onClick,
+  className,
+}: ScrollToBottomButtonProps) {
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          transition={{ duration: 0.2, ease: "easeInOut" }}
+          className={className}
+        >
+          <Button
+            onClick={onClick}
+            className="shadow-lg backdrop-blur-sm border transition-colors"
+            size="icon"
+            variant="ghost"
+          >
+            <ArrowDown />
+          </Button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+});
+
+// Memoized ChatContent component - moved outside to prevent recreation
+const ChatContent = memo(function ChatContent({
+  emptyMessage,
+  containerRef,
+  handleScroll,
+  messages,
+  threadId,
+  status,
+  addToolResult,
+  isLoading,
+  isPendingToolCall,
+  setMessages,
+  sendMessage,
+  space,
+  error,
+  isAtBottom,
+  scrollToBottom,
+  input,
+  setInput,
+  stop,
+  isFirstTime,
+  handleFocus,
+  isDeleteThreadPopupOpen,
+  setIsDeleteThreadPopupOpen,
+}: ChatContentProps) {
+  return (
+    <div
+      className={cn(
+        emptyMessage && "justify-center pb-24",
+        "flex flex-col min-w-0 relative h-full z-40",
+      )}
+    >
+      {emptyMessage ? (
+        <ChatGreeting />
+      ) : (
+        <>
+          <div
+            className={"flex flex-col gap-2 overflow-y-auto py-6 z-10"}
+            ref={containerRef}
+            onScroll={handleScroll}
+          >
+            {messages.map((message, index) => {
+              const isLastMessage = messages.length - 1 === index;
+              return (
+                <PreviewMessage
+                  threadId={threadId}
+                  messageIndex={index}
+                  prevMessage={messages[index - 1]}
+                  key={message.id}
+                  message={message}
+                  status={status}
+                  addToolResult={addToolResult}
+                  isLoading={isLoading || isPendingToolCall}
+                  isLastMessage={isLastMessage}
+                  setMessages={setMessages}
+                  sendMessage={sendMessage}
+                  className={
+                    isLastMessage &&
+                    message.role != "user" &&
+                    !space &&
+                    message.parts.length > 1
+                      ? "min-h-[calc(55dvh-40px)]"
+                      : ""
+                  }
+                />
+              );
+            })}
+            {space && (
+              <>
+                <div className="w-full mx-auto max-w-3xl px-6 relative">
+                  <div className={space == "space" ? "opacity-0" : ""}>
+                    <Think />
+                  </div>
+                </div>
+                <div className="min-h-[calc(55dvh-56px)]" />
+              </>
+            )}
+
+            {error && <ErrorMessage error={error} />}
+            <div className="min-w-0 min-h-52" />
+          </div>
+        </>
+      )}
+
+      <div
+        className={clsx(messages.length && "absolute bottom-14", "w-full z-10")}
+      >
+        <div className="max-w-3xl mx-auto relative flex justify-center items-center -top-2">
+          <ScrollToBottomButton
+            show={!isAtBottom && messages.length > 0}
+            onClick={scrollToBottom}
+          />
+        </div>
+
+        <PromptInput
+          input={input}
+          threadId={threadId}
+          sendMessage={sendMessage}
+          setInput={setInput}
+          isLoading={isLoading || isPendingToolCall}
+          onStop={stop}
+          onFocus={isFirstTime ? undefined : handleFocus}
+        />
+      </div>
+      <DeleteThreadPopup
+        threadId={threadId}
+        onClose={() => setIsDeleteThreadPopupOpen(false)}
+        open={isDeleteThreadPopupOpen}
+      />
+    </div>
+  );
+});
 
 const LightRays = dynamic(() => import("ui/light-rays"), {
   ssr: false,
@@ -60,12 +244,33 @@ const Particles = dynamic(() => import("ui/particles"), {
 const debounce = createDebounce();
 
 const firstTimeStorage = getStorageManager("IS_FIRST");
-const isFirstTime = firstTimeStorage.get() ?? true;
+const isFirstTime = Boolean(firstTimeStorage.get() ?? true);
 firstTimeStorage.set(false);
 
 export default function ChatBot({ threadId, initialMessages }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
+
+  // Canvas state management
+  const {
+    isVisible: isCanvasVisible,
+    artifacts: canvasArtifacts,
+    activeArtifactId,
+    addArtifact: addCanvasArtifact,
+    closeCanvas,
+    showCanvas,
+    setActiveArtifactId,
+  } = useCanvas();
+
+  // Debug canvas state changes
+  useEffect(() => {
+    console.log(
+      "🔍 Canvas Debug: Canvas state changed - isVisible:",
+      isCanvasVisible,
+      "artifacts:",
+      canvasArtifacts.length,
+    );
+  }, [isCanvasVisible, canvasArtifacts.length]);
 
   const [
     appStoreMutate,
@@ -344,96 +549,237 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     }
   }, [input]);
 
+  // Track processed tool calls to prevent duplicates
+  const processedToolCalls = useRef(new Set<string>());
+  const lastProcessedMessageId = useRef<string>("");
+
+  // Watch for completed chart tool calls and create canvas artifacts
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+
+    // Only process if it's a new assistant message to prevent re-processing during typing
+    if (
+      lastMessage?.role === "assistant" &&
+      lastMessage.id !== lastProcessedMessageId.current
+    ) {
+      console.log("🔍 Canvas Debug: Processing new message:", lastMessage.id);
+      lastProcessedMessageId.current = lastMessage.id;
+
+      lastMessage.parts.forEach((part) => {
+        if (isToolUIPart(part) && part.state === "output-available") {
+          const toolName = getToolName(part);
+          const result = part.output;
+
+          console.log("🔍 Canvas Debug: Found tool result:", {
+            toolName,
+            result,
+          });
+
+          // Create unique identifier for this tool call
+          const toolCallKey = `${part.toolCallId}-${toolName}`;
+
+          // Canvas processing re-enabled for chart artifacts
+          if (
+            true &&
+            (toolName === "create_chart" || toolName === "create_dashboard") &&
+            (result as any)?.success &&
+            !processedToolCalls.current.has(toolCallKey)
+          ) {
+            console.log(
+              "🎯 Canvas Debug: Chart tool success detected, creating canvas artifact:",
+              result,
+            );
+
+            // Mark as processed
+            processedToolCalls.current.add(toolCallKey);
+
+            // Create canvas artifact with safe JSON parsing
+            const typedResult = result as any;
+            let artifactData = {};
+            try {
+              const parsed = JSON.parse(typedResult.artifact?.content || "{}");
+              artifactData = parsed;
+              console.log(
+                "📊 Canvas Debug: Parsed artifact data:",
+                artifactData,
+              );
+            } catch (e) {
+              console.warn(
+                "⚠️ Canvas Debug: Failed to parse artifact content:",
+                e,
+              );
+            }
+
+            const artifact = {
+              id:
+                typedResult.artifactId ||
+                `${toolName.replace("create_", "")}-${Date.now()}`,
+              type:
+                toolName === "create_dashboard"
+                  ? ("dashboard" as const)
+                  : ("chart" as const),
+              title:
+                typedResult.artifact?.title ||
+                (toolName === "create_dashboard" ? "Dashboard" : "Chart"),
+              data: artifactData,
+              metadata: {
+                chartType: typedResult.chartType,
+                dataPoints:
+                  typedResult.totalDataPoints || typedResult.dataPoints,
+                charts: typedResult.chartCount,
+                lastUpdated: "now",
+              },
+            };
+
+            // Add canvas artifact immediately for proper state synchronization
+            console.log("🚀 Canvas Debug: Adding canvas artifact:", artifact);
+            console.log(
+              "🔍 Canvas Debug: Current canvas state - isVisible:",
+              isCanvasVisible,
+              "artifacts:",
+              canvasArtifacts.length,
+            );
+            addCanvasArtifact(artifact);
+            console.log(
+              "✅ Canvas Debug: addCanvasArtifact called, should trigger visibility change",
+            );
+          } else {
+            console.log("⏭️ Canvas Debug: Skipping tool result:", {
+              toolName,
+              isSuccess: (result as any)?.success,
+              alreadyProcessed: processedToolCalls.current.has(toolCallKey),
+              processedToolCalls: Array.from(processedToolCalls.current),
+            });
+          }
+        }
+      });
+    }
+  }, [messages.length, messages[messages.length - 1]?.id, addCanvasArtifact]);
+
+  // Listen for canvas show events
+  useEffect(() => {
+    const handleCanvasShow = () => {
+      console.log(
+        "🎯 Canvas Debug: Canvas show event triggered, artifacts:",
+        canvasArtifacts.length,
+      );
+      console.log(
+        "🔍 Canvas Debug: Current canvas state - isVisible:",
+        isCanvasVisible,
+      );
+      if (canvasArtifacts.length > 0) {
+        console.log("✅ Canvas Debug: Calling showCanvas() - artifacts exist");
+        // Force show canvas by calling showCanvas directly
+        showCanvas();
+      } else {
+        console.log(
+          "⚠️ Canvas Debug: No artifacts available, cannot show canvas",
+        );
+      }
+    };
+
+    console.log("🔧 Canvas Debug: Setting up canvas:show event listener");
+    window.addEventListener("canvas:show", handleCanvasShow);
+    return () => {
+      console.log("🧹 Canvas Debug: Cleaning up canvas:show event listener");
+      window.removeEventListener("canvas:show", handleCanvasShow);
+    };
+  }, [canvasArtifacts, showCanvas, isCanvasVisible]);
+
+  console.log(
+    "🎬 ChatBot Debug: Rendering ChatBot with isCanvasVisible:",
+    isCanvasVisible,
+    "artifacts:",
+    canvasArtifacts.length,
+  );
+
   return (
     <>
       {particle}
-      <div
-        className={cn(
-          emptyMessage && "justify-center pb-24",
-          "flex flex-col min-w-0 relative h-full z-40",
-        )}
-      >
-        {emptyMessage ? (
-          <ChatGreeting />
-        ) : (
-          <>
-            <div
-              className={"flex flex-col gap-2 overflow-y-auto py-6 z-10"}
-              ref={containerRef}
-              onScroll={handleScroll}
-            >
-              {messages.map((message, index) => {
-                const isLastMessage = messages.length - 1 === index;
-                return (
-                  <PreviewMessage
+      {/* Resizable integrated layout */}
+      {isCanvasVisible
+        ? (() => {
+            console.log(
+              "✨ ChatBot Debug: Rendering CANVAS LAYOUT (ResizablePanelGroup)",
+            );
+            return (
+              <ResizablePanelGroup direction="horizontal" className="h-full">
+                {/* Chat Panel */}
+                <ResizablePanel defaultSize={65} minSize={40} maxSize={80}>
+                  <ChatContent
+                    emptyMessage={emptyMessage}
+                    containerRef={containerRef}
+                    handleScroll={handleScroll}
+                    messages={messages}
                     threadId={threadId}
-                    messageIndex={index}
-                    prevMessage={messages[index - 1]}
-                    key={message.id}
-                    message={message}
                     status={status}
                     addToolResult={addToolResult}
-                    isLoading={isLoading || isPendingToolCall}
-                    isLastMessage={isLastMessage}
+                    isLoading={isLoading}
+                    isPendingToolCall={isPendingToolCall}
                     setMessages={setMessages}
                     sendMessage={sendMessage}
-                    className={
-                      isLastMessage &&
-                      message.role != "user" &&
-                      !space &&
-                      message.parts.length > 1
-                        ? "min-h-[calc(55dvh-40px)]"
-                        : ""
-                    }
+                    space={space}
+                    error={error}
+                    isAtBottom={isAtBottom}
+                    scrollToBottom={scrollToBottom}
+                    input={input}
+                    setInput={setInput}
+                    stop={stop}
+                    isFirstTime={isFirstTime}
+                    handleFocus={handleFocus}
+                    isDeleteThreadPopupOpen={isDeleteThreadPopupOpen}
+                    setIsDeleteThreadPopupOpen={setIsDeleteThreadPopupOpen}
                   />
-                );
-              })}
-              {space && (
-                <>
-                  <div className="w-full mx-auto max-w-3xl px-6 relative">
-                    <div className={space == "space" ? "opacity-0" : ""}>
-                      <Think />
-                    </div>
-                  </div>
-                  <div className="min-h-[calc(55dvh-56px)]" />
-                </>
-              )}
+                </ResizablePanel>
 
-              {error && <ErrorMessage error={error} />}
-              <div className="min-w-0 min-h-52" />
-            </div>
-          </>
-        )}
+                {/* Resizable Handle */}
+                <ResizableHandle className="w-1 bg-border hover:bg-border/80 transition-colors" />
 
-        <div
-          className={clsx(
-            messages.length && "absolute bottom-14",
-            "w-full z-10",
-          )}
-        >
-          <div className="max-w-3xl mx-auto relative flex justify-center items-center -top-2">
-            <ScrollToBottomButton
-              show={!isAtBottom && messages.length > 0}
-              onClick={scrollToBottom}
-            />
-          </div>
-
-          <PromptInput
-            input={input}
-            threadId={threadId}
-            sendMessage={sendMessage}
-            setInput={setInput}
-            isLoading={isLoading || isPendingToolCall}
-            onStop={stop}
-            onFocus={isFirstTime ? undefined : handleFocus}
-          />
-        </div>
-        <DeleteThreadPopup
-          threadId={threadId}
-          onClose={() => setIsDeleteThreadPopupOpen(false)}
-          open={isDeleteThreadPopupOpen}
-        />
-      </div>
+                {/* Canvas Panel */}
+                <ResizablePanel defaultSize={35} minSize={20} maxSize={60}>
+                  <CanvasPanel
+                    isVisible={isCanvasVisible}
+                    onClose={closeCanvas}
+                    artifacts={canvasArtifacts}
+                    activeArtifactId={activeArtifactId}
+                    onArtifactSelect={setActiveArtifactId}
+                    isIntegrated={true}
+                  />
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            );
+          })()
+        : (() => {
+            console.log(
+              "💬 ChatBot Debug: Rendering CHAT-ONLY LAYOUT (no canvas)",
+            );
+            return (
+              <ChatContent
+                emptyMessage={emptyMessage}
+                containerRef={containerRef}
+                handleScroll={handleScroll}
+                messages={messages}
+                threadId={threadId}
+                status={status}
+                addToolResult={addToolResult}
+                isLoading={isLoading}
+                isPendingToolCall={isPendingToolCall}
+                setMessages={setMessages}
+                sendMessage={sendMessage}
+                space={space}
+                error={error}
+                isAtBottom={isAtBottom}
+                scrollToBottom={scrollToBottom}
+                input={input}
+                setInput={setInput}
+                stop={stop}
+                isFirstTime={isFirstTime}
+                handleFocus={handleFocus}
+                isDeleteThreadPopupOpen={isDeleteThreadPopupOpen}
+                setIsDeleteThreadPopupOpen={setIsDeleteThreadPopupOpen}
+              />
+            );
+          })()}
     </>
   );
 }
@@ -477,40 +823,5 @@ function DeleteThreadPopup({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-interface ScrollToBottomButtonProps {
-  show: boolean;
-  onClick: () => void;
-  className?: string;
-}
-
-function ScrollToBottomButton({
-  show,
-  onClick,
-  className,
-}: ScrollToBottomButtonProps) {
-  return (
-    <AnimatePresence>
-      {show && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.8 }}
-          transition={{ duration: 0.2, ease: "easeInOut" }}
-          className={className}
-        >
-          <Button
-            onClick={onClick}
-            className="shadow-lg backdrop-blur-sm border transition-colors"
-            size="icon"
-            variant="ghost"
-          >
-            <ArrowDown />
-          </Button>
-        </motion.div>
-      )}
-    </AnimatePresence>
   );
 }
