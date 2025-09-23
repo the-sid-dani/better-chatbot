@@ -41,15 +41,31 @@ export interface SankeyChartProps {
 
 // Color scheme for sankey nodes and links
 const chartColors = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
 ];
 
 export function SankeyChart(props: SankeyChartProps) {
   const { title, nodes, links, description } = props;
+
+  // Tooltip state for interactive hover
+  const [tooltip, setTooltip] = React.useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    data: {
+      type: 'node' | 'link';
+      content: any;
+    } | null;
+  }>({
+    visible: false,
+    x: 0,
+    y: 0,
+    data: null
+  });
 
   const deduplicateData = React.useMemo(() => {
     // Deduplicate nodes
@@ -165,10 +181,37 @@ export function SankeyChart(props: SankeyChartProps) {
             <g key={`link-${index}`}>
               <path
                 d={pathData}
-                stroke={chartColors[index % chartColors.length]}
-                strokeWidth={Math.max(2, link.value / 10)}
+                stroke={`var(--chart-${(index % 5) + 1})`}
+                strokeWidth={Math.max(3, Math.min(8, link.value / 5))}
                 fill="none"
-                opacity={0.6}
+                opacity={0.7}
+                style={{ cursor: 'pointer' }}
+                onMouseEnter={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setTooltip({
+                    visible: true,
+                    x: e.clientX,
+                    y: e.clientY,
+                    data: {
+                      type: 'link',
+                      content: {
+                        source: link.sourceName || link.source,
+                        target: link.targetName || link.target,
+                        value: link.value
+                      }
+                    }
+                  });
+                }}
+                onMouseLeave={() => {
+                  setTooltip(prev => ({ ...prev, visible: false }));
+                }}
+                onMouseMove={(e) => {
+                  setTooltip(prev => ({
+                    ...prev,
+                    x: e.clientX,
+                    y: e.clientY
+                  }));
+                }}
               />
               {/* Link label */}
               <text
@@ -176,7 +219,9 @@ export function SankeyChart(props: SankeyChartProps) {
                 y={(sourceY + targetY) / 2 - 10}
                 textAnchor="middle"
                 fontSize="10"
-                fill="hsl(var(--muted-foreground))"
+                fill="hsl(var(--foreground))"
+                fontWeight="500"
+                style={{ pointerEvents: 'none' }}
               >
                 {link.value.toLocaleString()}
               </text>
@@ -189,6 +234,14 @@ export function SankeyChart(props: SankeyChartProps) {
           const pos = nodePositions.get(node.id);
           if (!pos) return null;
 
+          const nodeConnections = deduplicateData.links.filter(
+            link => link.source === node.id || link.target === node.id
+          );
+          const totalInflow = deduplicateData.links.filter(link => link.target === node.id)
+            .reduce((sum, link) => sum + link.value, 0);
+          const totalOutflow = deduplicateData.links.filter(link => link.source === node.id)
+            .reduce((sum, link) => sum + link.value, 0);
+
           return (
             <g key={node.id}>
               <rect
@@ -196,11 +249,38 @@ export function SankeyChart(props: SankeyChartProps) {
                 y={pos.y}
                 width={pos.width}
                 height={pos.height}
-                fill={chartColors[index % chartColors.length]}
+                fill={`var(--chart-${(index % 5) + 1})`}
                 stroke="hsl(var(--border))"
-                strokeWidth="1"
-                rx="4"
-                opacity={0.8}
+                strokeWidth="2"
+                rx="6"
+                opacity={0.9}
+                style={{ cursor: 'pointer' }}
+                onMouseEnter={(e) => {
+                  setTooltip({
+                    visible: true,
+                    x: e.clientX,
+                    y: e.clientY,
+                    data: {
+                      type: 'node',
+                      content: {
+                        name: node.name,
+                        connections: nodeConnections.length,
+                        inflow: totalInflow,
+                        outflow: totalOutflow
+                      }
+                    }
+                  });
+                }}
+                onMouseLeave={() => {
+                  setTooltip(prev => ({ ...prev, visible: false }));
+                }}
+                onMouseMove={(e) => {
+                  setTooltip(prev => ({
+                    ...prev,
+                    x: e.clientX,
+                    y: e.clientY
+                  }));
+                }}
               />
               <text
                 x={pos.x + pos.width / 2}
@@ -208,8 +288,9 @@ export function SankeyChart(props: SankeyChartProps) {
                 textAnchor="middle"
                 dominantBaseline="middle"
                 fontSize="12"
-                fill="hsl(var(--background))"
+                fill="white"
                 fontWeight="bold"
+                style={{ pointerEvents: 'none' }}
               >
                 {node.name}
               </text>
@@ -218,7 +299,84 @@ export function SankeyChart(props: SankeyChartProps) {
         })}
       </svg>
     );
-  }, [layout, deduplicateData]);
+  }, [layout, deduplicateData, setTooltip]);
+
+  // Custom tooltip component matching bar chart styling
+  const CustomTooltip = React.useMemo(() => {
+    if (!tooltip.visible || !tooltip.data) return null;
+
+    const { type, content } = tooltip.data;
+
+    return (
+      <div
+        className="rounded-lg border bg-background p-2 shadow-sm pointer-events-none z-50 fixed"
+        style={{
+          left: tooltip.x + 10,
+          top: tooltip.y - 10,
+        }}
+      >
+        {type === 'link' ? (
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                Flow
+              </span>
+              <span className="font-bold text-muted-foreground">
+                {content.source} → {content.target}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                Value
+              </span>
+              <span className="font-bold">
+                {content.value.toLocaleString()}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                Node
+              </span>
+              <span className="font-bold text-muted-foreground">
+                {content.name}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                Connections
+              </span>
+              <span className="font-bold">
+                {content.connections}
+              </span>
+            </div>
+            {content.inflow > 0 && (
+              <div className="flex flex-col">
+                <span className="text-[0.70rem] uppercase text-muted-foreground">
+                  Inflow
+                </span>
+                <span className="font-bold">
+                  {content.inflow.toLocaleString()}
+                </span>
+              </div>
+            )}
+            {content.outflow > 0 && (
+              <div className="flex flex-col">
+                <span className="text-[0.70rem] uppercase text-muted-foreground">
+                  Outflow
+                </span>
+                <span className="font-bold">
+                  {content.outflow.toLocaleString()}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }, [tooltip]);
 
   return (
     <Card className="bg-card h-full flex flex-col">
@@ -239,8 +397,9 @@ export function SankeyChart(props: SankeyChartProps) {
       <CardContent className="flex-1 pb-0 pt-2 min-h-0">
         <ChartContainer config={chartConfig} className="h-full w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <div className="w-full h-full flex items-center justify-center">
+            <div className="w-full h-full flex items-center justify-center relative">
               <SankeyVisualization />
+              <CustomTooltip />
             </div>
           </ResponsiveContainer>
         </ChartContainer>

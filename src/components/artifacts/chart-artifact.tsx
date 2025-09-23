@@ -4,6 +4,18 @@ import { ArtifactContentProps, BaseArtifact } from "app-types/artifacts";
 import { BarChart } from "../tool-invocation/bar-chart";
 import { LineChart } from "../tool-invocation/line-chart";
 import { PieChart } from "../tool-invocation/pie-chart";
+// Import all new chart components
+import { AreaChart } from "../tool-invocation/area-chart";
+import { ScatterChart } from "../tool-invocation/scatter-chart";
+import { RadarChart } from "../tool-invocation/radar-chart";
+import { FunnelChart } from "../tool-invocation/funnel-chart";
+import { TreemapChart } from "../tool-invocation/treemap-chart";
+import { SankeyChart } from "../tool-invocation/sankey-chart";
+import { RadialBarChart } from "../tool-invocation/radial-bar-chart";
+import { ComposedChart } from "../tool-invocation/composed-chart";
+import { GeographicChart } from "../tool-invocation/geographic-chart";
+import { GaugeChart } from "../tool-invocation/gauge-chart";
+import { CalendarHeatmap } from "../tool-invocation/calendar-heatmap";
 import { Card, CardContent } from "ui/card";
 import { Alert, AlertDescription } from "ui/alert";
 import { AlertTriangle } from "lucide-react";
@@ -91,6 +103,151 @@ export function ChartArtifactContent({
               data={chartData.data}
               description={chartData.description}
               unit={chartData.unit}
+            />
+          </div>
+        );
+
+      // New Recharts-native chart types
+      case "area-chart":
+        return (
+          <div className="w-full h-full">
+            <AreaChart
+              title={chartData.title}
+              data={chartData.data}
+              description={chartData.description}
+              xAxisLabel={chartData.xAxisLabel}
+              yAxisLabel={chartData.yAxisLabel}
+              areaType={chartData.areaType}
+            />
+          </div>
+        );
+
+      case "scatter-chart":
+        return (
+          <div className="w-full h-full">
+            <ScatterChart
+              title={chartData.title}
+              data={chartData.data}
+              description={chartData.description}
+              xAxisLabel={chartData.xAxisLabel}
+              yAxisLabel={chartData.yAxisLabel}
+              showBubbles={chartData.showBubbles}
+            />
+          </div>
+        );
+
+      case "radar-chart":
+        return (
+          <div className="w-full h-full">
+            <RadarChart
+              title={chartData.title}
+              data={chartData.data}
+              description={chartData.description}
+            />
+          </div>
+        );
+
+      case "funnel-chart":
+        return (
+          <div className="w-full h-full">
+            <FunnelChart
+              title={chartData.title}
+              data={chartData.data}
+              description={chartData.description}
+              unit={chartData.unit}
+            />
+          </div>
+        );
+
+      case "treemap-chart":
+        return (
+          <div className="w-full h-full">
+            <TreemapChart
+              title={chartData.title}
+              data={chartData.data}
+              description={chartData.description}
+            />
+          </div>
+        );
+
+      case "sankey-chart":
+        return (
+          <div className="w-full h-full">
+            <SankeyChart
+              title={chartData.title}
+              nodes={chartData.nodes}
+              links={chartData.links}
+              description={chartData.description}
+            />
+          </div>
+        );
+
+      case "radial-bar-chart":
+        return (
+          <div className="w-full h-full">
+            <RadialBarChart
+              title={chartData.title}
+              data={chartData.data}
+              description={chartData.description}
+              innerRadius={chartData.innerRadius}
+              outerRadius={chartData.outerRadius}
+            />
+          </div>
+        );
+
+      case "composed-chart":
+        return (
+          <div className="w-full h-full">
+            <ComposedChart
+              title={chartData.title}
+              data={chartData.data}
+              description={chartData.description}
+              xAxisLabel={chartData.xAxisLabel}
+              yAxisLabel={chartData.yAxisLabel}
+            />
+          </div>
+        );
+
+      // External library chart types
+      case "geographic-chart":
+        return (
+          <div className="w-full h-full">
+            <GeographicChart
+              title={chartData.title}
+              data={chartData.data}
+              geoType={chartData.geoType}
+              colorScale={chartData.colorScale}
+              description={chartData.description}
+            />
+          </div>
+        );
+
+      case "gauge-chart":
+        return (
+          <div className="w-full h-full">
+            <GaugeChart
+              title={chartData.title}
+              value={chartData.value}
+              minValue={chartData.minValue}
+              maxValue={chartData.maxValue}
+              gaugeType={chartData.gaugeType}
+              unit={chartData.unit}
+              thresholds={chartData.thresholds}
+              description={chartData.description}
+            />
+          </div>
+        );
+
+      case "calendar-heatmap":
+        return (
+          <div className="w-full h-full">
+            <CalendarHeatmap
+              title={chartData.title}
+              data={chartData.data}
+              startDate={chartData.startDate}
+              endDate={chartData.endDate}
+              colorScale={chartData.colorScale}
+              description={chartData.description}
             />
           </div>
         );

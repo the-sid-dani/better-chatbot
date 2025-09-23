@@ -27,6 +27,7 @@ import { RadialBarChart } from "./tool-invocation/radial-bar-chart";
 import { ComposedChart } from "./tool-invocation/composed-chart";
 import { GeographicChart } from "./tool-invocation/geographic-chart";
 import { GaugeChart } from "./tool-invocation/gauge-chart";
+import { CalendarHeatmap } from "./tool-invocation/calendar-heatmap";
 
 interface CanvasArtifact {
   id: string;
@@ -93,13 +94,53 @@ function ChartRenderer({ artifact }: { artifact: CanvasArtifact }) {
     );
   }
 
-  const { chartType, title, data, description, yAxisLabel } = artifact.data;
+  const {
+    chartType,
+    title,
+    data,
+    description,
+    yAxisLabel,
+    xAxisLabel,
+    areaType,
+    showBubbles,
+    geoType,
+    colorScale,
+    value,
+    minValue,
+    maxValue,
+    gaugeType,
+    unit,
+    thresholds,
+    nodes,
+    links,
+    innerRadius,
+    outerRadius,
+    startDate,
+    endDate
+  } = artifact.data;
 
   const chartProps = {
     title: title || artifact.title,
     data: data || [],
     description,
     yAxisLabel,
+    xAxisLabel,
+    areaType,
+    showBubbles,
+    geoType,
+    colorScale,
+    value,
+    minValue,
+    maxValue,
+    gaugeType,
+    unit,
+    thresholds,
+    nodes,
+    links,
+    innerRadius,
+    outerRadius,
+    startDate,
+    endDate,
   };
 
   // Add sizing wrapper for all charts
@@ -145,6 +186,9 @@ function ChartRenderer({ artifact }: { artifact: CanvasArtifact }) {
         return <GeographicChart {...chartProps} />;
       case "gauge":
         return <GaugeChart {...chartProps} />;
+      case "calendar-heatmap":
+      case "heatmap":
+        return <CalendarHeatmap {...chartProps} />;
       default:
         // Fallback to bar chart for unknown types
         console.warn(

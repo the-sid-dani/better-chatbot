@@ -1,7 +1,8 @@
 "use client";
 
-import * as React from "react";
 import dynamic from "next/dynamic";
+import * as React from "react";
+import { createPortal } from "react-dom";
 
 import {
   Card,
@@ -10,28 +11,25 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  ChartConfig,
-  ChartContainer,
-} from "@/components/ui/chart";
+import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 
-import { JsonViewPopup } from "../json-view-popup";
 import { generateUniqueKey } from "lib/utils";
+import { JsonViewPopup } from "../json-view-popup";
 
 // Dynamic import for react-simple-maps to avoid SSR issues
 const ComposableMap = dynamic(
   () => import("react-simple-maps").then((mod) => mod.ComposableMap),
-  { ssr: false }
+  { ssr: false },
 );
 
 const Geographies = dynamic(
   () => import("react-simple-maps").then((mod) => mod.Geographies),
-  { ssr: false }
+  { ssr: false },
 );
 
 const Geography = dynamic(
   () => import("react-simple-maps").then((mod) => mod.Geography),
-  { ssr: false }
+  { ssr: false },
 );
 
 // GeographicChart component props interface
@@ -52,15 +50,70 @@ export interface GeographicChartProps {
   description?: string;
 }
 
-// Color scales for geographic data visualization
+// State code mappings: FIPS to postal codes for US states
+const fipsToPostalCode: { [key: string]: string } = {
+  "01": "AL",
+  "02": "AK",
+  "04": "AZ",
+  "05": "AR",
+  "06": "CA",
+  "08": "CO",
+  "09": "CT",
+  "10": "DE",
+  "11": "DC",
+  "12": "FL",
+  "13": "GA",
+  "15": "HI",
+  "16": "ID",
+  "17": "IL",
+  "18": "IN",
+  "19": "IA",
+  "20": "KS",
+  "21": "KY",
+  "22": "LA",
+  "23": "ME",
+  "24": "MD",
+  "25": "MA",
+  "26": "MI",
+  "27": "MN",
+  "28": "MS",
+  "29": "MO",
+  "30": "MT",
+  "31": "NE",
+  "32": "NV",
+  "33": "NH",
+  "34": "NJ",
+  "35": "NM",
+  "36": "NY",
+  "37": "NC",
+  "38": "ND",
+  "39": "OH",
+  "40": "OK",
+  "41": "OR",
+  "42": "PA",
+  "44": "RI",
+  "45": "SC",
+  "46": "SD",
+  "47": "TN",
+  "48": "TX",
+  "49": "UT",
+  "50": "VT",
+  "51": "VA",
+  "53": "WA",
+  "54": "WV",
+  "55": "WI",
+  "56": "WY",
+};
+
+// Color scales for geographic data visualization using design system
 const colorScales = {
   blues: [
-    "hsl(var(--muted))",
-    "hsl(217, 91%, 95%)",
-    "hsl(217, 91%, 85%)",
-    "hsl(217, 91%, 75%)",
-    "hsl(217, 91%, 60%)",
-    "hsl(217, 91%, 45%)",
+    "hsl(var(--muted))", // No data / background
+    "hsl(210, 40%, 85%)", // Very light blue
+    "hsl(210, 50%, 70%)", // Light blue
+    "hsl(210, 60%, 55%)", // Medium blue
+    "hsl(210, 70%, 40%)", // Blue
+    "hsl(210, 80%, 25%)", // Dark blue
   ],
   reds: [
     "hsl(var(--muted))",
@@ -80,20 +133,20 @@ const colorScales = {
   ],
   viridis: [
     "hsl(var(--muted))",
-    "hsl(290, 85%, 85%)",
-    "hsl(250, 85%, 75%)",
-    "hsl(200, 85%, 65%)",
-    "hsl(150, 85%, 55%)",
-    "hsl(80, 85%, 45%)",
+    "hsl(var(--chart-5))",
+    "hsl(var(--chart-4))",
+    "hsl(var(--chart-3))",
+    "hsl(var(--chart-2))",
+    "hsl(var(--chart-1))",
   ],
 };
 
-// GeoJSON URLs for different geography types
+// GeoJSON URLs for different geography types - now using local files
 const geoDataUrls = {
-  world: "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json",
-  "usa-states": "https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json",
-  "usa-counties": "https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json",
-  "usa-dma": "https://gist.github.com/simzou/6459889/raw/nielsentopo.json",
+  world: "/geo/world-countries-110m.json",
+  "usa-states": "/geo/us-states-10m.json",
+  "usa-counties": "/geo/us-counties-10m.json",
+  "usa-dma": "/geo/nielsentopo.json",
 };
 
 export function GeographicChart(props: GeographicChartProps) {
@@ -102,6 +155,14 @@ export function GeographicChart(props: GeographicChartProps) {
   const [geoData, setGeoData] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [tooltip, setTooltip] = React.useState<{
+    name: string;
+    value: number | undefined;
+    x: number;
+    y: number;
+  } | null>(null);
+
+
 
   const deduplicateData = React.useMemo(() => {
     return data.reduce(
@@ -122,7 +183,7 @@ export function GeographicChart(props: GeographicChartProps) {
 
   // Create value-to-color mapping
   const valueToColor = React.useMemo(() => {
-    const values = deduplicateData.map(d => d.value);
+    const values = deduplicateData.map((d) => d.value);
     const minValue = Math.min(...values);
     const maxValue = Math.max(...values);
     const colors = colorScales[colorScale];
@@ -130,19 +191,44 @@ export function GeographicChart(props: GeographicChartProps) {
     return (value: number) => {
       if (minValue === maxValue) return colors[1];
       const normalized = (value - minValue) / (maxValue - minValue);
-      const index = Math.min(Math.floor(normalized * (colors.length - 1)), colors.length - 2) + 1;
+      const index =
+        Math.min(
+          Math.floor(normalized * (colors.length - 1)),
+          colors.length - 2,
+        ) + 1;
       return colors[index];
     };
   }, [deduplicateData, colorScale]);
 
-  // Create region code to value mapping
+  // Create region code to value mapping with flexible code matching
   const regionValues = React.useMemo(() => {
     const mapping: { [key: string]: number } = {};
-    deduplicateData.forEach(item => {
-      mapping[item.regionCode] = item.value;
+
+    deduplicateData.forEach((item) => {
+      const code = item.regionCode.toUpperCase();
+      // Store by original code
+      mapping[code] = item.value;
+
+      // For US states, also store by FIPS code if we have a postal code
+      if (geoType === "usa-states") {
+        // If it's a 2-letter postal code, find corresponding FIPS
+        if (code.length === 2) {
+          const fipsCode = Object.entries(fipsToPostalCode).find(
+            ([_, postal]) => postal === code,
+          )?.[0];
+          if (fipsCode) {
+            mapping[fipsCode] = item.value;
+          }
+        }
+        // If it's a FIPS code, also store by postal code
+        else if (fipsToPostalCode[code]) {
+          mapping[fipsToPostalCode[code]] = item.value;
+        }
+      }
     });
+
     return mapping;
-  }, [deduplicateData]);
+  }, [deduplicateData, geoType]);
 
   // Fetch geographic data
   React.useEffect(() => {
@@ -155,13 +241,44 @@ export function GeographicChart(props: GeographicChartProps) {
         const response = await fetch(url);
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch geographic data: ${response.statusText}`);
+          throw new Error(
+            `Failed to fetch geographic data: ${response.statusText}`,
+          );
         }
 
         const data = await response.json();
+
+        // Log debugging info for development
+        if (process.env.NODE_ENV === "development") {
+          console.log(`Geographic data loaded for ${geoType}:`, {
+            type: geoType,
+            hasArcs: !!data.arcs,
+            hasObjects: !!data.objects,
+            objectKeys: data.objects ? Object.keys(data.objects) : [],
+            dataLength: Array.isArray(data) ? data.length : "not array",
+          });
+
+          // Log sample region codes from the data
+          if (data.objects?.states?.geometries) {
+            const sampleRegions = data.objects.states.geometries
+              .slice(0, 3)
+              .map((geo: any) => ({
+                id: geo.id,
+                name: geo.properties?.name,
+                fipsCode: geo.id,
+                postalCode: fipsToPostalCode[geo.id],
+              }));
+            console.log("Sample regions from geographic data:", sampleRegions);
+          }
+
+          // Log our region values mapping
+          console.log("Region values mapping:", regionValues);
+        }
+
         setGeoData(data);
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to load geographic data";
+        const message =
+          err instanceof Error ? err.message : "Failed to load geographic data";
         setError(message);
         console.error("Geographic chart error:", err);
       } finally {
@@ -176,7 +293,7 @@ export function GeographicChart(props: GeographicChartProps) {
   const chartConfig = React.useMemo(() => {
     const config: ChartConfig = {};
 
-    deduplicateData.forEach((item, index) => {
+    deduplicateData.forEach((item, _index) => {
       config[item.regionCode] = {
         label: item.regionName,
         color: valueToColor(item.value),
@@ -190,7 +307,9 @@ export function GeographicChart(props: GeographicChartProps) {
     if (loading) {
       return (
         <div className="w-full h-full flex items-center justify-center">
-          <div className="animate-pulse text-muted-foreground">Loading geographic data...</div>
+          <div className="animate-pulse text-muted-foreground">
+            Loading geographic data...
+          </div>
         </div>
       );
     }
@@ -209,38 +328,168 @@ export function GeographicChart(props: GeographicChartProps) {
     if (!geoData) {
       return (
         <div className="w-full h-full flex items-center justify-center">
-          <div className="text-muted-foreground">No geographic data available</div>
+          <div className="text-muted-foreground">
+            No geographic data available
+          </div>
         </div>
       );
     }
 
+    // Determine projection based on geography type
+    const getProjection = () => {
+      switch (geoType) {
+        case "world":
+          return "geoNaturalEarth1";
+        case "usa-states":
+        case "usa-counties":
+        case "usa-dma":
+          return "geoAlbersUsa";
+        default:
+          return "geoNaturalEarth1";
+      }
+    };
+
     return (
       <ComposableMap
-        projection="geoAlbersUsa"
+        projection={getProjection()}
         style={{ width: "100%", height: "100%" }}
       >
         <Geographies geography={geoData}>
           {({ geographies }: any) =>
             geographies.map((geo: any) => {
-              const regionCode = geo.id || geo.properties?.NAME || geo.properties?.name;
-              const value = regionValues[regionCode];
-              const fillColor = value !== undefined ? valueToColor(value) : "hsl(var(--muted))";
+              // Enhanced region code mapping for different geography types
+              let regionCode = "";
+              let value: number | undefined;
+
+              switch (geoType) {
+                case "usa-states":
+                  // For US states, use FIPS code (geo.id) as primary
+                  regionCode = geo.id;
+                  value = regionValues[regionCode];
+
+                  // If no value found, try postal code lookup
+                  if (value === undefined && regionCode) {
+                    const postalCode = fipsToPostalCode[regionCode];
+                    if (postalCode) {
+                      value = regionValues[postalCode];
+                    }
+                  }
+
+                  // Fallback to property-based matching
+                  if (value === undefined) {
+                    const fallbackCode =
+                      geo.properties?.STUSPS || geo.properties?.NAME;
+                    if (fallbackCode) {
+                      value = regionValues[fallbackCode.toUpperCase()];
+                    }
+                  }
+                  break;
+
+                case "usa-counties":
+                  regionCode = geo.properties?.NAME || geo.id;
+                  value = regionValues[regionCode];
+                  break;
+
+                case "usa-dma":
+                  regionCode =
+                    geo.properties?.NAME || geo.properties?.name || geo.id;
+                  value = regionValues[regionCode];
+                  break;
+
+                case "world":
+                  // For world map, try ISO codes and names
+                  regionCode =
+                    geo.properties?.ISO_A2 ||
+                    geo.properties?.NAME ||
+                    geo.properties?.name ||
+                    geo.id;
+                  value = regionValues[regionCode];
+                  break;
+
+                default:
+                  regionCode =
+                    geo.id || geo.properties?.NAME || geo.properties?.name;
+                  value = regionValues[regionCode];
+              }
+
+              const fillColor =
+                value !== undefined
+                  ? valueToColor(value)
+                  : "rgba(148, 163, 184, 0.06)"; // Very subtle gray overlay for no data
 
               return (
                 <Geography
                   key={geo.rsmKey}
                   geography={geo}
                   fill={fillColor}
-                  stroke="hsl(var(--border))"
+                  stroke="rgba(148, 163, 184, 0.25)"
                   strokeWidth={0.5}
                   style={{
                     default: { outline: "none" },
                     hover: {
-                      fill: "hsl(var(--accent))",
+                      fill:
+                        value !== undefined
+                          ? "hsl(210, 85%, 35%)"
+                          : "rgba(148, 163, 184, 0.12)", // Darker blue on hover or very slightly more visible gray
                       outline: "none",
-                      cursor: "pointer"
+                      cursor: value !== undefined ? "pointer" : "default",
+                      stroke: "rgba(148, 163, 184, 0.4)",
+                      strokeWidth: value !== undefined ? 1 : 0.5,
                     },
                     pressed: { outline: "none" },
+                  }}
+                  onMouseEnter={(event) => {
+                    const stateName =
+                      geo.properties?.name ||
+                      geo.properties?.NAME ||
+                      regionCode;
+
+                    // Enhanced coordinate calculation with fallback
+                    let x = event.clientX;
+                    let y = event.clientY;
+
+                    // Fallback if clientX/clientY are not available
+                    if (x === undefined || y === undefined) {
+                      const rect = event.currentTarget.getBoundingClientRect();
+                      x = rect.left + rect.width / 2;
+                      y = rect.top + rect.height / 2;
+                    }
+
+
+                    setTooltip({
+                      name: stateName,
+                      value: value,
+                      x: x,
+                      y: y,
+                    });
+                  }}
+                  onMouseMove={(event) => {
+                    // Enhanced coordinate calculation with fallback
+                    let x = event.clientX;
+                    let y = event.clientY;
+
+                    // Fallback if clientX/clientY are not available
+                    if (x === undefined || y === undefined) {
+                      const rect = event.currentTarget.getBoundingClientRect();
+                      x = rect.left + rect.width / 2;
+                      y = rect.top + rect.height / 2;
+                    }
+
+
+                    if (tooltip) {
+                      setTooltip((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              x: x,
+                              y: y,
+                            }
+                          : null,
+                      );
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    setTooltip(null);
                   }}
                 />
               );
@@ -252,7 +501,7 @@ export function GeographicChart(props: GeographicChartProps) {
   };
 
   return (
-    <Card className="bg-card h-full flex flex-col">
+    <Card className="bg-card h-full flex flex-col relative">
       <CardHeader className="flex flex-col gap-1 relative pb-1 flex-shrink-0">
         <CardTitle className="flex items-center text-sm">
           Geographic Chart - {title}
@@ -265,15 +514,52 @@ export function GeographicChart(props: GeographicChartProps) {
             />
           </div>
         </CardTitle>
-        {description && <CardDescription className="text-xs">{description}</CardDescription>}
+        {description && (
+          <CardDescription className="text-xs">{description}</CardDescription>
+        )}
       </CardHeader>
       <CardContent className="flex-1 pb-0 pt-2 min-h-0">
         <ChartContainer config={chartConfig} className="h-full w-full">
-          <div className="w-full h-full">
-            {renderMap()}
-          </div>
+          <div className="w-full h-full">{renderMap()}</div>
         </ChartContainer>
       </CardContent>
+
+      {/* Custom Tooltip - Portal-based rendering with clean design */}
+      {tooltip &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed z-50 rounded-lg border bg-background p-2 shadow-sm pointer-events-none text-xs"
+            style={{
+              left: tooltip.x + 10,
+              top: tooltip.y - 10,
+              transform: "translate(-50%, -100%)",
+            }}
+            data-testid="geographic-tooltip"
+          >
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-col">
+                <span className="text-[0.60rem] uppercase text-muted-foreground">
+                  Region
+                </span>
+                <span className="font-bold text-muted-foreground text-xs">
+                  {tooltip.name}
+                </span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[0.60rem] uppercase text-muted-foreground">
+                  Value
+                </span>
+                <span className="font-bold text-xs">
+                  {tooltip.value !== undefined
+                    ? tooltip.value.toLocaleString()
+                    : "No data"}
+                </span>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </Card>
   );
 }

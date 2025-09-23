@@ -165,20 +165,24 @@ export const sankeyChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return simple, serializable result for Vercel AI SDK
+      // Return success with artifact creation data (matches existing pattern)
       const result = {
         success: true,
-        artifactId: artifactId,
-        title: title,
-        message: `Created sankey chart "${title}" with ${nodes.length} nodes and ${links.length} flows`,
+        artifactId,
+        artifact: {
+          kind: "charts" as const,
+          title: `Sankey Chart: ${title}`,
+          content: JSON.stringify(chartContent, null, 2),
+          metadata: chartContent.metadata,
+        },
+        message: `Created sankey chart "${title}" with ${nodes.length} nodes and ${links.length} flows showing data flow visualization. The chart is now available in the Canvas workspace with beautiful styling.`,
         chartType: "sankey",
         nodeCount: nodes.length,
         linkCount: links.length,
         totalFlow: chartContent.metadata.totalFlow,
-        // Include artifact data as serializable JSON string
-        artifactContent: JSON.stringify(chartContent),
-        artifactTitle: `Sankey Chart: ${title}`,
-        artifactKind: "charts"
+        // Additional metadata for Canvas integration
+        canvasReady: true,
+        componentType: "SankeyChart",
       };
 
       // Note: Canvas artifact creation happens in ChatBot component via tool result detection

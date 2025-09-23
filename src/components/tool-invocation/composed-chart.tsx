@@ -28,7 +28,7 @@ import {
 
 import { JsonViewPopup } from "../json-view-popup";
 import { sanitizeCssVariableName } from "./shared.tool-invocation";
-import { generateUniqueKey } from "lib/utils";
+import { generateUniqueKey, formatChartNumber } from "lib/utils";
 
 // ComposedChart component props interface
 export interface ComposedChartProps {
@@ -184,6 +184,7 @@ export function ComposedChart(props: ComposedChartProps) {
                 axisLine={false}
                 tickMargin={10}
                 fontSize={12}
+                tickFormatter={formatChartNumber}
                 label={
                   yAxisLabel
                     ? {
@@ -199,17 +200,16 @@ export function ComposedChart(props: ComposedChartProps) {
               />
 
               {/* Render Area components first (background layers) */}
-              {seriesByType.area.map((seriesName, index) => {
+              {seriesByType.area.map((seriesName, _index) => {
                 const seriesKey = sanitizeCssVariableName(seriesName);
-                const color = chartColors[allSeriesNames.indexOf(seriesName) % chartColors.length];
 
                 return (
                   <Area
                     key={`area-${seriesName}`}
                     type="monotone"
                     dataKey={seriesKey}
-                    stroke={`hsl(${color})`}
-                    fill={`hsl(${color})`}
+                    stroke={`var(--color-${sanitizeCssVariableName(seriesName)})`}
+                    fill={`var(--color-${sanitizeCssVariableName(seriesName)})`}
                     fillOpacity={0.3}
                     strokeWidth={2}
                   />
@@ -217,33 +217,31 @@ export function ComposedChart(props: ComposedChartProps) {
               })}
 
               {/* Render Bar components */}
-              {seriesByType.bar.map((seriesName, index) => {
+              {seriesByType.bar.map((seriesName, _index) => {
                 const seriesKey = sanitizeCssVariableName(seriesName);
-                const color = chartColors[allSeriesNames.indexOf(seriesName) % chartColors.length];
 
                 return (
                   <Bar
                     key={`bar-${seriesName}`}
                     dataKey={seriesKey}
-                    fill={`hsl(${color})`}
+                    fill={`var(--color-${sanitizeCssVariableName(seriesName)})`}
                     radius={[2, 2, 0, 0]}
                   />
                 );
               })}
 
               {/* Render Line components last (foreground layers) */}
-              {seriesByType.line.map((seriesName, index) => {
+              {seriesByType.line.map((seriesName, _index) => {
                 const seriesKey = sanitizeCssVariableName(seriesName);
-                const color = chartColors[allSeriesNames.indexOf(seriesName) % chartColors.length];
 
                 return (
                   <Line
                     key={`line-${seriesName}`}
                     type="monotone"
                     dataKey={seriesKey}
-                    stroke={`hsl(${color})`}
+                    stroke={`var(--color-${sanitizeCssVariableName(seriesName)})`}
                     strokeWidth={3}
-                    dot={{ r: 4, fill: `hsl(${color})` }}
+                    dot={{ r: 4, fill: `var(--color-${sanitizeCssVariableName(seriesName)})` }}
                     activeDot={{ r: 6 }}
                   />
                 );

@@ -153,25 +153,24 @@ export function RadarChart(props: RadarChartProps) {
               <PolarGrid />
               <PolarAngleAxis
                 dataKey="metric"
-                tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }}
               />
               <PolarRadiusAxis
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }}
                 tickCount={5}
+                domain={[0, 'dataMax']}
               />
               <ChartTooltip
                 content={<ChartTooltipContent />}
               />
-              {seriesNames.map((seriesName, index) => {
-                const color = chartColors[index % chartColors.length];
-
+              {seriesNames.map((seriesName, _index) => {
                 return (
                   <Radar
                     key={seriesName}
                     name={seriesName}
                     dataKey={sanitizeCssVariableName(seriesName)}
-                    stroke={`hsl(${color})`}
-                    fill={`hsl(${color})`}
+                    stroke={`var(--color-${sanitizeCssVariableName(seriesName)})`}
+                    fill={`var(--color-${sanitizeCssVariableName(seriesName)})`}
                     fillOpacity={0.3}
                     strokeWidth={2}
                   />

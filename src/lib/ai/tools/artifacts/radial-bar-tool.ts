@@ -143,20 +143,24 @@ export const radialBarChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return simple, serializable result for Vercel AI SDK
+      // Return success with artifact creation data (matches existing pattern)
       const result = {
         success: true,
-        artifactId: artifactId,
-        title: title,
-        message: `Created radial bar chart "${title}" with ${data.length} metrics`,
+        artifactId,
+        artifact: {
+          kind: "charts" as const,
+          title: `Radial Bar Chart: ${title}`,
+          content: JSON.stringify(chartContent, null, 2),
+          metadata: chartContent.metadata,
+        },
+        message: `Created radial bar chart "${title}" with ${data.length} metrics in circular format. The chart is now available in the Canvas workspace with beautiful styling.`,
         chartType: "radial-bar",
         items: data.length,
         innerRadius,
         outerRadius,
-        // Include artifact data as serializable JSON string
-        artifactContent: JSON.stringify(chartContent),
-        artifactTitle: `Radial Bar Chart: ${title}`,
-        artifactKind: "charts"
+        // Additional metadata for Canvas integration
+        canvasReady: true,
+        componentType: "RadialBarChart",
       };
 
       // Note: Canvas artifact creation happens in ChatBot component via tool result detection

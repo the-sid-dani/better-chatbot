@@ -147,20 +147,24 @@ export const composedChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return simple, serializable result for Vercel AI SDK
+      // Return success with artifact creation data (matches existing pattern)
       const result = {
         success: true,
-        artifactId: artifactId,
-        title: title,
-        message: `Created composed chart "${title}" with ${data.length} data points and ${chartTypes.length} chart types`,
+        artifactId,
+        artifact: {
+          kind: "charts" as const,
+          title: `Composed Chart: ${title}`,
+          content: JSON.stringify(chartContent, null, 2),
+          metadata: chartContent.metadata,
+        },
+        message: `Created composed chart "${title}" with ${data.length} data points combining ${chartTypes.length} chart types. The chart is now available in the Canvas workspace with beautiful styling.`,
         chartType: "composed",
         dataPoints: data.length,
-        series: seriesNames.join(", "),
+        series: seriesNames,
         chartTypes: chartTypes.join(", "),
-        // Include artifact data as serializable JSON string
-        artifactContent: JSON.stringify(chartContent),
-        artifactTitle: `Composed Chart: ${title}`,
-        artifactKind: "charts"
+        // Additional metadata for Canvas integration
+        canvasReady: true,
+        componentType: "ComposedChart",
       };
 
       // Note: Canvas artifact creation happens in ChatBot component via tool result detection

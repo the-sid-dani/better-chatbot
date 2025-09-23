@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/chart";
 
 import { JsonViewPopup } from "../json-view-popup";
-import { generateUniqueKey } from "lib/utils";
+import { generateUniqueKey, generateUUID } from "lib/utils";
 
 // Dynamic import for react-gauge-component to avoid SSR issues
 const GaugeComponent = dynamic(
@@ -48,13 +48,22 @@ export interface GaugeChartProps {
   description?: string;
 }
 
-// Default color scheme aligned with design system
-const defaultColors = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
+// Color variable names (chart-1 ~ chart-5) - consistent with other charts
+const chartColors = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+];
+
+// Actual color values for react-gauge-component (which can't resolve CSS variables)
+const chartColorValues = [
+  "hsl(221.2 83.2% 53.3%)", // --chart-1 (blue)
+  "hsl(212 95% 68%)",        // --chart-2 (lighter blue)
+  "hsl(216 92% 60%)",        // --chart-3 (medium blue)
+  "hsl(210 98% 78%)",        // --chart-4 (light blue)
+  "hsl(212 97% 87%)",        // --chart-5 (very light blue)
 ];
 
 export function GaugeChart(props: GaugeChartProps) {
@@ -78,7 +87,7 @@ export function GaugeChart(props: GaugeChartProps) {
   }, [deduplicatedProps.value, minValue, maxValue]);
 
   // Generate gauge configuration
-  const gaugeConfig = React.useMemo(() => {
+  const _gaugeConfig = React.useMemo(() => {
     const config: any = {
       type: gaugeType === "speedometer" ? "semicircle" : gaugeType,
       labels: {
@@ -90,13 +99,7 @@ export function GaugeChart(props: GaugeChartProps) {
         }
       },
       arc: {
-        colorArray: thresholds ? thresholds.map(t => t.color) : [
-          defaultColors[0],
-          defaultColors[1],
-          defaultColors[2],
-          defaultColors[3],
-          defaultColors[4],
-        ],
+        colorArray: thresholds ? thresholds.map(t => t.color) : chartColorValues,
         width: 0.3,
         padding: 0.02,
       },
@@ -129,11 +132,6 @@ export function GaugeChart(props: GaugeChartProps) {
   const chartConfig = React.useMemo(() => {
     const config: ChartConfig = {};
 
-    config.gauge = {
-      label: title,
-      color: "hsl(var(--chart-1))",
-    };
-
     if (thresholds) {
       thresholds.forEach((threshold, index) => {
         config[`threshold-${index}`] = {
@@ -141,10 +139,29 @@ export function GaugeChart(props: GaugeChartProps) {
           color: threshold.color,
         };
       });
+    } else {
+      // Create config entries for default chart colors so they get resolved by ChartContainer
+      chartColors.forEach((color, index) => {
+        config[`chart-${index + 1}`] = {
+          label: `Chart Color ${index + 1}`,
+          color: color,
+        };
+      });
     }
 
     return config;
-  }, [title, thresholds]);
+  }, [thresholds]);
+
+  // Get resolved colors for the gauge component
+  // react-gauge-component can't resolve CSS variables, so we use actual values
+  const resolvedColors = React.useMemo(() => {
+    if (thresholds) {
+      return thresholds.map(t => t.color);
+    }
+
+    // Use actual color values from design system for react-gauge-component
+    return chartColorValues;
+  }, [thresholds]);
 
   return (
     <Card className="bg-card h-full flex flex-col">
@@ -173,13 +190,7 @@ export function GaugeChart(props: GaugeChartProps) {
                 formatTextValue={(value: number) => `${Math.round(value)}${unit || ""}`}
                 needleColor="hsl(var(--foreground))"
                 needleBaseColor="hsl(var(--muted-foreground))"
-                colors={thresholds ? thresholds.map(t => t.color) : [
-                  "#FF5F6D",
-                  "#FFC371",
-                  "#4ECDC4",
-                  "#45B7D1",
-                  "#96CEB4"
-                ]}
+                colors={resolvedColors}
                 textColor="hsl(var(--foreground))"
                 style={{ width: "100%", height: "100%" }}
               />

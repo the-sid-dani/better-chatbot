@@ -139,20 +139,23 @@ export const scatterChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return simple, serializable result for Vercel AI SDK
+      // Return success with artifact creation data (matches existing pattern)
       const result = {
         success: true,
-        artifactId: artifactId,
-        title: title,
-        message: `Created scatter chart "${title}" with ${chartContent.metadata.dataPoints} data points`,
+        artifactId,
+        artifact: {
+          kind: "charts" as const,
+          title: `Scatter Chart: ${title}`,
+          content: JSON.stringify(chartContent, null, 2),
+          metadata: chartContent.metadata,
+        },
+        message: `Created scatter chart "${title}" with ${chartContent.metadata.dataPoints} data points${showBubbles ? " (bubble chart)" : ""}. The chart is now available in the Canvas workspace with beautiful styling.`,
         chartType: "scatter",
-        showBubbles,
         dataPoints: chartContent.metadata.dataPoints,
-        series: seriesNames.join(", "),
-        // Include artifact data as serializable JSON string
-        artifactContent: JSON.stringify(chartContent),
-        artifactTitle: `Scatter Chart: ${title}`,
-        artifactKind: "charts"
+        series: seriesNames,
+        // Additional metadata for Canvas integration
+        canvasReady: true,
+        componentType: "ScatterChart",
       };
 
       // Note: Canvas artifact creation happens in ChatBot component via tool result detection

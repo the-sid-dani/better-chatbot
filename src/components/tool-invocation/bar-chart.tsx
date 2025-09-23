@@ -26,7 +26,7 @@ import {
 
 import { JsonViewPopup } from "../json-view-popup";
 import { sanitizeCssVariableName } from "./shared.tool-invocation";
-import { generateUniqueKey } from "lib/utils";
+import { generateUniqueKey, formatChartNumber } from "lib/utils";
 
 // BarChart component props interface
 export interface BarChartProps {
@@ -157,6 +157,7 @@ export function BarChart(props: BarChartProps) {
                   tickLine={false}
                   axisLine={false}
                   tickMargin={10}
+                  tickFormatter={formatChartNumber}
                   label={
                     yAxisLabel
                       ? {

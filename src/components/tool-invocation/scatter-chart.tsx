@@ -27,7 +27,7 @@ import {
 
 import { JsonViewPopup } from "../json-view-popup";
 import { sanitizeCssVariableName } from "./shared.tool-invocation";
-import { generateUniqueKey } from "lib/utils";
+import { generateUniqueKey, formatChartNumber } from "lib/utils";
 
 // ScatterChart component props interface
 export interface ScatterChartProps {
@@ -186,6 +186,7 @@ export function ScatterChart(props: ScatterChartProps) {
                 axisLine={false}
                 tickMargin={10}
                 fontSize={12}
+                tickFormatter={formatChartNumber}
                 label={
                   yAxisLabel
                     ? {
@@ -208,16 +209,15 @@ export function ScatterChart(props: ScatterChartProps) {
                 cursor={{ strokeDasharray: "3 3" }}
                 content={<ChartTooltipContent />}
               />
-              {seriesNames.map((seriesName, index) => {
+              {seriesNames.map((seriesName, _index) => {
                 const seriesKey = sanitizeCssVariableName(seriesName);
-                const color = chartColors[index % chartColors.length];
 
                 return (
                   <Scatter
                     key={seriesName}
                     name={seriesName}
                     data={chartData[seriesKey] || []}
-                    fill={`hsl(${color})`}
+                    fill={`var(--color-${sanitizeCssVariableName(seriesName)})`}
                     opacity={0.8}
                   />
                 );

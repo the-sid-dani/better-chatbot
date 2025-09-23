@@ -134,19 +134,23 @@ export const treemapChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return simple, serializable result for Vercel AI SDK
+      // Return success with artifact creation data (matches existing pattern)
       const result = {
         success: true,
-        artifactId: artifactId,
-        title: title,
-        message: `Created treemap chart "${title}" with ${data.length} top-level items`,
+        artifactId,
+        artifact: {
+          kind: "charts" as const,
+          title: `Treemap Chart: ${title}`,
+          content: JSON.stringify(chartContent, null, 2),
+          metadata: chartContent.metadata,
+        },
+        message: `Created treemap chart "${title}" with ${data.length} top-level items showing hierarchical data. The chart is now available in the Canvas workspace with beautiful styling.`,
         chartType: "treemap",
         topLevelItems: data.length,
         totalItems,
-        // Include artifact data as serializable JSON string
-        artifactContent: JSON.stringify(chartContent),
-        artifactTitle: `Treemap Chart: ${title}`,
-        artifactKind: "charts"
+        // Additional metadata for Canvas integration
+        canvasReady: true,
+        componentType: "TreemapChart",
       };
 
       // Note: Canvas artifact creation happens in ChatBot component via tool result detection

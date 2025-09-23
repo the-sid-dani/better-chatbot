@@ -148,12 +148,17 @@ export const gaugeChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return simple, serializable result for Vercel AI SDK
+      // Return success with artifact creation data (matches existing pattern)
       const result = {
         success: true,
-        artifactId: artifactId,
-        title: title,
-        message: `Created gauge chart "${title}" showing ${clampedValue}${unit || ""} (${chartContent.metadata.percentage}%)`,
+        artifactId,
+        artifact: {
+          kind: "charts" as const,
+          title: `Gauge Chart: ${title}`,
+          content: JSON.stringify(chartContent, null, 2),
+          metadata: chartContent.metadata,
+        },
+        message: `Created gauge chart "${title}" showing ${clampedValue}${unit || ""} (${chartContent.metadata.percentage}%). The chart is now available in the Canvas workspace with beautiful styling.`,
         chartType: "gauge",
         gaugeType,
         value: clampedValue,
@@ -161,10 +166,9 @@ export const gaugeChartArtifactTool = createTool({
         maxValue,
         unit: unit || "",
         percentage: chartContent.metadata.percentage,
-        // Include artifact data as serializable JSON string
-        artifactContent: JSON.stringify(chartContent),
-        artifactTitle: `Gauge Chart: ${title}`,
-        artifactKind: "charts"
+        // Additional metadata for Canvas integration
+        canvasReady: true,
+        componentType: "GaugeChart",
       };
 
       // Note: Canvas artifact creation happens in ChatBot component via tool result detection

@@ -28,7 +28,7 @@ import {
 
 import { JsonViewPopup } from "../json-view-popup";
 import { sanitizeCssVariableName } from "./shared.tool-invocation";
-import { generateUniqueKey } from "lib/utils";
+import { generateUniqueKey, formatChartNumber } from "lib/utils";
 // LineChart component props interface
 export interface LineChartProps {
   // Chart title (required)
@@ -159,6 +159,7 @@ export function LineChart(props: LineChartProps) {
                   tickLine={false}
                   axisLine={false}
                   tickMargin={10}
+                  tickFormatter={formatChartNumber}
                   label={
                     yAxisLabel
                       ? {

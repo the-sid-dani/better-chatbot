@@ -91,7 +91,7 @@ export function FunnelChart(props: FunnelChartProps) {
   const chartData = React.useMemo(() => {
     return sortedData.map((stage, index) => ({
       ...stage,
-      fill: stage.fill || chartColors[index % chartColors.length],
+      fill: stage.fill || `var(--chart-${(index % 5) + 1})`,
     }));
   }, [sortedData]);
 

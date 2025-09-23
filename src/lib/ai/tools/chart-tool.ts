@@ -3,6 +3,19 @@ import { z } from "zod";
 import { generateUUID } from "lib/utils";
 import logger from "logger";
 
+// Import all new chart artifact tools
+import { areaChartArtifactTool } from "./artifacts/area-chart-tool";
+import { scatterChartArtifactTool } from "./artifacts/scatter-chart-tool";
+import { radarChartArtifactTool } from "./artifacts/radar-chart-tool";
+import { funnelChartArtifactTool } from "./artifacts/funnel-chart-tool";
+import { treemapChartArtifactTool } from "./artifacts/treemap-chart-tool";
+import { sankeyChartArtifactTool } from "./artifacts/sankey-chart-tool";
+import { radialBarChartArtifactTool } from "./artifacts/radial-bar-tool";
+import { composedChartArtifactTool } from "./artifacts/composed-chart-tool";
+import { geographicChartArtifactTool } from "./artifacts/geographic-chart-tool";
+import { gaugeChartArtifactTool } from "./artifacts/gauge-chart-tool";
+import { calendarHeatmapArtifactTool } from "./artifacts/calendar-heatmap-tool";
+
 // Chart creation tool using native AI SDK 5 streaming patterns
 export const createChartTool = createTool({
   description: `Create an interactive chart that streams to the Canvas workspace.
@@ -252,4 +265,17 @@ export const updateChartTool = createTool({
 export const chartTools = {
   create_chart: createChartTool,
   update_chart: updateChartTool,
+  // Recharts-native tools
+  create_area_chart: areaChartArtifactTool,
+  create_scatter_chart: scatterChartArtifactTool,
+  create_radar_chart: radarChartArtifactTool,
+  create_funnel_chart: funnelChartArtifactTool,
+  create_treemap_chart: treemapChartArtifactTool,
+  create_sankey_chart: sankeyChartArtifactTool,
+  create_radial_bar_chart: radialBarChartArtifactTool,
+  create_composed_chart: composedChartArtifactTool,
+  // External library tools
+  create_geographic_chart: geographicChartArtifactTool,
+  create_gauge_chart: gaugeChartArtifactTool,
+  create_calendar_heatmap: calendarHeatmapArtifactTool,
 };

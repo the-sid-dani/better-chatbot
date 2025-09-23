@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/chart";
 
 import { JsonViewPopup } from "../json-view-popup";
+import { sanitizeCssVariableName } from "./shared.tool-invocation";
 import { generateUniqueKey } from "lib/utils";
 
 // RadialBarChart component props interface
@@ -44,11 +45,11 @@ export interface RadialBarChartProps {
 
 // Color scheme for radial bars
 const chartColors = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
 ];
 
 export function RadialBarChart(props: RadialBarChartProps) {
@@ -82,7 +83,7 @@ export function RadialBarChart(props: RadialBarChartProps) {
         value: item.value,
         maxValue: maxVal,
         percentage: Math.round(percentage),
-        fill: chartColors[index % chartColors.length],
+        fill: `var(--color-${sanitizeCssVariableName(item.name)})`,
       };
     });
   }, [deduplicateData]);
@@ -91,8 +92,14 @@ export function RadialBarChart(props: RadialBarChartProps) {
   const chartConfig = React.useMemo(() => {
     const config: ChartConfig = {};
 
+    // Add default config for the radial bar itself
+    config.default = {
+      label: "Performance",
+      color: chartColors[0], // Primary blue
+    };
+
     deduplicateData.forEach((item, index) => {
-      config[item.name] = {
+      config[sanitizeCssVariableName(item.name)] = {
         label: item.name,
         color: chartColors[index % chartColors.length],
       };
@@ -179,7 +186,7 @@ export function RadialBarChart(props: RadialBarChartProps) {
               <RadialBar
                 dataKey="percentage"
                 cornerRadius={10}
-                background={{ fill: "hsl(var(--muted))", opacity: 0.3 }}
+                background={{ fill: "hsl(var(--muted))", opacity: 0.1 }}
               />
               <ChartTooltip
                 content={<CustomTooltip />}

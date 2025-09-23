@@ -160,22 +160,26 @@ export const calendarHeatmapArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return simple, serializable result for Vercel AI SDK
+      // Return success with artifact creation data (matches existing pattern)
       const result = {
         success: true,
-        artifactId: artifactId,
-        title: title,
-        message: `Created calendar heatmap "${title}" with ${data.length} data points spanning ${daysCovered} days`,
+        artifactId,
+        artifact: {
+          kind: "charts" as const,
+          title: `Calendar Heatmap: ${title}`,
+          content: JSON.stringify(chartContent, null, 2),
+          metadata: chartContent.metadata,
+        },
+        message: `Created calendar heatmap "${title}" with ${data.length} data points spanning ${daysCovered} days. The chart is now available in the Canvas workspace with beautiful styling.`,
         chartType: "calendar-heatmap",
         dataPoints: data.length,
         daysCovered,
         startDate: actualStartDate,
         endDate: actualEndDate,
         colorScale,
-        // Include artifact data as serializable JSON string
-        artifactContent: JSON.stringify(chartContent),
-        artifactTitle: `Calendar Heatmap: ${title}`,
-        artifactKind: "charts"
+        // Additional metadata for Canvas integration
+        canvasReady: true,
+        componentType: "CalendarHeatmap",
       };
 
       // Note: Canvas artifact creation happens in ChatBot component via tool result detection

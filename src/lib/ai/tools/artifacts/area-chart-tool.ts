@@ -130,20 +130,23 @@ export const areaChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return simple, serializable result for Vercel AI SDK
+      // Return success with artifact creation data (matches existing pattern)
       const result = {
         success: true,
-        artifactId: artifactId,
-        title: title,
-        message: `Created area chart "${title}" with ${data.length} data points`,
+        artifactId,
+        artifact: {
+          kind: "charts" as const,
+          title: `Area Chart: ${title}`,
+          content: JSON.stringify(chartContent, null, 2),
+          metadata: chartContent.metadata,
+        },
+        message: `Created area chart "${title}" with ${data.length} data points and ${seriesNames.length} trend areas. The chart is now available in the Canvas workspace with smooth curves and beautiful styling.`,
         chartType: "area",
-        areaType,
         dataPoints: data.length,
-        series: seriesNames.join(", "),
-        // Include artifact data as serializable JSON string
-        artifactContent: JSON.stringify(chartContent),
-        artifactTitle: `Area Chart: ${title}`,
-        artifactKind: "charts"
+        series: seriesNames,
+        // Additional metadata for Canvas integration
+        canvasReady: true,
+        componentType: "AreaChart",
       };
 
       // Note: Canvas artifact creation happens in ChatBot component via tool result detection

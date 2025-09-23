@@ -117,19 +117,23 @@ export const radarChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return simple, serializable result for Vercel AI SDK
+      // Return success with artifact creation data (matches existing pattern)
       const result = {
         success: true,
-        artifactId: artifactId,
-        title: title,
-        message: `Created radar chart "${title}" with ${data.length} metrics`,
+        artifactId,
+        artifact: {
+          kind: "charts" as const,
+          title: `Radar Chart: ${title}`,
+          content: JSON.stringify(chartContent, null, 2),
+          metadata: chartContent.metadata,
+        },
+        message: `Created radar chart "${title}" with ${data.length} metrics across ${seriesNames.length} dimensions. The chart is now available in the Canvas workspace with beautiful styling.`,
         chartType: "radar",
         metrics: data.length,
-        series: seriesNames.join(", "),
-        // Include artifact data as serializable JSON string
-        artifactContent: JSON.stringify(chartContent),
-        artifactTitle: `Radar Chart: ${title}`,
-        artifactKind: "charts"
+        series: seriesNames,
+        // Additional metadata for Canvas integration
+        canvasReady: true,
+        componentType: "RadarChart",
       };
 
       // Note: Canvas artifact creation happens in ChatBot component via tool result detection

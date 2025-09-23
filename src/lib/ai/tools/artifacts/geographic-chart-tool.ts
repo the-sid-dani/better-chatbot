@@ -126,20 +126,24 @@ export const geographicChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return simple, serializable result for Vercel AI SDK
+      // Return success with artifact creation data (matches existing pattern)
       const result = {
         success: true,
-        artifactId: artifactId,
-        title: title,
-        message: `Created geographic chart "${title}" showing ${data.length} regions`,
+        artifactId,
+        artifact: {
+          kind: "charts" as const,
+          title: `Geographic Chart: ${title}`,
+          content: JSON.stringify(chartContent, null, 2),
+          metadata: chartContent.metadata,
+        },
+        message: `Created geographic chart "${title}" showing ${data.length} regions with ${geoType} visualization. The chart is now available in the Canvas workspace with beautiful styling.`,
         chartType: "geographic",
         geoType,
         regionCount: data.length,
         colorScale,
-        // Include artifact data as serializable JSON string
-        artifactContent: JSON.stringify(chartContent),
-        artifactTitle: `Geographic Chart: ${title}`,
-        artifactKind: "charts"
+        // Additional metadata for Canvas integration
+        canvasReady: true,
+        componentType: "GeographicChart",
       };
 
       // Note: Canvas artifact creation happens in ChatBot component via tool result detection

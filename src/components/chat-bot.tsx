@@ -705,19 +705,38 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
             // Handle new artifact format
             if (result.artifact) {
               const artifactContent = JSON.parse(result.artifact.content);
-              chartData = {
-                title: artifactContent.title,
-                chartType: artifactContent.type.replace("-chart", ""),
-                data: artifactContent.data,
-                description: artifactContent.description,
-                yAxisLabel: artifactContent.yAxisLabel,
-                // Copy all metadata from artifact
-                ...artifactContent,
-              };
+              // Extract the correct chart type
               chartType =
                 artifactContent.metadata?.chartType ||
                 artifactContent.type.replace("-chart", "");
               title = result.artifact.title;
+
+              // Create chartData in the format expected by ChartRenderer
+              chartData = {
+                chartType: chartType,
+                title: artifactContent.title,
+                data: artifactContent.data || [],
+                description: artifactContent.description,
+                yAxisLabel: artifactContent.yAxisLabel,
+                xAxisLabel: artifactContent.xAxisLabel,
+                // Add additional properties for special chart types
+                areaType: artifactContent.areaType,
+                showBubbles: artifactContent.showBubbles,
+                geoType: artifactContent.geoType,
+                colorScale: artifactContent.colorScale,
+                value: artifactContent.value,
+                minValue: artifactContent.minValue,
+                maxValue: artifactContent.maxValue,
+                gaugeType: artifactContent.gaugeType,
+                unit: artifactContent.unit,
+                thresholds: artifactContent.thresholds,
+                nodes: artifactContent.nodes,
+                links: artifactContent.links,
+                innerRadius: artifactContent.innerRadius,
+                outerRadius: artifactContent.outerRadius,
+                startDate: artifactContent.startDate,
+                endDate: artifactContent.endDate,
+              };
             }
             // Handle original format
             else {

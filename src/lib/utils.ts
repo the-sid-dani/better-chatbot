@@ -43,6 +43,19 @@ export const wait = (delay = 0) =>
 export const randomRange = (min: number, max: number) =>
   Math.floor(Math.random() * (max - min + 1) + min);
 
+export const formatChartNumber = (value: number): string => {
+  if (value >= 1000000000) {
+    return (value / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
+  }
+  if (value >= 1000000) {
+    return (value / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  }
+  if (value >= 1000) {
+    return (value / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  }
+  return value.toString();
+};
+
 export const isString = (value: any): value is string =>
   typeof value === "string";
 

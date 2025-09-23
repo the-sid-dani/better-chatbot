@@ -43,21 +43,23 @@ export interface CalendarHeatmapProps {
   description?: string;
 }
 
-// Color scales for calendar heatmap
+// Color scales for calendar heatmap using design system
 const colorScales = {
   github: [
     "hsl(var(--muted))",
-    "hsl(120, 50%, 90%)",
-    "hsl(120, 50%, 70%)",
-    "hsl(120, 50%, 50%)",
-    "hsl(120, 50%, 30%)",
+    "hsl(var(--chart-5))",  // Very light blue (GitHub style)
+    "hsl(var(--chart-4))",  // Light blue
+    "hsl(var(--chart-3))",  // Medium blue
+    "hsl(var(--chart-2))",  // Blue
+    "hsl(var(--chart-1))",  // Dark blue
   ],
   blues: [
     "hsl(var(--muted))",
-    "hsl(217, 91%, 90%)",
-    "hsl(217, 91%, 70%)",
-    "hsl(217, 91%, 50%)",
-    "hsl(217, 91%, 30%)",
+    "hsl(var(--chart-5))",
+    "hsl(var(--chart-4))",
+    "hsl(var(--chart-3))",
+    "hsl(var(--chart-2))",
+    "hsl(var(--chart-1))",
   ],
   greens: [
     "hsl(var(--muted))",
@@ -188,7 +190,6 @@ export function CalendarHeatmap(props: CalendarHeatmapProps) {
                 width="100%"
                 style={{ color: "hsl(var(--muted-foreground))" }}
                 legendCellSize={12}
-                legendFontSize={10}
                 rectSize={12}
                 rectRender={(props: any, data: any) => {
                   const { key, ...restProps } = props;
@@ -218,10 +219,6 @@ export function CalendarHeatmap(props: CalendarHeatmapProps) {
                       strokeWidth={0.5}
                     />
                   );
-                }}
-                tooltipContent={(data: any, active: boolean) => {
-                  if (!active) return null;
-                  return <CustomTooltip date={data.date} count={data.count} />;
                 }}
               />
             </div>

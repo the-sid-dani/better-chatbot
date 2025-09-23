@@ -26,7 +26,7 @@ import {
 
 import { JsonViewPopup } from "../json-view-popup";
 import { sanitizeCssVariableName } from "./shared.tool-invocation";
-import { generateUniqueKey } from "lib/utils";
+import { generateUniqueKey, formatChartNumber } from "lib/utils";
 
 // AreaChart component props interface
 export interface AreaChartProps {
@@ -163,6 +163,7 @@ export function AreaChart(props: AreaChartProps) {
                 axisLine={false}
                 tickMargin={10}
                 fontSize={12}
+                tickFormatter={formatChartNumber}
                 label={
                   yAxisLabel
                     ? {
@@ -177,14 +178,14 @@ export function AreaChart(props: AreaChartProps) {
                 cursor={{ fill: "rgba(0, 0, 0, 0.1)" }}
                 content={<ChartTooltipContent />}
               />
-              {seriesNames.map((seriesName, index) => (
+              {seriesNames.map((seriesName, _index) => (
                 <Area
                   key={seriesName}
                   type="monotone"
                   dataKey={sanitizeCssVariableName(seriesName)}
                   stackId={areaType === "standard" ? undefined : "1"}
-                  stroke={`hsl(${chartColors[index % chartColors.length]})`}
-                  fill={`hsl(${chartColors[index % chartColors.length]})`}
+                  stroke={`var(--color-${sanitizeCssVariableName(seriesName)})`}
+                  fill={`var(--color-${sanitizeCssVariableName(seriesName)})`}
                   fillOpacity={0.6}
                 />
               ))}
