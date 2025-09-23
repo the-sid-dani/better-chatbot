@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "archon": {
+      "type": "sse",
+      "url": "http://localhost:8051/mcp",
+      "headers": {
+        "Authorization": "Bearer dummy-token"
+      }
+    }
+  }
+}

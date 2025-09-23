@@ -257,20 +257,29 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     artifacts: canvasArtifacts,
     activeArtifactId,
     canvasName,
+    userManuallyClosed,
     addArtifact: addCanvasArtifact,
     closeCanvas,
-    setActiveArtifactId,
+    showCanvas,
+    setActiveArtifactId
   } = useCanvas();
 
-  // Debug canvas state changes
+  // Debug canvas state changes with enhanced logging
   useEffect(() => {
     console.log(
-      "🔍 Canvas Debug: Canvas state changed - isVisible:",
-      isCanvasVisible,
-      "artifacts:",
-      canvasArtifacts.length,
+      "🔍 ChatBot Canvas Debug: Canvas state changed",
+      {
+        isVisible: isCanvasVisible,
+        artifactCount: canvasArtifacts.length,
+        userManuallyClosed,
+        activeArtifactId,
+        canvasName,
+        timestamp: new Date().toISOString()
+      }
     );
-  }, [isCanvasVisible, canvasArtifacts.length]);
+  }, [isCanvasVisible, canvasArtifacts.length, userManuallyClosed, activeArtifactId, canvasName]);
+
+  // MOVED AFTER useChat hook to fix initialization error
 
   const [
     appStoreMutate,
@@ -352,12 +361,8 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
           chatModel:
             (body as { model: ChatModel })?.model ?? latestRef.current.model,
           toolChoice: latestRef.current.toolChoice,
-          allowedAppDefaultToolkit: latestRef.current.mentions?.length
-            ? []
-            : latestRef.current.allowedAppDefaultToolkit,
-          allowedMcpServers: latestRef.current.mentions?.length
-            ? {}
-            : latestRef.current.allowedMcpServers,
+          allowedAppDefaultToolkit: latestRef.current.allowedAppDefaultToolkit,
+          allowedMcpServers: latestRef.current.allowedMcpServers,
           mentions: latestRef.current.mentions,
           message: lastMessage,
         };
@@ -368,9 +373,12 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     generateId: generateUUID,
     experimental_throttle: 100,
     onFinish,
-    // Debug data streaming (will be handled by tool result processing)
+    // Clean implementation without complex onData handling
     onData: (data: any) => {
-      console.log("🔍 AI SDK onData:", data);
+      // Simple logging for debugging
+      if (data?.type) {
+        console.log("AI SDK onData:", data.type);
+      }
     },
   });
   const [isDeleteThreadPopupOpen, setIsDeleteThreadPopupOpen] = useState(false);
@@ -547,147 +555,311 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // HARDENED PRODUCTION FIX: Tool-based Canvas processing with race condition protection
+  const processedToolsRef = useRef(new Set<string>());
+  const processingDebounceRef = useRef<NodeJS.Timeout>();
+
   useEffect(() => {
-    if (mounted) {
-      handleFocus();
+    // Clear any existing debounce
+    if (processingDebounceRef.current) {
+      clearTimeout(processingDebounceRef.current);
     }
-  }, [input]);
 
-  // Track processed messages to prevent infinite loops
-  const processedMessagesRef = useRef(new Set<string>());
+    // Debounce tool processing to prevent rapid-fire updates
+    processingDebounceRef.current = setTimeout(() => {
+      try {
+        const lastMessage = messages[messages.length - 1];
 
-  // Simple tool result processing for Canvas
-  useEffect(() => {
-    const lastMessage = messages[messages.length - 1];
+        if (!lastMessage || lastMessage.role !== "assistant") {
+          return;
+        }
 
-    if (lastMessage?.role === "assistant" && !processedMessagesRef.current.has(lastMessage.id)) {
-      processedMessagesRef.current.add(lastMessage.id);
+        console.log("🔧 ChatBot Tool Debug: Processing message", {
+          messageId: lastMessage.id,
+          partCount: lastMessage.parts.length,
+          timestamp: new Date().toISOString()
+        });
 
-      lastMessage.parts.forEach((part) => {
-        if (isToolUIPart(part) && part.state === "output-available") {
-          const toolName = getToolName(part);
+        // Look for chart tools in any state
+        const chartTools = lastMessage.parts.filter(part =>
+          isToolUIPart(part) && getToolName(part) === "create_chart"
+        );
+
+        console.log("📊 ChatBot Tool Debug: Found chart tools", {
+          toolCount: chartTools.length,
+          states: chartTools.map(t => t.state)
+        });
+
+        // Open Canvas immediately when chart tools are detected (unless user closed it)
+        if (chartTools.length > 0 && !isCanvasVisible && !userManuallyClosed) {
+          console.log("🎭 ChatBot Canvas Debug: Auto-opening Canvas for chart tools");
+          showCanvas();
+        } else if (chartTools.length > 0 && userManuallyClosed) {
+          console.log("🚪 ChatBot Canvas Debug: Chart tools detected but user closed Canvas - respecting user choice");
+        }
+
+        // Process completed charts with duplicate prevention
+        const completedCharts = chartTools.filter(part => {
+          const isCompleted = part.state === "output-available" &&
+            (part.output as any)?.shouldCreateArtifact &&
+            (part.output as any)?.status === 'success';
+
+          if (isCompleted) {
+            const result = part.output as any;
+            const toolKey = `${lastMessage.id}-${result.chartId}`;
+
+            // Check if we've already processed this tool
+            if (processedToolsRef.current.has(toolKey)) {
+              console.log("⚠️ ChatBot Tool Debug: Skipping already processed chart", { chartId: result.chartId });
+              return false;
+            }
+
+            // Mark as processed
+            processedToolsRef.current.add(toolKey);
+            return true;
+          }
+
+          return false;
+        });
+
+        console.log("✅ ChatBot Tool Debug: Processing completed charts", {
+          completedCount: completedCharts.length,
+          existingArtifacts: canvasArtifacts.length
+        });
+
+        completedCharts.forEach((part) => {
           const result = part.output as any;
+          const existingArtifact = canvasArtifacts.find(a => a.id === result.chartId);
 
-          // Simple chart tool detection and Canvas artifact creation
-          if (toolName === "create_chart" && result?.shouldCreateArtifact && result?.status === 'success') {
+          if (!existingArtifact) {
+            console.log("✨ ChatBot Tool Debug: Creating new chart artifact", { chartId: result.chartId, title: result.title });
+
             const artifact = {
               id: result.chartId,
               type: "chart" as const,
               title: result.title,
+              canvasName: result.canvasName || "Data Visualization",
               data: result.chartData,
+              status: "completed" as const,
               metadata: {
                 chartType: result.chartType,
-                dataPoints: result.dataPoints,
-                lastUpdated: "now"
+                dataPoints: result.dataPoints || 0,
+                lastUpdated: new Date().toISOString()
               }
             };
 
             addCanvasArtifact(artifact);
+          } else {
+            console.log("🔄 ChatBot Tool Debug: Chart artifact already exists", { chartId: result.chartId });
           }
-        }
-      });
+        });
+      } catch (error) {
+        console.error("🚨 ChatBot Tool Debug: Error processing chart tools:", error);
+      }
+    }, 150); // 150ms debounce to prevent rapid processing
+
+    // Cleanup function
+    return () => {
+      if (processingDebounceRef.current) {
+        clearTimeout(processingDebounceRef.current);
+      }
+    };
+  }, [messages, isCanvasVisible, userManuallyClosed, showCanvas, addCanvasArtifact, canvasArtifacts]);
+
+  useEffect(() => {
+    if (mounted) {
+      handleFocus();
     }
-  }, [messages.length, addCanvasArtifact]);
+  }, [input, mounted, handleFocus]);
 
-  // Canvas visibility now controlled directly by onData handler
+  // Comprehensive cleanup on unmount
+  useEffect(() => {
+    return () => {
+      console.log("🧼 ChatBot Debug: Component unmounting - performing cleanup");
 
-  console.log(
-    "🎬 ChatBot Debug: Rendering ChatBot with isCanvasVisible:",
-    isCanvasVisible,
-    "artifacts:",
-    canvasArtifacts.length,
-  );
+      // Clear any pending timeouts
+      if (processingDebounceRef.current) {
+        clearTimeout(processingDebounceRef.current);
+      }
 
-  // Canvas visibility controlled manually - no auto-show
+      // Clear processed tools cache
+      processedToolsRef.current.clear();
+
+      console.log("✅ ChatBot Debug: Cleanup completed");
+    };
+  }, []);
+
+  // Error boundary for the entire chat interface
+  const [chatError, setChatError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    const handleUnhandledError = (event: ErrorEvent) => {
+      console.error("🚨 ChatBot Debug: Unhandled error in chat:", event.error);
+      setChatError(event.error);
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error("🚨 ChatBot Debug: Unhandled promise rejection in chat:", event.reason);
+      setChatError(new Error(`Promise rejection: ${event.reason}`));
+    };
+
+    window.addEventListener('error', handleUnhandledError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleUnhandledError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
+  // If there's a critical error, show error state
+  if (chatError) {
+    return (
+      <div className="h-full flex items-center justify-center p-4">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="text-destructive">
+            <h3 className="font-semibold text-lg">Chat Error</h3>
+            <p className="text-sm text-muted-foreground mt-2">
+              The chat interface encountered an error. Please try refreshing the page.
+            </p>
+            <p className="text-xs text-muted-foreground mt-2 font-mono">
+              Error: {chatError.message}
+            </p>
+          </div>
+          <div className="flex gap-2 justify-center">
+            <Button
+              onClick={() => setChatError(null)}
+              variant="outline"
+              size="sm"
+            >
+              Try Again
+            </Button>
+            <Button
+              onClick={() => window.location.reload()}
+              size="sm"
+            >
+              Reload Page
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Cleanup processed tools when thread changes to prevent memory leaks
+  useEffect(() => {
+    console.log("🧼 ChatBot Debug: Thread changed - clearing processed tools cache");
+    processedToolsRef.current.clear();
+  }, [threadId]);
+
+  // Monitor for excessive re-renders
+  const renderCountRef = useRef(0);
+  renderCountRef.current += 1;
+
+  if (renderCountRef.current > 100) {
+    console.warn("⚠️ ChatBot Debug: Excessive re-renders detected", {
+      renderCount: renderCountRef.current,
+      threadId,
+      messageCount: messages.length,
+      canvasVisible: isCanvasVisible
+    });
+  }
+
+  // Debug: Track layout decisions for Canvas behavior with enhanced context
+  console.log("🎬 ChatBot Layout Debug:", {
+    layout: isCanvasVisible ? "SPLIT VIEW" : "CHAT ONLY",
+    artifactCount: canvasArtifacts.length,
+    userManuallyClosed,
+    activeArtifactId,
+    canvasName,
+    renderCount: renderCountRef.current,
+    messagesLength: messages.length,
+    isLoading,
+    timestamp: new Date().toISOString()
+  });
 
   return (
     <>
       {particle}
-      {/* Resizable integrated layout */}
-      {isCanvasVisible
-        ? (() => {
-            console.log(
-              "✨ ChatBot Debug: Rendering CANVAS LAYOUT (ResizablePanelGroup)",
-            );
-            return (
-              <ResizablePanelGroup direction="horizontal" className="h-full">
-                {/* Chat Panel */}
-                <ResizablePanel defaultSize={65} minSize={40} maxSize={80}>
-                  <ChatContent
-                    emptyMessage={emptyMessage}
-                    containerRef={containerRef}
-                    handleScroll={handleScroll}
-                    messages={messages}
-                    threadId={threadId}
-                    status={status}
-                    addToolResult={addToolResult}
-                    isLoading={isLoading}
-                    isPendingToolCall={isPendingToolCall}
-                    setMessages={setMessages}
-                    sendMessage={sendMessage}
-                    space={space}
-                    error={error}
-                    isAtBottom={isAtBottom}
-                    scrollToBottom={scrollToBottom}
-                    input={input}
-                    setInput={setInput}
-                    stop={stop}
-                    isFirstTime={isFirstTime}
-                    handleFocus={handleFocus}
-                    isDeleteThreadPopupOpen={isDeleteThreadPopupOpen}
-                    setIsDeleteThreadPopupOpen={setIsDeleteThreadPopupOpen}
-                  />
-                </ResizablePanel>
+      {/* Resizable integrated layout with proper keys for React reconciliation */}
+      {isCanvasVisible ? (
+        <ResizablePanelGroup
+          key="canvas-layout"
+          direction="horizontal"
+          className="h-full"
+        >
+          {/* Chat Panel */}
+          <ResizablePanel defaultSize={50} minSize={35} maxSize={75}>
+            <ChatContent
+              emptyMessage={emptyMessage}
+              containerRef={containerRef}
+              handleScroll={handleScroll}
+              messages={messages}
+              threadId={threadId}
+              status={status}
+              addToolResult={addToolResult}
+              isLoading={isLoading}
+              isPendingToolCall={isPendingToolCall}
+              setMessages={setMessages}
+              sendMessage={sendMessage}
+              space={space}
+              error={error}
+              isAtBottom={isAtBottom}
+              scrollToBottom={scrollToBottom}
+              input={input}
+              setInput={setInput}
+              stop={stop}
+              isFirstTime={isFirstTime}
+              handleFocus={handleFocus}
+              isDeleteThreadPopupOpen={isDeleteThreadPopupOpen}
+              setIsDeleteThreadPopupOpen={setIsDeleteThreadPopupOpen}
+            />
+          </ResizablePanel>
 
-                {/* Resizable Handle */}
-                <ResizableHandle className="w-1 bg-border hover:bg-border/80 transition-colors" />
+          {/* Resizable Handle */}
+          <ResizableHandle className="w-1 bg-border hover:bg-border/80 transition-colors" />
 
-                {/* Canvas Panel */}
-                <ResizablePanel defaultSize={35} minSize={20} maxSize={60}>
-                  <CanvasPanel
-                    isVisible={isCanvasVisible}
-                    onClose={closeCanvas}
-                    artifacts={canvasArtifacts}
-                    activeArtifactId={activeArtifactId}
-                    onArtifactSelect={setActiveArtifactId}
-                    canvasName={canvasName}
-                    isIntegrated={true}
-                  />
-                </ResizablePanel>
-              </ResizablePanelGroup>
-            );
-          })()
-        : (() => {
-            console.log(
-              "💬 ChatBot Debug: Rendering CHAT-ONLY LAYOUT (no canvas)",
-            );
-            return (
-              <ChatContent
-                emptyMessage={emptyMessage}
-                containerRef={containerRef}
-                handleScroll={handleScroll}
-                messages={messages}
-                threadId={threadId}
-                status={status}
-                addToolResult={addToolResult}
-                isLoading={isLoading}
-                isPendingToolCall={isPendingToolCall}
-                setMessages={setMessages}
-                sendMessage={sendMessage}
-                space={space}
-                error={error}
-                isAtBottom={isAtBottom}
-                scrollToBottom={scrollToBottom}
-                input={input}
-                setInput={setInput}
-                stop={stop}
-                isFirstTime={isFirstTime}
-                handleFocus={handleFocus}
-                isDeleteThreadPopupOpen={isDeleteThreadPopupOpen}
-                setIsDeleteThreadPopupOpen={setIsDeleteThreadPopupOpen}
-              />
-            );
-          })()}
+          {/* Canvas Panel */}
+          <ResizablePanel defaultSize={50} minSize={25} maxSize={65}>
+            <CanvasPanel
+              isVisible={isCanvasVisible}
+              onClose={closeCanvas}
+              artifacts={canvasArtifacts}
+              activeArtifactId={activeArtifactId}
+              onArtifactSelect={setActiveArtifactId}
+              canvasName={canvasName}
+              isIntegrated={true}
+            />
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      ) : (
+        <div key="chat-only-layout" className="h-full">
+          <ChatContent
+            emptyMessage={emptyMessage}
+            containerRef={containerRef}
+            handleScroll={handleScroll}
+            messages={messages}
+            threadId={threadId}
+            status={status}
+            addToolResult={addToolResult}
+            isLoading={isLoading}
+            isPendingToolCall={isPendingToolCall}
+            setMessages={setMessages}
+            sendMessage={sendMessage}
+            space={space}
+            error={error}
+            isAtBottom={isAtBottom}
+            scrollToBottom={scrollToBottom}
+            input={input}
+            setInput={setInput}
+            stop={stop}
+            isFirstTime={isFirstTime}
+            handleFocus={handleFocus}
+            isDeleteThreadPopupOpen={isDeleteThreadPopupOpen}
+            setIsDeleteThreadPopupOpen={setIsDeleteThreadPopupOpen}
+          />
+        </div>
+      )}
     </>
   );
 }

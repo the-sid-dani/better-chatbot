@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import * as React from "react";
 import { Button } from "ui/button";
 import { Badge } from "ui/badge";
 import {
@@ -16,12 +17,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { BarChart } from "./tool-invocation/bar-chart";
 import { LineChart } from "./tool-invocation/line-chart";
 import { PieChart } from "./tool-invocation/pie-chart";
-import { DashboardCanvas } from "./canvas/dashboard-canvas";
 
 interface CanvasArtifact {
   id: string;
   type: "chart" | "dashboard" | "code" | "text" | "image" | "data";
   title: string;
+  canvasName?: string;
   data?: any;
   content?: string;
   status?: "loading" | "completed" | "error";
@@ -144,6 +145,54 @@ function CanvasEmptyState() {
   );
 }
 
+// Error Boundary for Canvas Panel
+class CanvasPanelErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('💥 Canvas Error Boundary: Canvas crashed:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="h-full flex items-center justify-center p-4">
+          <div className="text-center space-y-4">
+            <div className="text-destructive">
+              <BarChart3 className="w-12 h-12 mx-auto mb-4" />
+              <h3 className="font-semibold text-lg">Canvas Error</h3>
+              <p className="text-sm text-muted-foreground">
+                The Canvas workspace encountered an error and needs to be reloaded.
+              </p>
+            </div>
+            <Button
+              onClick={() => {
+                this.setState({ hasError: false, error: undefined });
+                window.location.reload();
+              }}
+              size="sm"
+            >
+              Reload Canvas
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 // Main Canvas Panel Component
 export function CanvasPanel({
   isVisible,
@@ -155,10 +204,13 @@ export function CanvasPanel({
   isIntegrated = false
 }: CanvasPanelProps) {
   const [isMinimized, setIsMinimized] = useState(false);
+  const renderCountRef = useRef(0);
 
-  // Remove tab-based logic - we'll show all charts in grid
+  // Track render count for debugging
+  renderCountRef.current += 1;
+  const debugPrefix = "🎭 CanvasPanel Debug:";
 
-  console.log("🎭 CanvasPanel Debug: Render check - isVisible:", isVisible, "artifacts:", artifacts.length, "activeArtifactId:", activeArtifactId);
+  console.log(`${debugPrefix} Render #${renderCountRef.current} - isVisible:`, isVisible, "artifacts:", artifacts.length, "activeArtifactId:", activeArtifactId);
 
   if (!isVisible) {
     console.log("❌ CanvasPanel Debug: Not rendering - isVisible is false");
@@ -167,14 +219,14 @@ export function CanvasPanel({
 
   console.log("✅ CanvasPanel Debug: Rendering canvas panel");
 
-  // Use different styling for integrated vs floating
+  // Use different styling for integrated vs floating - FIXED with proper max-height for scrolling
   const containerClasses = isIntegrated
-    ? "h-full bg-background border-l border-border"
-    : "fixed right-0 top-0 h-full w-[45vw] min-w-[500px] max-w-[700px] z-50 bg-background border-l border-border shadow-2xl";
+    ? "max-h-screen bg-background border-l border-border overflow-y-auto"
+    : "fixed right-0 top-0 max-h-screen w-[45vw] min-w-[500px] max-w-[700px] z-50 bg-background border-l border-border shadow-2xl overflow-y-auto";
 
   const content = (
     <div className={containerClasses}>
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col relative">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border bg-muted/30">
           <div className="flex items-center space-x-2">
@@ -216,25 +268,26 @@ export function CanvasPanel({
           <div className="border-b border-border/10"></div>
         )}
 
-        {/* Content Area - CSS Grid Layout */}
-        <div className="flex-1 overflow-auto">
+        {/* Content Area - Canvas Panel Scrolling with Quality Charts */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
           {isMinimized ? (
             <div className="p-4 text-center text-muted-foreground">
               <p className="text-sm">Canvas minimized</p>
             </div>
           ) : artifacts.length > 0 ? (
-            <div className="h-full p-4">
-              {/* Clean CSS Grid - Vercel AI SDK Style */}
+            <div className="p-4 pb-8" style={{
+              minHeight: `${Math.ceil(artifacts.length / 2) * 450 + 200}px`
+            }}>
+              {/* Canvas Grid - Balanced approach for scrolling + chart quality */}
               <div className={cn(
-                "grid gap-6 h-full p-4",
-                // Responsive grid based on number of charts
+                "grid gap-6 grid-cols-2",
+                // Fixed 2-column horizontal layout
                 artifacts.length === 1 && "grid-cols-1",
                 artifacts.length === 2 && "grid-cols-2",
-                artifacts.length === 3 && "grid-cols-1 lg:grid-cols-2",
-                artifacts.length === 4 && "grid-cols-2",
-                artifacts.length >= 5 && "grid-cols-2 xl:grid-cols-3"
+                artifacts.length === 3 && "grid-cols-2",
+                artifacts.length >= 4 && "grid-cols-2"
               )}>
-                {artifacts.map((artifact, index) => (
+                {artifacts.map((artifact, _index) => (
                   <div
                     key={`chart-${artifact.id}`}
                     className="bg-card/30 border border-border/20 rounded-2xl overflow-hidden min-h-[400px] flex flex-col"
@@ -252,171 +305,298 @@ export function CanvasPanel({
             <CanvasEmptyState />
           )}
         </div>
+
       </div>
     </div>
   );
 
-  // Return with or without animation based on integration mode
+  // Return with smooth animation for Canvas opening - wrapped in error boundary
   if (isIntegrated) {
-    return content;
+    return (
+      <CanvasPanelErrorBoundary>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: "spring", stiffness: 200, damping: 25, duration: 0.3 }}
+        >
+          {content}
+        </motion.div>
+      </CanvasPanelErrorBoundary>
+    );
   }
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ x: "100%", opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        exit={{ x: "100%", opacity: 0 }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      >
-        {content}
-      </motion.div>
-    </AnimatePresence>
+    <CanvasPanelErrorBoundary>
+      <AnimatePresence>
+        <motion.div
+          initial={{ x: "100%", opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: "100%", opacity: 0 }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        >
+          {content}
+        </motion.div>
+      </AnimatePresence>
+    </CanvasPanelErrorBoundary>
   );
 }
 
-// Generate smart canvas name based on chart content
-function generateCanvasName(artifacts: CanvasArtifact[]): string {
-  if (artifacts.length === 0) return "Canvas";
-
-  const chartTitles = artifacts.map(a => a.title.toLowerCase());
-
-  // Analyze chart titles for common themes
-  const keywords = chartTitles.join(" ");
-
-  if (keywords.includes("sales") || keywords.includes("revenue") || keywords.includes("financial")) {
-    return "Sales & Finance Dashboard";
-  } else if (keywords.includes("market") && keywords.includes("global")) {
-    return "Global Market Analytics";
-  } else if (keywords.includes("population") || keywords.includes("global") || keywords.includes("world")) {
-    return "World Data Dashboard";
-  } else if (keywords.includes("performance") || keywords.includes("analytics")) {
-    return "Performance Analytics";
-  } else if (keywords.includes("user") || keywords.includes("traffic") || keywords.includes("engagement")) {
-    return "User Analytics Dashboard";
-  } else if (artifacts.length > 3) {
-    return "Multi-Chart Dashboard";
-  } else {
-    return "Data Visualization";
-  }
-}
+// Simple Canvas naming - uses AI-provided canvas names
 
 // Export simple canvas hook for managing canvas state
 export function useCanvas() {
   const [isVisible, setIsVisible] = useState(false);
   const [artifacts, setArtifacts] = useState<CanvasArtifact[]>([]);
   const [activeArtifactId, setActiveArtifactId] = useState<string>();
+  const [canvasName, setCanvasName] = useState<string>("Canvas");
+  const [userManuallyClosed, setUserManuallyClosed] = useState(false);
 
-  // Generate canvas name based on current artifacts
-  const canvasName = generateCanvasName(artifacts);
+  // Debug state management with detailed logging
+  const debugPrefix = "🎭 useCanvas Debug:";
+  const isMountedRef = useRef(true);
+  const stateVersionRef = useRef(0);
+
+  // Debug function for state changes
+  const debugLog = useCallback((action: string, data?: any) => {
+    const version = ++stateVersionRef.current;
+    console.log(`${debugPrefix} [v${version}] ${action}`, {
+      isVisible,
+      artifactCount: artifacts.length,
+      activeArtifactId,
+      userManuallyClosed,
+      isMounted: isMountedRef.current,
+      ...data
+    });
+  }, [isVisible, artifacts.length, activeArtifactId, userManuallyClosed]);
+
+  // Track memory usage for debugging
+  const memoryTracker = useCallback(() => {
+    if (typeof window !== 'undefined' && window.performance && window.performance.memory) {
+      const memory = window.performance.memory;
+      console.log(`${debugPrefix} Memory Usage:`, {
+        used: Math.round(memory.usedJSHeapSize / 1024 / 1024) + 'MB',
+        total: Math.round(memory.totalJSHeapSize / 1024 / 1024) + 'MB',
+        limit: Math.round(memory.jsHeapSizeLimit / 1024 / 1024) + 'MB'
+      });
+    }
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    debugLog("Canvas hook mounted");
+
+    return () => {
+      isMountedRef.current = false;
+      debugLog("Canvas hook unmounting - cleanup initiated");
+    };
+  }, []);
+
+
+  // Update canvas name when artifacts change - with safety checks
+  useEffect(() => {
+    if (!isMountedRef.current) {
+      debugLog("Skipping canvas name update - component unmounted");
+      return;
+    }
+
+    debugLog("Updating canvas name", { artifactCount: artifacts.length });
+
+    if (artifacts.length > 0) {
+      // Use canvas name from first artifact (all charts in same canvas should have same name)
+      const firstArtifactCanvasName = (artifacts[0] as any)?.canvasName;
+      if (firstArtifactCanvasName && firstArtifactCanvasName !== canvasName) {
+        debugLog("Canvas name changed", { from: canvasName, to: firstArtifactCanvasName });
+        setCanvasName(firstArtifactCanvasName);
+      }
+    } else if (canvasName !== "Canvas") {
+      debugLog("Resetting canvas name to default");
+      setCanvasName("Canvas");
+    }
+  }, [artifacts, canvasName, debugLog]);
 
   const addArtifact = useCallback((artifact: CanvasArtifact) => {
-    console.log("🚀 useCanvas Debug: addArtifact called with:", artifact);
+    if (!isMountedRef.current) {
+      debugLog("Attempted to add artifact after unmount - ignoring", { artifactId: artifact.id });
+      return;
+    }
 
-    // Use functional updates to ensure all state changes happen synchronously
+    debugLog("Adding artifact", { artifactId: artifact.id, title: artifact.title, type: artifact.type });
+    memoryTracker();
+
     setArtifacts(prev => {
       const existing = prev.find(a => a.id === artifact.id);
       if (existing) {
+        debugLog("Updating existing artifact", { artifactId: artifact.id });
         // Update existing artifact
-        const updated = prev.map(a => a.id === artifact.id ? { ...a, ...artifact } : a);
-        console.log("📊 useCanvas Debug: Updated existing artifact:", artifact.id);
-        return updated;
+        return prev.map(a => a.id === artifact.id ? { ...a, ...artifact } : a);
       } else {
+        debugLog("Adding new artifact", { artifactId: artifact.id, newTotal: prev.length + 1 });
         // Add new artifact
-        const newArtifacts = [...prev, artifact];
-        console.log("📊 useCanvas Debug: New artifacts array:", newArtifacts.length, "items");
-        return newArtifacts;
+        return [...prev, artifact];
       }
     });
 
     setActiveArtifactId(artifact.id);
-    console.log("🎯 useCanvas Debug: Setting active artifact ID:", artifact.id);
 
-    // Always show canvas when new artifact is added
-    setIsVisible(true);
-    console.log("✅ useCanvas Debug: Setting isVisible to true - canvas should now be visible");
-  }, []);
+    // Prevent Canvas flickering by ensuring it stays visible
+    if (!isVisible) {
+      debugLog("Auto-opening Canvas for new artifact", { artifactId: artifact.id });
+      setIsVisible(true);
+    }
+  }, [isVisible, debugLog, memoryTracker]);
 
   const addLoadingArtifact = useCallback((artifact: Omit<CanvasArtifact, 'status'>) => {
-    console.log("🔄 useCanvas Debug: addLoadingArtifact called with:", artifact);
+    if (!isMountedRef.current) {
+      debugLog("Attempted to add loading artifact after unmount - ignoring", { artifactId: artifact.id });
+      return;
+    }
+
+    debugLog("Adding loading artifact", { artifactId: artifact.id, title: artifact.title });
     const loadingArtifact = { ...artifact, status: "loading" as const };
     addArtifact(loadingArtifact);
-  }, [addArtifact]);
+  }, [addArtifact, debugLog]);
 
   const updateArtifact = useCallback((id: string, updates: Partial<CanvasArtifact>) => {
-    console.log("🔄 useCanvas Debug: updateArtifact called with:", id, updates);
-    setArtifacts(prev =>
-      prev.map(artifact =>
+    if (!isMountedRef.current) {
+      debugLog("Attempted to update artifact after unmount - ignoring", { artifactId: id });
+      return;
+    }
+
+    debugLog("Updating artifact", { artifactId: id, updates: Object.keys(updates) });
+    setArtifacts(prev => {
+      const artifactExists = prev.find(a => a.id === id);
+      if (!artifactExists) {
+        debugLog("Warning: Attempted to update non-existent artifact", { artifactId: id });
+        return prev;
+      }
+      return prev.map(artifact =>
         artifact.id === id ? { ...artifact, ...updates } : artifact
-      )
-    );
-  }, []);
+      );
+    });
+  }, [debugLog]);
 
   const removeArtifact = useCallback((id: string) => {
-    console.log("🗑️ useCanvas Debug: removeArtifact called with ID:", id);
+    if (!isMountedRef.current) {
+      debugLog("Attempted to remove artifact after unmount - ignoring", { artifactId: id });
+      return;
+    }
+
+    debugLog("Removing artifact", { artifactId: id });
     setArtifacts(prev => {
+      const artifactExists = prev.find(a => a.id === id);
+      if (!artifactExists) {
+        debugLog("Warning: Attempted to remove non-existent artifact", { artifactId: id });
+        return prev;
+      }
+
       const filtered = prev.filter(a => a.id !== id);
-      console.log("📊 useCanvas Debug: Artifacts after removal:", filtered.length);
+      debugLog("Artifacts after removal", { remainingCount: filtered.length });
+
       if (filtered.length === 0) {
-        console.log("🙈 useCanvas Debug: Last artifact removed, hiding canvas");
-        setIsVisible(false); // Hide if last artifact
+        debugLog("Last artifact removed - hiding canvas");
+        // Use setTimeout to prevent race conditions
+        setTimeout(() => {
+          if (isMountedRef.current) {
+            setIsVisible(false);
+          }
+        }, 100);
       }
       return filtered;
     });
-  }, []);
+  }, [debugLog]);
 
   const closeCanvas = useCallback(() => {
-    console.log("❌ useCanvas Debug: closeCanvas called");
+    if (!isMountedRef.current) {
+      debugLog("Attempted to close canvas after unmount - ignoring");
+      return;
+    }
+
+    debugLog("User manually closed Canvas");
     setIsVisible(false);
-  }, []);
+    setUserManuallyClosed(true);
+  }, [debugLog]);
 
   const showCanvas = useCallback(() => {
-    console.log("👁️ useCanvas Debug: showCanvas called");
-    setArtifacts(prev => {
-      console.log("🔍 useCanvas Debug: Current artifacts:", prev.length);
-      if (prev.length > 0) {
-        setIsVisible(true);
-        console.log("✅ useCanvas Debug: Canvas shown (artifacts available)");
-      } else {
-        console.log("⚠️ useCanvas Debug: Cannot show canvas - no artifacts available");
-      }
-      return prev; // Don't change artifacts
-    });
-  }, []);
+    if (!isMountedRef.current) {
+      debugLog("Attempted to show canvas after unmount - ignoring");
+      return;
+    }
 
-  // Listen for show canvas events - using useCallback to prevent stale closures
+    debugLog("Opening Canvas", { previouslyVisible: isVisible, userHadClosed: userManuallyClosed });
+    setIsVisible(true);
+    setUserManuallyClosed(false); // Reset manual close flag when programmatically opened
+  }, [isVisible, userManuallyClosed, debugLog]);
+
+  // Listen for show canvas events - with proper cleanup and error handling
   useEffect(() => {
-    const handleShow = () => {
-      console.log("🔊 useCanvas Debug: Received canvas:show event");
-      setArtifacts(prev => {
-        if (prev.length > 0) {
-          console.log("✅ useCanvas Debug: Showing Canvas - artifacts available");
-          setIsVisible(true);
-        } else {
-          console.log("⚠️ useCanvas Debug: Ignoring show event - no artifacts available");
+    const handleShow = (event: Event) => {
+      try {
+        if (!isMountedRef.current) {
+          debugLog("Canvas show event received after unmount - ignoring");
+          return;
         }
-        return prev; // Don't change artifacts
-      });
+
+        debugLog("User clicked 'Open Canvas' button", { eventType: event.type });
+
+        // Check if we have artifacts to show
+        setArtifacts(prev => {
+          if (prev.length > 0) {
+            debugLog("Opening Canvas - artifacts available", { count: prev.length });
+            setIsVisible(true);
+            setUserManuallyClosed(false);
+          } else {
+            debugLog("Warning: Open Canvas button clicked but no artifacts available");
+          }
+          return prev; // Don't change artifacts
+        });
+      } catch (error) {
+        debugLog("Error handling canvas show event", { error });
+        console.error(`${debugPrefix} Error in canvas show handler:`, error);
+      }
     };
 
-    console.log("🔧 useCanvas Debug: Setting up canvas:show event listener in hook");
-    window.addEventListener('canvas:show', handleShow);
+    // Add error boundary for event listener
+    const safeHandleShow = (event: Event) => {
+      try {
+        handleShow(event);
+      } catch (error) {
+        console.error(`${debugPrefix} Critical error in canvas show handler:`, error);
+      }
+    };
+
+    debugLog("Registering canvas:show event listener");
+    window.addEventListener('canvas:show', safeHandleShow);
+
     return () => {
-      console.log("🧹 useCanvas Debug: Cleaning up canvas:show event listener in hook");
-      window.removeEventListener('canvas:show', handleShow);
+      debugLog("Removing canvas:show event listener");
+      window.removeEventListener('canvas:show', safeHandleShow);
     };
-  }, []); // Remove artifacts dependency to prevent stale closure issues
+  }, [debugLog]); // Safe dependency
 
-  // Debug state changes
+  // Debug state changes with comprehensive tracking
   useEffect(() => {
-    console.log("🔄 useCanvas Debug: State changed - isVisible:", isVisible, "artifacts:", artifacts.length, "activeId:", activeArtifactId);
-  }, [isVisible, artifacts.length, activeArtifactId]);
+    if (!isMountedRef.current) return;
+
+    debugLog("Canvas state changed", {
+      isVisible,
+      artifactCount: artifacts.length,
+      activeArtifactId,
+      userManuallyClosed,
+      canvasName
+    });
+
+    // Track potential memory leaks
+    memoryTracker();
+  }, [isVisible, artifacts.length, activeArtifactId, userManuallyClosed, canvasName, debugLog, memoryTracker]);
+
 
   return {
     isVisible,
     artifacts,
     activeArtifactId,
     canvasName,
+    userManuallyClosed,
     addArtifact,
     addLoadingArtifact,
     updateArtifact,

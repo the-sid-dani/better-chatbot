@@ -46,6 +46,8 @@ api/
 │   ├── 📄 actions.ts           - Server actions for auth operations
 │   └── 📄 [...all]/route.ts    - Catch-all Better-Auth handler
 ├── 📄 bookmark/route.ts         - Bookmark management (GET/POST/DELETE)
+├── 📁 health/                   # System Health Monitoring
+│   └── 📄 langfuse/route.ts     - Langfuse observability system health check
 ├── 📁 chat/                     # Core Chat System - MOST CRITICAL
 │   ├── 📄 route.ts             - Main chat endpoint with streaming AI responses
 │   ├── 📄 shared.chat.ts       - Shared chat utilities and tool loading
@@ -58,9 +60,10 @@ api/
 │   ├── 📄 route.ts             - MCP server management (POST)
 │   ├── 📄 actions.ts           - Server actions for MCP operations
 │   ├── 📄 list/route.ts        - List available MCP servers
+│   ├── 📄 oauth/route.ts       - OAuth initiation for MCP servers
 │   ├── 📄 oauth/callback/route.ts - OAuth callback for MCP servers
 │   ├── 📄 server-customizations/[server]/route.ts - MCP server customizations
-│   └── 📄 tool-customizations/ - MCP tool customization endpoints
+│   └── 📄 tool-customizations/[server]/[tool]/route.ts - MCP tool customization endpoints
 ├── 📄 thread/route.ts           - Chat thread management (GET/POST/DELETE)
 ├── 📄 user/preferences/route.ts - User preference management
 └── 📁 workflow/                 # Visual Workflow System

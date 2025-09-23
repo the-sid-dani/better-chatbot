@@ -8,6 +8,8 @@ Read the README.md file to get an understanding of the project.
 
 Read key files in the src/ or root directory
 
+IMPORTANT: Use Serena to search through the codebase. If you get any error using serena, retry with different Serena tools. 
+
 Explain back to me:
 - Project structure
 - Project purpose and goals

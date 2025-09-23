@@ -53,13 +53,17 @@ src/components/
 │   ├── 📄 app-sidebar-threads.tsx    # Chat thread management
 │   ├── 📄 app-sidebar-user.tsx       # User profile and settings
 │   └── 📄 theme-provider.tsx         # Dark/light theme context
-├── 📁 tool-invocation/               # Tool Result Visualization (10 files)
+├── 📁 tool-invocation/               # Tool Result Visualization (14 files)
+│   ├── 📄 area-chart.tsx           # Data visualization - area charts (Canvas optimized)
 │   ├── 📄 bar-chart.tsx             # Data visualization - bar charts
 │   ├── 📄 code-executor.tsx         # Code execution interface
 │   ├── 📄 code.worker.ts            # Web worker for code execution
+│   ├── 📄 funnel-chart.tsx         # Data visualization - funnel charts (Canvas optimized)
 │   ├── 📄 interactive-table.tsx     # Sortable/filterable data tables
 │   ├── 📄 line-chart.tsx           # Data visualization - line charts
 │   ├── 📄 pie-chart.tsx            # Data visualization - pie charts
+│   ├── 📄 radar-chart.tsx          # Data visualization - radar charts (Canvas optimized)
+│   ├── 📄 scatter-chart.tsx        # Data visualization - scatter plots (Canvas optimized)
 │   ├── 📄 sequential-thinking.tsx    # AI reasoning process display
 │   ├── 📄 shared.tool-invocation.ts # Shared utilities for tool results
 │   ├── 📄 web-search.tsx           # Web search result display
@@ -82,6 +86,7 @@ src/components/
 ├── 📄 chat-bot.tsx                  # Main chat interface component with Canvas integration
 ├── 📄 chat-bot-voice.tsx           # Voice chat functionality (21.2k lines)
 ├── 📄 message-parts.tsx            # Message rendering with "Open Canvas" button integration
+├── 📄 progress-toast.tsx           # Progress indication for long-running operations
 ├── 📄 prompt-input.tsx             # Chat input with mentions and tools (14.3k lines)
 ├── 📄 mcp-*.tsx                    # MCP (Model Context Protocol) components (5 files)
 ├── 📄 tool-select-dropdown.tsx     # Tool selection interface (34.5k lines)

@@ -47,7 +47,8 @@
       "mcp__cloudflare-playwright-mcp__browser_click",
       "mcp__cloudflare-playwright-mcp__browser_type",
       "mcp__cloudflare-playwright-mcp__browser_snapshot",
-      "mcp__cloudflare-playwright-mcp__browser_take_screenshot"
+      "mcp__cloudflare-playwright-mcp__browser_take_screenshot",
+      "mcp__serena"
     ],
     "deny": [
       "Read(./.env)",

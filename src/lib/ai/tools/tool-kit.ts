@@ -33,5 +33,6 @@ export const APP_DEFAULT_TOOL_KIT: Record<
   },
   [AppDefaultToolkit.Artifacts]: {
     [DefaultToolName.CreateChart]: chartTools.create_chart,
+    "update_chart": chartTools.update_chart,
   },
 };

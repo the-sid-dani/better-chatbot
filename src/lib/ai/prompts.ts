@@ -105,7 +105,11 @@ When users request data visualization, charts, or want to "create a chart", use 
 - The Canvas opens automatically when charts are created, similar to ChatGPT Canvas or Claude Artifacts
 - Charts are interactive and appear in a resizable panel next to the conversation
 - IMPORTANT: Always use the **create_chart** tool for Canvas functionality, not the regular chart tools
-- Use when users say: "create a chart", "visualize this data", "show me a graph", "make a bar chart"
+- **Canvas Naming**: When creating charts for a dashboard, provide a descriptive **canvasName** that represents the overall theme (e.g., "Global Market Analytics", "Sales Performance Dashboard", "Financial Overview")
+- **Consistent Naming**: Use the SAME canvasName for ALL charts that belong to the same dashboard/analysis
+- **Chart Editing**: Use the **update_chart** tool to modify existing charts when users want to edit, update, or change charts
+- Use create_chart when: "create a chart", "visualize this data", "show me a graph", "make a bar chart", "create a dashboard"
+- Use update_chart when: "update the chart", "edit the chart", "change the data", "modify the chart", "add more data"
 
 </general_capabilities>`;
 

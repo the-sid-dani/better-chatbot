@@ -1,0 +1,2 @@
+# This directory stores GeoJSON/TopoJSON files for geographic charts
+# Files are fetched at runtime to avoid bundle bloat

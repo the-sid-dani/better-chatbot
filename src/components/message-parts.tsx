@@ -1035,11 +1035,53 @@ export const ToolMessagePart = memo(
                           variant="outline"
                           className="h-6 text-xs mr-2"
                           onClick={() => {
-                            console.log("🎯 Message Debug: Open Canvas button clicked");
-                            console.log("🔍 Message Debug: Tool result data:", result);
-                            console.log("📡 Message Debug: Dispatching canvas:show event");
-                            window.dispatchEvent(new CustomEvent('canvas:show'));
-                            console.log("✅ Message Debug: Canvas show event dispatched successfully");
+                            try {
+                              console.log("🎯 Message Debug: Open Canvas button clicked", {
+                                toolName,
+                                resultStatus: (result as any)?.status,
+                                resultId: (result as any)?.chartId,
+                                timestamp: new Date().toISOString()
+                              });
+                              console.log("🔍 Message Debug: Tool result data:", result);
+
+                              // Enhanced event dispatch with error handling and timeout
+                              const canvasEvent = new CustomEvent('canvas:show', {
+                                detail: {
+                                  source: 'open-canvas-button',
+                                  toolName,
+                                  resultId: (result as any)?.chartId,
+                                  timestamp: Date.now()
+                                }
+                              });
+
+                              console.log("📡 Message Debug: Dispatching canvas:show event with details:", canvasEvent.detail);
+
+                              // Dispatch event with retry mechanism
+                              let eventDispatched = false;
+                              try {
+                                eventDispatched = window.dispatchEvent(canvasEvent);
+                                console.log("✅ Message Debug: Canvas show event dispatched", { success: eventDispatched });
+                              } catch (dispatchError) {
+                                console.error("🚨 Message Debug: Error dispatching canvas event:", dispatchError);
+                                // Fallback: try again after small delay
+                                setTimeout(() => {
+                                  try {
+                                    window.dispatchEvent(canvasEvent);
+                                    console.log("🔄 Message Debug: Canvas show event retry successful");
+                                  } catch (retryError) {
+                                    console.error("🚨 Message Debug: Canvas event retry failed:", retryError);
+                                  }
+                                }, 100);
+                              }
+
+                              // Additional safety check - verify the canvas should be able to show
+                              if (!eventDispatched) {
+                                console.warn("⚠️ Message Debug: Canvas event was not dispatched properly - Canvas may not open");
+                              }
+
+                            } catch (error) {
+                              console.error("🚨 Message Debug: Critical error in Open Canvas button:", error);
+                            }
                           }}
                         >
                           <BarChart3 className="w-3 h-3 mr-1" />

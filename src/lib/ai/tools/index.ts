@@ -17,7 +17,6 @@ export enum DefaultToolName {
   JavascriptExecution = "mini-javascript-execution",
   PythonExecution = "python-execution",
   CreateChart = "create_chart",
-  CreateDashboard = "create_dashboard",
 }
 
 export const SequentialThinkingToolName = "sequential-thinking";

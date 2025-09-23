@@ -399,10 +399,17 @@ export const loadMcpTools = (opt?: {
 }) =>
   safe(() => mcpClientsManager.tools())
     .map((tools) => {
-      if (opt?.mentions?.length) {
-        return filterMCPToolsByMentions(tools, opt.mentions);
+      // First apply allowed servers filter (security/permission layer)
+      const serverFilteredTools = filterMCPToolsByAllowedMCPServers(tools, opt?.allowedMcpServers);
+
+      // If no mentions, return all server-filtered tools
+      if (!opt?.mentions?.length) {
+        return serverFilteredTools;
       }
-      return filterMCPToolsByAllowedMCPServers(tools, opt?.allowedMcpServers);
+
+      // If mentions exist, they should be additive - return all server-filtered tools
+      // The mentions are for agent instructions, not for restricting available tools
+      return serverFilteredTools;
     })
     .orElse({} as Record<string, VercelAIMcpTool>);
 
