@@ -13,6 +13,7 @@ export const pgMcpRepository: MCPRepository = {
         name: server.name,
         config: server.config,
         enabled: true,
+        adminCreated: server.adminCreated ?? false,
         createdAt: new Date(),
         updatedAt: new Date(),
       })
@@ -20,6 +21,7 @@ export const pgMcpRepository: MCPRepository = {
         target: [McpServerSchema.id],
         set: {
           config: server.config,
+          adminCreated: server.adminCreated ?? false,
           updatedAt: new Date(),
         },
       })

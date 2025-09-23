@@ -51,11 +51,16 @@ export type McpServerInsert = {
   name: string;
   config: MCPServerConfig;
   id?: string;
+  adminCreated?: boolean;
 };
 export type McpServerSelect = {
   name: string;
   config: MCPServerConfig;
   id: string;
+  adminCreated: boolean;
+  enabled: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 export type VercelAIMcpTool = Tool & {

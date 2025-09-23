@@ -48,7 +48,7 @@ export const AgentSchema = pgTable("agent", {
     .references(() => UserSchema.id),
   instructions: json("instructions").$type<Agent["instructions"]>(),
   visibility: varchar("visibility", {
-    enum: ["public", "private", "readonly"],
+    enum: ["public", "private", "readonly", "admin-shared"],
   })
     .notNull()
     .default("private"),
@@ -83,6 +83,7 @@ export const McpServerSchema = pgTable("mcp_server", {
   name: text("name").notNull(),
   config: json("config").notNull().$type<MCPServerConfig>(),
   enabled: boolean("enabled").notNull().default(true),
+  adminCreated: boolean("admin_created").notNull().default(false),
   createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: timestamp("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
@@ -94,6 +95,7 @@ export const UserSchema = pgTable("user", {
   emailVerified: boolean("email_verified").default(false).notNull(),
   password: text("password"),
   image: text("image"),
+  role: varchar("role", { length: 20 }).notNull().default("user"),
   preferences: json("preferences").default({}).$type<UserPreferences>(),
   createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: timestamp("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -195,7 +197,7 @@ export const WorkflowSchema = pgTable("workflow", {
   description: text("description"),
   isPublished: boolean("is_published").notNull().default(false),
   visibility: varchar("visibility", {
-    enum: ["public", "private", "readonly"],
+    enum: ["public", "private", "readonly", "admin-shared"],
   })
     .notNull()
     .default("private"),

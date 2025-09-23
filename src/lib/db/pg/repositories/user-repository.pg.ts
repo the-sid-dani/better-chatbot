@@ -60,4 +60,28 @@ export const pgUserRepository: UserRepository = {
       .where(eq(UserSchema.id, userId));
     return (result as User) ?? null;
   },
+  updateRole: async (userId: string, role: "user" | "admin"): Promise<User> => {
+    const [result] = await db
+      .update(UserSchema)
+      .set({
+        role,
+        updatedAt: new Date(),
+      })
+      .where(eq(UserSchema.id, userId))
+      .returning();
+    return {
+      ...result,
+      preferences: result.preferences ?? undefined,
+    };
+  },
+  listUsers: async (): Promise<User[]> => {
+    const results = await db
+      .select()
+      .from(UserSchema)
+      .orderBy(UserSchema.createdAt);
+    return results.map((result) => ({
+      ...result,
+      preferences: result.preferences ?? undefined,
+    }));
+  },
 };

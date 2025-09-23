@@ -12,6 +12,7 @@ export type User = {
   name: string;
   email: string;
   image: string | null;
+  role: "user" | "admin";
   preferences?: UserPreferences;
 };
 
@@ -24,6 +25,8 @@ export type UserRepository = {
   ) => Promise<User>;
   getPreferences: (userId: string) => Promise<UserPreferences | null>;
   findById: (userId: string) => Promise<User | null>;
+  updateRole: (userId: string, role: "user" | "admin") => Promise<User>;
+  listUsers: () => Promise<User[]>;
 };
 
 export const UserZodSchema = z.object({

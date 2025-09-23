@@ -15,6 +15,7 @@ import { getAuthConfig } from "./config";
 
 import logger from "logger";
 import { redirect } from "next/navigation";
+import { pgUserRepository } from "lib/db/pg/repositories/user-repository.pg";
 
 const {
   emailAndPasswordEnabled,
@@ -90,4 +91,47 @@ export const getSession = async () => {
     redirect("/sign-in");
   }
   return session!;
+};
+
+// Enhanced session with role information for admin functionality
+export const getEnhancedSession = async () => {
+  "use server";
+  const session = await auth.api
+    .getSession({
+      headers: await headers(),
+    })
+    .catch((e) => {
+      logger.error(e);
+      return null;
+    });
+
+  if (!session?.user?.id) return null;
+
+  // Get user details including role from database
+  const user = await pgUserRepository.findById(session.user.id);
+  if (!user) return null;
+
+  return {
+    ...session,
+    user: {
+      ...session.user,
+      role: user.role,
+    }
+  };
+};
+
+// Require admin role - throws or redirects if not admin
+export const requireAdmin = async () => {
+  "use server";
+  const session = await getEnhancedSession();
+
+  if (!session) {
+    redirect("/sign-in");
+  }
+
+  if (session.user.role !== "admin") {
+    redirect("/unauthorized");
+  }
+
+  return session;
 };

@@ -15,6 +15,7 @@ import { cn } from "lib/utils";
 import { ShareableActions, type Visibility } from "./shareable-actions";
 import { WorkflowSummary } from "app-types/workflow";
 import { AgentSummary } from "app-types/agent";
+import { AdminResourceBadge } from "./admin/admin-resource-badge";
 import Link from "next/link";
 
 export interface ShareableIcon {
@@ -87,6 +88,7 @@ export function ShareableCard({
                 <time className="shrink-0">
                   {format(item.updatedAt, "MMM d, yyyy")}
                 </time>
+                <AdminResourceBadge visibility={item.visibility} className="shrink-0" />
                 {type === "workflow" && !isPublished && (
                   <span className="px-2 rounded-sm bg-secondary text-foreground shrink-0">
                     {t("Workflow.draft")}

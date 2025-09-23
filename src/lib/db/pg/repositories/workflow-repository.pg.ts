@@ -82,7 +82,9 @@ export const pgWorkflowRepository: WorkflowRepository = {
           eq(WorkflowSchema.isPublished, true),
           or(
             eq(WorkflowSchema.userId, userId),
-            not(eq(WorkflowSchema.visibility, "private")),
+            eq(WorkflowSchema.visibility, "public"),
+            eq(WorkflowSchema.visibility, "readonly"),
+            eq(WorkflowSchema.visibility, "admin-shared"),
           ),
         ),
       );
@@ -106,7 +108,7 @@ export const pgWorkflowRepository: WorkflowRepository = {
       .innerJoin(UserSchema, eq(WorkflowSchema.userId, UserSchema.id))
       .where(
         or(
-          inArray(WorkflowSchema.visibility, ["public", "readonly"]),
+          inArray(WorkflowSchema.visibility, ["public", "readonly", "admin-shared"]),
           eq(WorkflowSchema.userId, userId),
         ),
       )
@@ -136,8 +138,10 @@ export const pgWorkflowRepository: WorkflowRepository = {
     if (workflow.visibility === "private") {
       return false;
     }
-    if (workflow.visibility == "readonly" && !readOnly) return false;
-    return true;
+    if (workflow.visibility === "readonly" && !readOnly) return false;
+    if (workflow.visibility === "admin-shared") return true;
+    if (workflow.visibility === "public") return true;
+    return false;
   },
   async delete(id) {
     const result = await pgDb
