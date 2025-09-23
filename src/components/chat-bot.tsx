@@ -261,23 +261,40 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     addArtifact: addCanvasArtifact,
     closeCanvas,
     showCanvas,
-    setActiveArtifactId
+    setActiveArtifactId,
   } = useCanvas();
+
+  // Cleanup processed tools when thread changes to prevent memory leaks
+  const processedToolsRef = useRef(new Set<string>());
+
+  // Monitor for excessive re-renders
+  const renderCountRef = useRef(0);
+  renderCountRef.current += 1;
+
+  useEffect(() => {
+    console.log(
+      "🧼 ChatBot Debug: Thread changed - clearing processed tools cache",
+    );
+    processedToolsRef.current.clear();
+  }, [threadId]);
 
   // Debug canvas state changes with enhanced logging
   useEffect(() => {
-    console.log(
-      "🔍 ChatBot Canvas Debug: Canvas state changed",
-      {
-        isVisible: isCanvasVisible,
-        artifactCount: canvasArtifacts.length,
-        userManuallyClosed,
-        activeArtifactId,
-        canvasName,
-        timestamp: new Date().toISOString()
-      }
-    );
-  }, [isCanvasVisible, canvasArtifacts.length, userManuallyClosed, activeArtifactId, canvasName]);
+    console.log("🔍 ChatBot Canvas Debug: Canvas state changed", {
+      isVisible: isCanvasVisible,
+      artifactCount: canvasArtifacts.length,
+      userManuallyClosed,
+      activeArtifactId,
+      canvasName,
+      timestamp: new Date().toISOString(),
+    });
+  }, [
+    isCanvasVisible,
+    canvasArtifacts.length,
+    userManuallyClosed,
+    activeArtifactId,
+    canvasName,
+  ]);
 
   // MOVED AFTER useChat hook to fix initialization error
 
@@ -556,7 +573,6 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
   }, []);
 
   // HARDENED PRODUCTION FIX: Tool-based Canvas processing with race condition protection
-  const processedToolsRef = useRef(new Set<string>());
   const processingDebounceRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
@@ -577,40 +593,77 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
         console.log("🔧 ChatBot Tool Debug: Processing message", {
           messageId: lastMessage.id,
           partCount: lastMessage.parts.length,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
 
-        // Look for chart tools in any state
-        const chartTools = lastMessage.parts.filter(part =>
-          isToolUIPart(part) && getToolName(part) === "create_chart"
+        // Look for all chart tools in any state (including new artifact tools)
+        const chartToolNames = [
+          "create_chart",
+          "create_area_chart",
+          "create_scatter_chart",
+          "create_radar_chart",
+          "create_funnel_chart",
+          "create_treemap_chart",
+          "create_sankey_chart",
+          "create_radial_bar_chart",
+          "create_composed_chart",
+          "create_geographic_chart",
+          "create_gauge_chart",
+          "create_calendar_heatmap",
+        ];
+
+        const chartTools = lastMessage.parts.filter(
+          (part) =>
+            isToolUIPart(part) && chartToolNames.includes(getToolName(part)),
         );
 
         console.log("📊 ChatBot Tool Debug: Found chart tools", {
           toolCount: chartTools.length,
-          states: chartTools.map(t => t.state)
+          states: chartTools.map((t) => t.state),
         });
 
         // Open Canvas immediately when chart tools are detected (unless user closed it)
         if (chartTools.length > 0 && !isCanvasVisible && !userManuallyClosed) {
-          console.log("🎭 ChatBot Canvas Debug: Auto-opening Canvas for chart tools");
+          console.log(
+            "🎭 ChatBot Canvas Debug: Auto-opening Canvas for chart tools",
+          );
           showCanvas();
         } else if (chartTools.length > 0 && userManuallyClosed) {
-          console.log("🚪 ChatBot Canvas Debug: Chart tools detected but user closed Canvas - respecting user choice");
+          console.log(
+            "🚪 ChatBot Canvas Debug: Chart tools detected but user closed Canvas - respecting user choice",
+          );
         }
 
         // Process completed charts with duplicate prevention
-        const completedCharts = chartTools.filter(part => {
-          const isCompleted = part.state === "output-available" &&
-            (part.output as any)?.shouldCreateArtifact &&
-            (part.output as any)?.status === 'success';
+        const completedCharts = chartTools.filter((part) => {
+          if (part.state !== "output-available") {
+            return false;
+          }
+
+          const result = part.output as any;
+
+          // Support multiple result formats:
+          // 1. Original format: shouldCreateArtifact && status === 'success'
+          // 2. New format: success === true
+          const isCompleted =
+            (result?.shouldCreateArtifact && result?.status === "success") ||
+            result?.success === true;
 
           if (isCompleted) {
-            const result = part.output as any;
-            const toolKey = `${lastMessage.id}-${result.chartId}`;
+            // Use different ID fields depending on format
+            const artifactId =
+              result.chartId || result.artifactId || generateUUID();
+            const toolKey = `${lastMessage.id}-${artifactId}`;
 
             // Check if we've already processed this tool
             if (processedToolsRef.current.has(toolKey)) {
-              console.log("⚠️ ChatBot Tool Debug: Skipping already processed chart", { chartId: result.chartId });
+              console.log(
+                "⚠️ ChatBot Tool Debug: Skipping already processed chart",
+                {
+                  chartId: artifactId,
+                  toolName: getToolName(part),
+                },
+              );
               return false;
             }
 
@@ -624,37 +677,86 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
 
         console.log("✅ ChatBot Tool Debug: Processing completed charts", {
           completedCount: completedCharts.length,
-          existingArtifacts: canvasArtifacts.length
+          existingArtifacts: canvasArtifacts.length,
         });
 
         completedCharts.forEach((part) => {
           const result = part.output as any;
-          const existingArtifact = canvasArtifacts.find(a => a.id === result.chartId);
+          const toolName = getToolName(part);
+
+          // Handle different result formats
+          const artifactId =
+            result.chartId || result.artifactId || generateUUID();
+          const existingArtifact = canvasArtifacts.find(
+            (a) => a.id === artifactId,
+          );
 
           if (!existingArtifact) {
-            console.log("✨ ChatBot Tool Debug: Creating new chart artifact", { chartId: result.chartId, title: result.title });
+            console.log("✨ ChatBot Tool Debug: Creating new chart artifact", {
+              chartId: artifactId,
+              title: result.title || result.artifact?.title,
+              toolName,
+            });
+
+            let chartData;
+            let chartType;
+            let title;
+
+            // Handle new artifact format
+            if (result.artifact) {
+              const artifactContent = JSON.parse(result.artifact.content);
+              chartData = {
+                title: artifactContent.title,
+                chartType: artifactContent.type.replace("-chart", ""),
+                data: artifactContent.data,
+                description: artifactContent.description,
+                yAxisLabel: artifactContent.yAxisLabel,
+                // Copy all metadata from artifact
+                ...artifactContent,
+              };
+              chartType =
+                artifactContent.metadata?.chartType ||
+                artifactContent.type.replace("-chart", "");
+              title = result.artifact.title;
+            }
+            // Handle original format
+            else {
+              chartData = result.chartData;
+              chartType = result.chartType;
+              title = result.title;
+            }
 
             const artifact = {
-              id: result.chartId,
+              id: artifactId,
               type: "chart" as const,
-              title: result.title,
+              title: title || `${chartType} Chart`,
               canvasName: result.canvasName || "Data Visualization",
-              data: result.chartData,
+              data: chartData,
               status: "completed" as const,
               metadata: {
-                chartType: result.chartType,
-                dataPoints: result.dataPoints || 0,
-                lastUpdated: new Date().toISOString()
-              }
+                chartType: chartType || "bar",
+                dataPoints: result.dataPoints || chartData?.data?.length || 0,
+                toolName,
+                lastUpdated: new Date().toISOString(),
+              },
             };
 
             addCanvasArtifact(artifact);
           } else {
-            console.log("🔄 ChatBot Tool Debug: Chart artifact already exists", { chartId: result.chartId });
+            console.log(
+              "🔄 ChatBot Tool Debug: Chart artifact already exists",
+              {
+                chartId: artifactId,
+                toolName,
+              },
+            );
           }
         });
       } catch (error) {
-        console.error("🚨 ChatBot Tool Debug: Error processing chart tools:", error);
+        console.error(
+          "🚨 ChatBot Tool Debug: Error processing chart tools:",
+          error,
+        );
       }
     }, 150); // 150ms debounce to prevent rapid processing
 
@@ -664,7 +766,14 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
         clearTimeout(processingDebounceRef.current);
       }
     };
-  }, [messages, isCanvasVisible, userManuallyClosed, showCanvas, addCanvasArtifact, canvasArtifacts]);
+  }, [
+    messages,
+    isCanvasVisible,
+    userManuallyClosed,
+    showCanvas,
+    addCanvasArtifact,
+    canvasArtifacts,
+  ]);
 
   useEffect(() => {
     if (mounted) {
@@ -675,7 +784,9 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
   // Comprehensive cleanup on unmount
   useEffect(() => {
     return () => {
-      console.log("🧼 ChatBot Debug: Component unmounting - performing cleanup");
+      console.log(
+        "🧼 ChatBot Debug: Component unmounting - performing cleanup",
+      );
 
       // Clear any pending timeouts
       if (processingDebounceRef.current) {
@@ -699,16 +810,22 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     };
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      console.error("🚨 ChatBot Debug: Unhandled promise rejection in chat:", event.reason);
+      console.error(
+        "🚨 ChatBot Debug: Unhandled promise rejection in chat:",
+        event.reason,
+      );
       setChatError(new Error(`Promise rejection: ${event.reason}`));
     };
 
-    window.addEventListener('error', handleUnhandledError);
-    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    window.addEventListener("error", handleUnhandledError);
+    window.addEventListener("unhandledrejection", handleUnhandledRejection);
 
     return () => {
-      window.removeEventListener('error', handleUnhandledError);
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      window.removeEventListener("error", handleUnhandledError);
+      window.removeEventListener(
+        "unhandledrejection",
+        handleUnhandledRejection,
+      );
     };
   }, []);
 
@@ -720,7 +837,8 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
           <div className="text-destructive">
             <h3 className="font-semibold text-lg">Chat Error</h3>
             <p className="text-sm text-muted-foreground mt-2">
-              The chat interface encountered an error. Please try refreshing the page.
+              The chat interface encountered an error. Please try refreshing the
+              page.
             </p>
             <p className="text-xs text-muted-foreground mt-2 font-mono">
               Error: {chatError.message}
@@ -734,10 +852,7 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
             >
               Try Again
             </Button>
-            <Button
-              onClick={() => window.location.reload()}
-              size="sm"
-            >
+            <Button onClick={() => window.location.reload()} size="sm">
               Reload Page
             </Button>
           </div>
@@ -746,22 +861,12 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     );
   }
 
-  // Cleanup processed tools when thread changes to prevent memory leaks
-  useEffect(() => {
-    console.log("🧼 ChatBot Debug: Thread changed - clearing processed tools cache");
-    processedToolsRef.current.clear();
-  }, [threadId]);
-
-  // Monitor for excessive re-renders
-  const renderCountRef = useRef(0);
-  renderCountRef.current += 1;
-
   if (renderCountRef.current > 100) {
     console.warn("⚠️ ChatBot Debug: Excessive re-renders detected", {
       renderCount: renderCountRef.current,
       threadId,
       messageCount: messages.length,
-      canvasVisible: isCanvasVisible
+      canvasVisible: isCanvasVisible,
     });
   }
 
@@ -775,7 +880,7 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     renderCount: renderCountRef.current,
     messagesLength: messages.length,
     isLoading,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 
   return (

@@ -1029,58 +1029,109 @@ export const ToolMessagePart = memo(
                       <div className="flex-1" />
 
                       {/* Canvas button for chart/dashboard tools - outside the collapsed area */}
-                      {(toolName === "create_chart" || toolName === "create_dashboard") && (result as any)?.status === 'success' && (
+                      {(() => {
+                        const chartToolNames = [
+                          "create_chart",
+                          "create_dashboard",
+                          "create_area_chart",
+                          "create_scatter_chart",
+                          "create_radar_chart",
+                          "create_funnel_chart",
+                          "create_treemap_chart",
+                          "create_sankey_chart",
+                          "create_radial_bar_chart",
+                          "create_composed_chart",
+                          "create_geographic_chart",
+                          "create_gauge_chart",
+                          "create_calendar_heatmap",
+                        ];
+
+                        const isChartTool = chartToolNames.includes(toolName);
+                        const isSuccessful =
+                          (result as any)?.status === "success" ||
+                          (result as any)?.success === true;
+
+                        return isChartTool && isSuccessful;
+                      })() && (
                         <Button
                           size="sm"
                           variant="outline"
                           className="h-6 text-xs mr-2"
                           onClick={() => {
                             try {
-                              console.log("🎯 Message Debug: Open Canvas button clicked", {
-                                toolName,
-                                resultStatus: (result as any)?.status,
-                                resultId: (result as any)?.chartId,
-                                timestamp: new Date().toISOString()
-                              });
-                              console.log("🔍 Message Debug: Tool result data:", result);
+                              console.log(
+                                "🎯 Message Debug: Open Canvas button clicked",
+                                {
+                                  toolName,
+                                  resultStatus: (result as any)?.status,
+                                  resultId: (result as any)?.chartId,
+                                  timestamp: new Date().toISOString(),
+                                },
+                              );
+                              console.log(
+                                "🔍 Message Debug: Tool result data:",
+                                result,
+                              );
 
                               // Enhanced event dispatch with error handling and timeout
-                              const canvasEvent = new CustomEvent('canvas:show', {
-                                detail: {
-                                  source: 'open-canvas-button',
-                                  toolName,
-                                  resultId: (result as any)?.chartId,
-                                  timestamp: Date.now()
-                                }
-                              });
+                              const canvasEvent = new CustomEvent(
+                                "canvas:show",
+                                {
+                                  detail: {
+                                    source: "open-canvas-button",
+                                    toolName,
+                                    resultId: (result as any)?.chartId,
+                                    timestamp: Date.now(),
+                                  },
+                                },
+                              );
 
-                              console.log("📡 Message Debug: Dispatching canvas:show event with details:", canvasEvent.detail);
+                              console.log(
+                                "📡 Message Debug: Dispatching canvas:show event with details:",
+                                canvasEvent.detail,
+                              );
 
                               // Dispatch event with retry mechanism
                               let eventDispatched = false;
                               try {
-                                eventDispatched = window.dispatchEvent(canvasEvent);
-                                console.log("✅ Message Debug: Canvas show event dispatched", { success: eventDispatched });
+                                eventDispatched =
+                                  window.dispatchEvent(canvasEvent);
+                                console.log(
+                                  "✅ Message Debug: Canvas show event dispatched",
+                                  { success: eventDispatched },
+                                );
                               } catch (dispatchError) {
-                                console.error("🚨 Message Debug: Error dispatching canvas event:", dispatchError);
+                                console.error(
+                                  "🚨 Message Debug: Error dispatching canvas event:",
+                                  dispatchError,
+                                );
                                 // Fallback: try again after small delay
                                 setTimeout(() => {
                                   try {
                                     window.dispatchEvent(canvasEvent);
-                                    console.log("🔄 Message Debug: Canvas show event retry successful");
+                                    console.log(
+                                      "🔄 Message Debug: Canvas show event retry successful",
+                                    );
                                   } catch (retryError) {
-                                    console.error("🚨 Message Debug: Canvas event retry failed:", retryError);
+                                    console.error(
+                                      "🚨 Message Debug: Canvas event retry failed:",
+                                      retryError,
+                                    );
                                   }
                                 }, 100);
                               }
 
                               // Additional safety check - verify the canvas should be able to show
                               if (!eventDispatched) {
-                                console.warn("⚠️ Message Debug: Canvas event was not dispatched properly - Canvas may not open");
+                                console.warn(
+                                  "⚠️ Message Debug: Canvas event was not dispatched properly - Canvas may not open",
+                                );
                               }
-
                             } catch (error) {
-                              console.error("🚨 Message Debug: Critical error in Open Canvas button:", error);
+                              console.error(
+                                "🚨 Message Debug: Critical error in Open Canvas button:",
+                                error,
+                              );
                             }
                           }}
                         >
@@ -1104,26 +1155,87 @@ export const ToolMessagePart = memo(
                     </div>
                     {isExpanded && (
                       <div className="p-2 max-h-[300px] overflow-y-auto">
-                        {(toolName === "create_chart" || toolName === "create_dashboard") && (result as any)?.success ? (
+                        {(() => {
+                          const chartToolNames = [
+                            "create_chart",
+                            "create_dashboard",
+                            "create_area_chart",
+                            "create_scatter_chart",
+                            "create_radar_chart",
+                            "create_funnel_chart",
+                            "create_treemap_chart",
+                            "create_sankey_chart",
+                            "create_radial_bar_chart",
+                            "create_composed_chart",
+                            "create_geographic_chart",
+                            "create_gauge_chart",
+                            "create_calendar_heatmap",
+                          ];
+
+                          const isChartTool = chartToolNames.includes(toolName);
+                          const isSuccessful =
+                            (result as any)?.success === true ||
+                            (result as any)?.status === "success";
+
+                          return isChartTool && isSuccessful;
+                        })() ? (
                           <div className="space-y-3">
                             <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
                               <BarChart3 className="w-4 h-4" />
                               <span className="font-medium">
-                                {toolName === "create_dashboard" ? "Dashboard" : "Chart"} Created in Canvas
+                                {toolName === "create_dashboard"
+                                  ? "Dashboard"
+                                  : "Chart"}{" "}
+                                Created in Canvas
                               </span>
                             </div>
                             <div className="text-xs space-y-1">
-                              {(result as any).chartType && <div><strong>Type:</strong> {(result as any).chartType}</div>}
-                              {(result as any).chartCount && <div><strong>Charts:</strong> {(result as any).chartCount}</div>}
-                              {(result as any).metricCount && <div><strong>Metrics:</strong> {(result as any).metricCount}</div>}
-                              {((result as any).dataPoints || (result as any).totalDataPoints) && (
-                                <div><strong>Data Points:</strong> {(result as any).totalDataPoints || (result as any).dataPoints}</div>
+                              {(result as any).chartType && (
+                                <div>
+                                  <strong>Type:</strong>{" "}
+                                  {(result as any).chartType}
+                                </div>
                               )}
-                              {(result as any).series && <div><strong>Series:</strong> {(result as any).series?.join(", ")}</div>}
-                              {(result as any).chartTypes && <div><strong>Chart Types:</strong> {(result as any).chartTypes?.join(", ")}</div>}
+                              {(result as any).chartCount && (
+                                <div>
+                                  <strong>Charts:</strong>{" "}
+                                  {(result as any).chartCount}
+                                </div>
+                              )}
+                              {(result as any).metricCount && (
+                                <div>
+                                  <strong>Metrics:</strong>{" "}
+                                  {(result as any).metricCount}
+                                </div>
+                              )}
+                              {((result as any).dataPoints ||
+                                (result as any).totalDataPoints) && (
+                                <div>
+                                  <strong>Data Points:</strong>{" "}
+                                  {(result as any).totalDataPoints ||
+                                    (result as any).dataPoints}
+                                </div>
+                              )}
+                              {(result as any).series && (
+                                <div>
+                                  <strong>Series:</strong>{" "}
+                                  {(result as any).series?.join(", ")}
+                                </div>
+                              )}
+                              {(result as any).chartTypes && (
+                                <div>
+                                  <strong>Chart Types:</strong>{" "}
+                                  {(result as any).chartTypes?.join(", ")}
+                                </div>
+                              )}
                             </div>
                             <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
-                              {toolName === "create_dashboard" ? "Dashboard" : "Chart"} created successfully. Use the &ldquo;Open Canvas&rdquo; button above to view the interactive visualization.
+                              {toolName === "create_dashboard"
+                                ? "Dashboard"
+                                : "Chart"}{" "}
+                              created successfully. Use the &ldquo;Open
+                              Canvas&rdquo; button above to view the interactive
+                              visualization.
                             </div>
                           </div>
                         ) : (
