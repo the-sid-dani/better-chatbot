@@ -87,20 +87,20 @@ export function PieChart(props: PieChartProps) {
   }, [data]);
 
   return (
-    <Card className="flex flex-col bg-card">
-      <CardHeader className="items-center pb-0 flex flex-col gap-2 relative">
-        <CardTitle className="flex items-center">
+    <Card className="flex flex-col bg-card h-full">
+      <CardHeader className="flex flex-col gap-1 relative pb-1">
+        <CardTitle className="flex items-center text-left text-sm">
           Pie Chart - {title}
-          <div className="absolute right-4 top-">
+          <div className="absolute right-4 top-0">
             <JsonViewPopup data={props} />
           </div>
         </CardTitle>
-        {description && <CardDescription>{description}</CardDescription>}
+        {description && <CardDescription className="text-left">{description}</CardDescription>}
       </CardHeader>
-      <CardContent className="flex-1 pb-0">
+      <CardContent className="flex-1 pb-0 flex items-center justify-center">
         <ChartContainer
           config={chartConfig}
-          className="mx-auto aspect-square max-h-[300px]"
+          className="h-full max-w-[280px] max-h-[280px] aspect-square"
         >
           <RechartsPieChart>
             <ChartTooltip

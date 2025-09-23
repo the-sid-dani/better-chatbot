@@ -15,6 +15,7 @@ import {
   TriangleAlert,
   HammerIcon,
   EllipsisIcon,
+  BarChart3,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "ui/tooltip";
 import { Button } from "ui/button";
@@ -734,6 +735,8 @@ export const ToolMessagePart = memo(
     const { copied: copiedOutput, copy: copyOutput } = useCopy();
     const [isDeleting, setIsDeleting] = useState(false);
 
+    // Artifact creation is now handled in ChatBot component
+
     // Handle keyboard shortcuts for approve/reject actions
     useEffect(() => {
       // Only enable shortcuts when manual tool invocation buttons are shown
@@ -1024,6 +1027,26 @@ export const ToolMessagePart = memo(
                         Response
                       </h5>
                       <div className="flex-1" />
+
+                      {/* Canvas button for chart/dashboard tools - outside the collapsed area */}
+                      {(toolName === "create_chart" || toolName === "create_dashboard") && (result as any)?.status === 'success' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 text-xs mr-2"
+                          onClick={() => {
+                            console.log("🎯 Message Debug: Open Canvas button clicked");
+                            console.log("🔍 Message Debug: Tool result data:", result);
+                            console.log("📡 Message Debug: Dispatching canvas:show event");
+                            window.dispatchEvent(new CustomEvent('canvas:show'));
+                            console.log("✅ Message Debug: Canvas show event dispatched successfully");
+                          }}
+                        >
+                          <BarChart3 className="w-3 h-3 mr-1" />
+                          Open Canvas
+                        </Button>
+                      )}
+
                       {copiedOutput ? (
                         <Check className="size-3" />
                       ) : (
@@ -1039,7 +1062,31 @@ export const ToolMessagePart = memo(
                     </div>
                     {isExpanded && (
                       <div className="p-2 max-h-[300px] overflow-y-auto">
-                        <JsonView data={result} />
+                        {(toolName === "create_chart" || toolName === "create_dashboard") && (result as any)?.success ? (
+                          <div className="space-y-3">
+                            <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
+                              <BarChart3 className="w-4 h-4" />
+                              <span className="font-medium">
+                                {toolName === "create_dashboard" ? "Dashboard" : "Chart"} Created in Canvas
+                              </span>
+                            </div>
+                            <div className="text-xs space-y-1">
+                              {(result as any).chartType && <div><strong>Type:</strong> {(result as any).chartType}</div>}
+                              {(result as any).chartCount && <div><strong>Charts:</strong> {(result as any).chartCount}</div>}
+                              {(result as any).metricCount && <div><strong>Metrics:</strong> {(result as any).metricCount}</div>}
+                              {((result as any).dataPoints || (result as any).totalDataPoints) && (
+                                <div><strong>Data Points:</strong> {(result as any).totalDataPoints || (result as any).dataPoints}</div>
+                              )}
+                              {(result as any).series && <div><strong>Series:</strong> {(result as any).series?.join(", ")}</div>}
+                              {(result as any).chartTypes && <div><strong>Chart Types:</strong> {(result as any).chartTypes?.join(", ")}</div>}
+                            </div>
+                            <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                              {toolName === "create_dashboard" ? "Dashboard" : "Chart"} created successfully. Use the &ldquo;Open Canvas&rdquo; button above to view the interactive visualization.
+                            </div>
+                          </div>
+                        ) : (
+                          <JsonView data={result} />
+                        )}
                       </div>
                     )}
                   </div>

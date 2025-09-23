@@ -256,9 +256,9 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     isVisible: isCanvasVisible,
     artifacts: canvasArtifacts,
     activeArtifactId,
+    canvasName,
     addArtifact: addCanvasArtifact,
     closeCanvas,
-    showCanvas,
     setActiveArtifactId,
   } = useCanvas();
 
@@ -368,6 +368,10 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     generateId: generateUUID,
     experimental_throttle: 100,
     onFinish,
+    // Debug data streaming (will be handled by tool result processing)
+    onData: (data: any) => {
+      console.log("🔍 AI SDK onData:", data);
+    },
   });
   const [isDeleteThreadPopupOpen, setIsDeleteThreadPopupOpen] = useState(false);
 
@@ -549,142 +553,43 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     }
   }, [input]);
 
-  // Track processed tool calls to prevent duplicates
-  const processedToolCalls = useRef(new Set<string>());
-  const lastProcessedMessageId = useRef<string>("");
+  // Track processed messages to prevent infinite loops
+  const processedMessagesRef = useRef(new Set<string>());
 
-  // Watch for completed chart tool calls and create canvas artifacts
+  // Simple tool result processing for Canvas
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
 
-    // Only process if it's a new assistant message to prevent re-processing during typing
-    if (
-      lastMessage?.role === "assistant" &&
-      lastMessage.id !== lastProcessedMessageId.current
-    ) {
-      console.log("🔍 Canvas Debug: Processing new message:", lastMessage.id);
-      lastProcessedMessageId.current = lastMessage.id;
+    if (lastMessage?.role === "assistant" && !processedMessagesRef.current.has(lastMessage.id)) {
+      processedMessagesRef.current.add(lastMessage.id);
 
       lastMessage.parts.forEach((part) => {
         if (isToolUIPart(part) && part.state === "output-available") {
           const toolName = getToolName(part);
-          const result = part.output;
+          const result = part.output as any;
 
-          console.log("🔍 Canvas Debug: Found tool result:", {
-            toolName,
-            result,
-          });
-
-          // Create unique identifier for this tool call
-          const toolCallKey = `${part.toolCallId}-${toolName}`;
-
-          // Canvas processing re-enabled for chart artifacts
-          if (
-            true &&
-            (toolName === "create_chart" || toolName === "create_dashboard") &&
-            (result as any)?.success &&
-            !processedToolCalls.current.has(toolCallKey)
-          ) {
-            console.log(
-              "🎯 Canvas Debug: Chart tool success detected, creating canvas artifact:",
-              result,
-            );
-
-            // Mark as processed
-            processedToolCalls.current.add(toolCallKey);
-
-            // Create canvas artifact with safe JSON parsing
-            const typedResult = result as any;
-            let artifactData = {};
-            try {
-              const parsed = JSON.parse(typedResult.artifact?.content || "{}");
-              artifactData = parsed;
-              console.log(
-                "📊 Canvas Debug: Parsed artifact data:",
-                artifactData,
-              );
-            } catch (e) {
-              console.warn(
-                "⚠️ Canvas Debug: Failed to parse artifact content:",
-                e,
-              );
-            }
-
+          // Simple chart tool detection and Canvas artifact creation
+          if (toolName === "create_chart" && result?.shouldCreateArtifact && result?.status === 'success') {
             const artifact = {
-              id:
-                typedResult.artifactId ||
-                `${toolName.replace("create_", "")}-${Date.now()}`,
-              type:
-                toolName === "create_dashboard"
-                  ? ("dashboard" as const)
-                  : ("chart" as const),
-              title:
-                typedResult.artifact?.title ||
-                (toolName === "create_dashboard" ? "Dashboard" : "Chart"),
-              data: artifactData,
+              id: result.chartId,
+              type: "chart" as const,
+              title: result.title,
+              data: result.chartData,
               metadata: {
-                chartType: typedResult.chartType,
-                dataPoints:
-                  typedResult.totalDataPoints || typedResult.dataPoints,
-                charts: typedResult.chartCount,
-                lastUpdated: "now",
-              },
+                chartType: result.chartType,
+                dataPoints: result.dataPoints,
+                lastUpdated: "now"
+              }
             };
 
-            // Add canvas artifact immediately for proper state synchronization
-            console.log("🚀 Canvas Debug: Adding canvas artifact:", artifact);
-            console.log(
-              "🔍 Canvas Debug: Current canvas state - isVisible:",
-              isCanvasVisible,
-              "artifacts:",
-              canvasArtifacts.length,
-            );
             addCanvasArtifact(artifact);
-            console.log(
-              "✅ Canvas Debug: addCanvasArtifact called, should trigger visibility change",
-            );
-          } else {
-            console.log("⏭️ Canvas Debug: Skipping tool result:", {
-              toolName,
-              isSuccess: (result as any)?.success,
-              alreadyProcessed: processedToolCalls.current.has(toolCallKey),
-              processedToolCalls: Array.from(processedToolCalls.current),
-            });
           }
         }
       });
     }
-  }, [messages.length, messages[messages.length - 1]?.id, addCanvasArtifact]);
+  }, [messages.length, addCanvasArtifact]);
 
-  // Listen for canvas show events
-  useEffect(() => {
-    const handleCanvasShow = () => {
-      console.log(
-        "🎯 Canvas Debug: Canvas show event triggered, artifacts:",
-        canvasArtifacts.length,
-      );
-      console.log(
-        "🔍 Canvas Debug: Current canvas state - isVisible:",
-        isCanvasVisible,
-      );
-      if (canvasArtifacts.length > 0) {
-        console.log("✅ Canvas Debug: Calling showCanvas() - artifacts exist");
-        // Force show canvas by calling showCanvas directly
-        showCanvas();
-      } else {
-        console.log(
-          "⚠️ Canvas Debug: No artifacts available, cannot show canvas",
-        );
-      }
-    };
-
-    console.log("🔧 Canvas Debug: Setting up canvas:show event listener");
-    window.addEventListener("canvas:show", handleCanvasShow);
-    return () => {
-      console.log("🧹 Canvas Debug: Cleaning up canvas:show event listener");
-      window.removeEventListener("canvas:show", handleCanvasShow);
-    };
-  }, [canvasArtifacts, showCanvas, isCanvasVisible]);
+  // Canvas visibility now controlled directly by onData handler
 
   console.log(
     "🎬 ChatBot Debug: Rendering ChatBot with isCanvasVisible:",
@@ -692,6 +597,8 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     "artifacts:",
     canvasArtifacts.length,
   );
+
+  // Canvas visibility controlled manually - no auto-show
 
   return (
     <>
@@ -743,6 +650,7 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
                     artifacts={canvasArtifacts}
                     activeArtifactId={activeArtifactId}
                     onArtifactSelect={setActiveArtifactId}
+                    canvasName={canvasName}
                     isIntegrated={true}
                   />
                 </ResizablePanel>

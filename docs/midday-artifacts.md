@@ -1,0 +1,110 @@
+Directory structure:
+└── artifacts/
+    ├── burn-rate.ts
+    ├── chat-title.ts
+    └── followup-questions.ts
+
+
+Files Content:
+
+================================================
+FILE: apps/api/src/ai/artifacts/burn-rate.ts
+================================================
+import { artifact } from "@ai-sdk-tools/artifacts";
+import { z } from "zod";
+import { toastSchema } from "../tools/schema";
+
+export const burnRateArtifact = artifact(
+  "burn-rate",
+  z.object({
+    // Processing stage
+    stage: z.enum([
+      "loading",
+      "chart_ready",
+      "metrics_ready",
+      "analysis_ready",
+    ]),
+
+    // Basic info
+    currency: z.string(),
+
+    toast: toastSchema,
+
+    // Chart data (available at chart_ready stage)
+    chart: z
+      .object({
+        monthlyData: z.array(
+          z.object({
+            month: z.string(),
+            amount: z.number(),
+            average: z.number(),
+            currentBurn: z.number(),
+            averageBurn: z.number(),
+          }),
+        ),
+      })
+      .optional(),
+
+    // Core metrics (available at metrics_ready stage)
+    metrics: z
+      .object({
+        currentMonthlyBurn: z.number(),
+        averageBurnRate: z.number(),
+        runway: z.number(),
+        runwayStatus: z.string(),
+        topCategory: z.object({
+          name: z.string(),
+          percentage: z.number(),
+          amount: z.number(),
+        }),
+      })
+      .optional(),
+
+    // Analysis data (available at analysis_ready stage)
+    analysis: z
+      .object({
+        burnRateChange: z.object({
+          percentage: z.number(),
+          period: z.string(),
+          startValue: z.number(),
+          endValue: z.number(),
+        }),
+        summary: z.string(),
+        recommendations: z.array(z.string()),
+      })
+      .optional(),
+  }),
+);
+
+
+
+================================================
+FILE: apps/api/src/ai/artifacts/chat-title.ts
+================================================
+import { artifact } from "@ai-sdk-tools/artifacts";
+import { z } from "zod";
+
+export const chatTitleArtifact = artifact(
+  "chat-title",
+  z.object({
+    title: z.string(),
+  }),
+);
+
+
+
+================================================
+FILE: apps/api/src/ai/artifacts/followup-questions.ts
+================================================
+import { artifact } from "@ai-sdk-tools/artifacts";
+import { z } from "zod";
+
+export const followupQuestionsArtifact = artifact(
+  "followup-questions",
+  z.object({
+    questions: z.array(z.string()).max(4),
+    context: z.string().optional(),
+  }),
+);
+
+

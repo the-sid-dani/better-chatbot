@@ -13,44 +13,17 @@ This folder contains the complete Next.js 15 App Router application structure fo
 ## Architectural Context
 
 ### Position in Project Hierarchy
-```
-better-chatbot/
-├── instrumentation.ts        # 🔍 Langfuse SDK v4 observability (CRITICAL)
-├── src/
-│   ├── app/ ← YOU ARE HERE (Next.js App Router Core)
-│   │   ├── (auth)/           # Authentication routes (route groups)
-│   │   ├── (chat)/           # Main chat application routes (Vercel AI SDK streaming)
-│   │   ├── api/              # Backend API endpoints (Vercel AI SDK-powered)
-│   │   │   └── chat/         # Core AI streaming endpoints with observability
-│   │   ├── store/            # Client-side state management
-│   │   ├── layout.tsx        # Root layout component
-│   │   └── globals.css       # Global styles
-│   ├── components/           # Reusable React components (handle Vercel AI SDK streams)
-│   ├── lib/                  # Utility libraries and configurations
-│   │   └── ai/               # Vercel AI SDK-centric AI functionality
-│   └── ...
-```
+*App Router core for Next.js 15 application structure*
 
-### Relationship Map
-```mermaid
-graph TD
-    A[src/app/] --> B[Depends On: src/components/]
-    A --> C[Depends On: src/lib/]
-    A --> D[Depends On: app-types/]
-    A --> E[Integrates: MCP Servers]
-    A --> F[Uses: AI Providers]
-    A --> G[Manages: Database via Drizzle ORM]
-    H[Browser/Client] --> A
-    I[External AI APIs] --> A
-    J[MCP Protocol Servers] --> A
-    K[Database] --> A
-```
+**Key directories:**
+- `(auth)/` - Authentication routes
+- `(chat)/` - Main chat interface
+- `api/` - Backend API endpoints
+- `store/` - Client-side state management
 
 ### Integration Points
-- **Upstream Dependencies**: React 19, Next.js 15, TypeScript, AI SDK, MCP SDK, Better Auth
-- **Downstream Consumers**: Web browsers, mobile webviews, API consumers
-- **Sibling Interactions**: src/components (UI), src/lib (utilities), app-types (type definitions)
-- **External Integrations**: OpenAI, Anthropic, Google AI, XAI, OpenRouter, MCP servers, PostgreSQL, Redis
+- **Dependencies**: src/components/ (UI), src/lib/ (business logic), app-types/ (types)
+- **External Integrations**: AI providers, MCP servers, PostgreSQL, Redis
 
 ## Complete Content Inventory
 
@@ -209,32 +182,19 @@ External AI/MCP Services
 ## Technology & Patterns
 
 ### Technology Stack
-- **AI Framework**: Vercel AI SDK 5.0.26 (FOUNDATIONAL - all AI operations built on this)
-- **Framework**: Next.js 15.3.2 with App Router
-- **Language**: TypeScript 5.9.2 (Strict mode)
-- **Observability**: Langfuse SDK v4 with OpenTelemetry integration
-- **React**: React 19.1.1 with Server Components
-- **State Management**: Zustand 5.0.8 with persistence middleware
-- **Styling**: Tailwind CSS 4.1.12 with custom design system
-- **AI Providers**: Multiple providers via Vercel AI SDK abstractions (OpenAI, Anthropic, Google, xAI, Ollama, OpenRouter)
-- **Authentication**: Better Auth 1.3.7
-- **Database**: Drizzle ORM 0.41.0 with PostgreSQL
-- **Real-time**: Vercel AI SDK streaming with experimental_telemetry observability
-- **Internationalization**: next-intl 4.3.5
+*See main project CLAUDE.md for comprehensive technology details*
+
+Key app-specific technologies:
+- **Next.js 15 App Router**: File-based routing with route groups
+- **Server Components**: React 19 server components for performance
+- **Zustand**: Persistent state management (v2.0.1)
+- **next-intl**: Internationalization support
 
 ### Design Patterns Detected
-- **Vercel AI SDK Pattern**: All AI operations built on `streamText`/`generateText` foundations
-- **Unified Provider Pattern**: Single interface for multiple LLM providers via Vercel AI SDK
-- **Tool Conversion Pattern**: MCP, Workflow, and App tools converted to Vercel AI SDK tool interface
-- **Observability Integration Pattern**: `experimental_telemetry` enables automatic tracing
-- **App Router Pattern**: Next.js 13+ file-based routing with layouts, loading, and error boundaries
-- **Route Groups**: Using (auth) and (chat) for logical grouping without URL impact
-- **Server Components**: Leveraging React Server Components for performance
-- **Streaming Responses**: Vercel AI SDK streaming with real-time observability
-- **Repository Pattern**: Centralized database operations via repository classes
-- **Provider Pattern**: Context providers for themes, internationalization, and global state
-- **Middleware Pattern**: Better Auth integration with route protection
-- **Instrumentation Pattern**: OpenTelemetry instrumentation with Langfuse integration
+- **App Router Pattern**: File-based routing with (auth) and (chat) route groups
+- **Server/Client Component Split**: Strategic use of React 19 features
+- **Route Groups**: Logical grouping without URL impact
+- **Dynamic Routing**: Extensive use of [param] and [...catchall] syntax
 
 ### Coding Standards Applied
 - **File Naming**: kebab-case for directories, PascalCase for React components, camelCase for utilities
@@ -246,22 +206,10 @@ External AI/MCP Services
 ## Operational Workflows
 
 ### Development Workflow
-1. **Page Creation**: Create page.tsx in appropriate route group directory
-2. **API Development**: Add route.ts files in api/ directory with proper HTTP methods
-3. **State Management**: Update Zustand stores for new features
-4. **Type Safety**: Define types in app-types/ and import in components
-
-### Build & Deployment
-- **Build Process**: Next.js builds both client and server components
-- **API Routes**: Compiled to serverless functions
-- **Static Assets**: Optimized and served via CDN
-- **Environment**: Supports development, staging, and production environments
-
-### Maintenance Patterns
-- **Update Frequency**: Active development with regular feature additions
-- **Breaking Changes**: Version-controlled database migrations required
-- **Backward Compatibility**: API versioning not yet implemented
-- **Performance Monitoring**: Built-in Next.js analytics and logging
+1. Create page.tsx in appropriate route group
+2. Add route.ts files in api/ directory
+3. Update Zustand stores for state
+4. Define types in app-types/
 
 ## Critical Context & Warnings
 
@@ -335,14 +283,7 @@ export default async function ExamplePage() {
 ## Quick Reference
 
 ### Essential Commands
-```bash
-npm run dev           # Start development server with Turbopack
-npm run build         # Build for production
-npm run lint          # Run ESLint and Biome linting
-npm run check-types   # TypeScript type checking
-npm run db:push       # Push database schema changes
-npm run db:studio     # Open Drizzle Studio for database management
-```
+*See main project CLAUDE.md for complete command reference*
 
 ### Key Files to Understand First
 1. **layout.tsx** - Start here to understand overall app structure and providers

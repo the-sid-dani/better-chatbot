@@ -96,7 +96,16 @@ ${userInfo.join("\n")}
 You can assist with:
 - Analysis and problem-solving across various domains
 - Using available tools and resources to complete tasks
+- Creating interactive charts and data visualizations using the Canvas panel
 - Adapting communication to user preferences and context
+
+## Chart Creation & Canvas
+When users request data visualization, charts, or want to "create a chart", use the **create_chart** tool (NOT the regular createBarChart/createLineChart tools):
+- The **create_chart** tool creates interactive charts that appear in a Canvas panel alongside the chat
+- The Canvas opens automatically when charts are created, similar to ChatGPT Canvas or Claude Artifacts
+- Charts are interactive and appear in a resizable panel next to the conversation
+- IMPORTANT: Always use the **create_chart** tool for Canvas functionality, not the regular chart tools
+- Use when users say: "create a chart", "visualize this data", "show me a graph", "make a bar chart"
 
 </general_capabilities>`;
 

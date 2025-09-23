@@ -13,49 +13,20 @@ This folder contains the complete UI component library for the Better Chatbot pl
 ## Architectural Context
 
 ### Position in Project Hierarchy
-```
-better-chatbot/
-├── src/
-│   ├── app/                    # Next.js App Router
-│   ├── lib/                    # Business logic
-│   ├── hooks/                  # React hooks
-│   └── components/ ← YOU ARE HERE
-│       ├── agent/              # Agent management UI
-│       ├── layouts/            # App-wide layout components
-│       ├── tool-invocation/    # Tool result visualization
-│       ├── ui/                 # Reusable design system primitives
-│       ├── workflow/           # Visual workflow builder components
-│       └── [40+ root components] # Feature-specific components
-```
+*React component library and design system*
 
-### Relationship Map
-```mermaid
-graph TD
-    A[src/components] --> B[src/app - Page Consumption]
-    A --> C[src/lib - Business Logic]
-    A --> D[src/hooks - State Management]
-    A --> E[External: Radix UI]
-    A --> F[External: Framer Motion]
-    A --> G[External: Lucide React]
-    A --> H[External: Recharts]
-    A --> I[app-types - Type Definitions]
-```
+**Key component categories:**
+- `agent/` - Agent management UI
+- `canvas/` - Canvas workspace and dashboard components
+- `layouts/` - App-wide layout components
+- `tool-invocation/` - Tool result visualization
+- `ui/` - Reusable design system primitives
+- `workflow/` - Visual workflow builder
 
 ### Integration Points
-- **Upstream Dependencies**:
-  - `src/lib/ai/` for Vercel AI SDK-centric AI integration and tool conversion
-  - `src/hooks/` for React state management
-  - `app-types/` for TypeScript definitions (includes Vercel AI SDK types)
-  - External UI libraries (Radix, Framer Motion, Lucide)
-  - **Vercel AI SDK**: Components handle streaming responses, tool results, and UI message streams
-- **Downstream Consumers**:
-  - `src/app/` Next.js pages and layouts (consume Vercel AI SDK streaming data)
-  - Self-referential (components import other components)
-- **Sibling Interactions**: Heavy cross-component communication within folder
-- **External Integrations**:
-  - Radix UI (accessibility), Framer Motion (animations), Recharts (data visualization)
-  - **Vercel AI SDK**: Direct integration with streaming patterns and tool execution results
-  - **Langfuse**: Components may display observability data and trace information
+- **Dependencies**: src/lib/ai/ (AI integration), src/hooks/ (state), app-types/ (types)
+- **External Libraries**: Radix UI, Framer Motion, Lucide React, Recharts
+- **Consumers**: src/app/ (pages and layouts), self-referential components
 
 ## Complete Content Inventory
 
@@ -69,6 +40,10 @@ src/components/
 │   ├── 📄 agents-list.tsx            # Agent gallery and management
 │   ├── 📄 edit-agent.tsx             # Agent creation/editing interface
 │   └── 📄 generate-agent-dialog.tsx   # AI-powered agent generation
+├── 📁 canvas/                          # Canvas Workspace System (3 files)
+│   ├── 📄 dashboard-canvas.tsx        # Multi-grid dashboard layout component
+│   ├── 📄 canvas-artifact.tsx         # Individual canvas artifact renderer
+│   └── 📄 canvas-utils.ts             # Canvas utilities and helpers
 ├── 📁 layouts/                        # App Structure Components (8 files)
 │   ├── 📄 app-header.tsx             # Main application header
 │   ├── 📄 app-popup-provider.tsx     # Global popup/modal state management
@@ -103,9 +78,10 @@ src/components/
 │   │   ├── 📄 tool-node-config.tsx # Tool execution node configuration
 │   │   └── 📄 [6 other configs].tsx # Input, output, HTTP, condition, template nodes
 │   └── 📄 [11 other workflow].tsx  # Node management, variables, UI components
-├── 📄 chat-bot.tsx                  # Main chat interface component (15.5k lines)
+├── 📄 canvas-panel.tsx              # Canvas workspace panel with ResizablePanelGroup integration
+├── 📄 chat-bot.tsx                  # Main chat interface component with Canvas integration
 ├── 📄 chat-bot-voice.tsx           # Voice chat functionality (21.2k lines)
-├── 📄 message-parts.tsx            # Message rendering and interaction (38.1k lines)
+├── 📄 message-parts.tsx            # Message rendering with "Open Canvas" button integration
 ├── 📄 prompt-input.tsx             # Chat input with mentions and tools (14.3k lines)
 ├── 📄 mcp-*.tsx                    # MCP (Model Context Protocol) components (5 files)
 ├── 📄 tool-select-dropdown.tsx     # Tool selection interface (34.5k lines)
@@ -115,14 +91,23 @@ src/components/
 ### File Categories and Purposes
 
 #### Core Chat Components (Essential for Vercel AI SDK integration)
-- **chat-bot.tsx**: Main chat interface handling **Vercel AI SDK streaming responses** with real-time observability
+- **chat-bot.tsx**: Main chat interface handling **Vercel AI SDK streaming responses** with real-time observability and **Canvas integration**
   - Processes `createUIMessageStream` responses from Vercel AI SDK
   - Handles tool execution results from MCP, Workflow, and App tools
+  - Integrates Canvas workspace using ResizablePanelGroup for chart visualization
+  - Manages Canvas state with `useCanvas` hook for progressive chart building
   - Integrates with Langfuse trace context for user feedback collection
+- **canvas-panel.tsx**: **Multi-grid Canvas workspace** for data visualization and dashboard creation
+  - Progressive chart building as AI creates charts with native `async function*` streaming
+  - Responsive CSS Grid layout (2x2, scales based on chart count)
+  - Smart Canvas naming based on chart content analysis
+  - ResizablePanelGroup integration for smooth resizing alongside chat
+  - Supports loading states, error handling, and empty state UX
 - **chat-bot-voice.tsx**: Voice chat integration with **OpenAI Realtime API** through Vercel AI SDK
-- **message-parts.tsx**: Complex message rendering optimized for **Vercel AI SDK message structures**
+- **message-parts.tsx**: Complex message rendering optimized for **Vercel AI SDK message structures** with **Canvas integration**
   - Handles streaming tool execution results
   - Renders Vercel AI SDK tool call outputs with rich formatting
+  - **"Open Canvas" buttons** for chart tool results with proper condition checking (`result.status === 'success'`)
   - Supports editing and re-execution through Vercel AI SDK patterns
 - **prompt-input.tsx**: Advanced input component with **Vercel AI SDK tool mentions** and selection
 - **message.tsx**: Individual message component handling **Vercel AI SDK message types** and observability metadata
@@ -156,62 +141,46 @@ src/components/
 - **app-header.tsx**: Main application header with user controls
 - **theme-provider.tsx**: Dark/light mode theme management
 
-#### Tool Visualization Components
-- **Interactive charts**: bar-chart.tsx, line-chart.tsx, pie-chart.tsx using Recharts
+#### Canvas System Components (Data Visualization & Dashboard Creation)
+- **canvas-panel.tsx**: Main Canvas workspace component with multi-grid layout and progressive building
+- **useCanvas hook**: State management for Canvas artifacts, visibility, and smart naming
+- **Canvas integration**: ResizablePanelGroup allows Canvas alongside chat interface
+- **Progressive chart building**: Charts appear sequentially as AI creates them using `yield` statements
+- **Responsive scaling**: Charts adapt smoothly to Canvas panel resizing
+
+#### Tool Visualization Components (Enhanced for Canvas Integration)
+- **Interactive charts**: bar-chart.tsx, line-chart.tsx, pie-chart.tsx using Recharts with **Canvas-optimized sizing**
+  - Fixed responsive scaling issues (`height="400px"` → `height="100%"`)
+  - Consistent chart sizing and alignment across all chart types
+  - Proper container utilization with no gaps or cutoffs
 - **code-executor.tsx**: Code execution interface with syntax highlighting
 - **web-search.tsx**: Search result display with metadata
 - **sequential-thinking.tsx**: AI reasoning process visualization
 
 ### File Relationships and Dependencies
-```
-[Main Chat Flow]
-chat-bot.tsx
-  ↓ imports & renders
-prompt-input.tsx + message-parts.tsx + chat-greeting.tsx
-  ↓ uses
-ui/* (design system primitives)
-  ↓ integrates with
-tool-invocation/* (result visualization)
-
-[MCP Integration Flow]
-mcp-dashboard.tsx
-  ↓ renders
-mcp-card.tsx → mcp-editor.tsx → mcp-customization-popup.tsx
-  ↓ uses
-tool-select-dropdown.tsx
-
-[Agent System Flow]
-agents-list.tsx
-  ↓ uses
-edit-agent.tsx → agent-icon-picker.tsx + agent-tool-selector.tsx
-  ↓ renders in
-agent-dropdown.tsx
-
-[Layout Hierarchy]
-layouts/app-sidebar.tsx
-  ↓ composes
-app-sidebar-threads.tsx + app-sidebar-agents.tsx + app-sidebar-menus.tsx + app-sidebar-user.tsx
-```
+**Main flows:**
+- **Chat**: chat-bot.tsx → prompt-input.tsx + message-parts.tsx → ui/* + tool-invocation/*
+- **MCP**: mcp-dashboard.tsx → mcp-card.tsx → mcp-editor.tsx
+- **Agent**: agents-list.tsx → edit-agent.tsx → agent-icon-picker.tsx
+- **Layout**: app-sidebar.tsx → app-sidebar-*.tsx components
 
 ## Technology & Patterns
 
 ### Technology Stack
-- **Languages**: TypeScript 5.x with strict mode
-- **UI Framework**: React 18+ with Next.js 15 App Router
-- **Styling**: Tailwind CSS with CSS-in-JS for dynamic styles
-- **Design System**: Radix UI primitives with custom theming
-- **Animations**: Framer Motion for complex animations and transitions
-- **Icons**: Lucide React for consistent iconography
-- **Charts**: Recharts for data visualization
-- **Code Highlighting**: Prism.js integration for syntax highlighting
+*See main project CLAUDE.md for comprehensive technology details*
+
+Key component-specific technologies:
+- **Radix UI**: Accessibility-first design system primitives
+- **Framer Motion**: Complex animations and transitions
+- **Lucide React**: Consistent iconography
+- **Recharts**: Data visualization
+- **Prism.js**: Syntax highlighting
 
 ### Design Patterns Detected
-- **Compound Component Pattern**: Complex components like `Dialog` composed of multiple sub-components
-- **Render Props Pattern**: Used in chart components and data visualization
-- **Context Provider Pattern**: Theme management, popup state, app-wide state
-- **Custom Hook Integration**: Heavy use of custom hooks for state and side effects
-- **Controlled/Uncontrolled Component Pattern**: Input components with both modes
-- **Factory Pattern**: Dynamic component rendering based on tool types and message content
+- **Compound Components**: Dialog and complex UI components
+- **Context Providers**: Theme, popup state, app-wide state
+- **Custom Hooks**: Extensive use for state and side effects
+- **Factory Pattern**: Dynamic rendering based on content types
 
 ### Coding Standards Applied
 - **Naming Conventions**:
@@ -234,7 +203,15 @@ app-sidebar-threads.tsx + app-sidebar-agents.tsx + app-sidebar-menus.tsx + app-s
 1. **Creation**: New components follow existing patterns, use ui/ primitives where possible
 2. **Modification**: Components are highly modular, changes typically isolated to single files
 3. **Integration**: New features integrate through existing component composition patterns
-4. **Testing**: Components tested through Playwright E2E tests and Vitest unit tests
+4. **Canvas Integration**: Chart tools automatically stream to Canvas using native AI SDK patterns
+5. **Testing**: Components tested through Playwright E2E tests and Vitest unit tests
+
+### Canvas Development Patterns
+- **Progressive Building**: Charts appear in Canvas as AI streams tool execution using `yield` statements
+- **Native AI SDK Streaming**: Chart tools use `async function*` patterns without custom middleware
+- **Smart Canvas Management**: `useCanvas` hook with `useCallback` memoization to prevent infinite loops
+- **Responsive Grid Layout**: CSS Grid adapts based on chart count (1-5+ charts)
+- **Integration Patterns**: Canvas integrated with chat using ResizablePanelGroup
 
 ### Build & Deployment
 - **Build Process**: Next.js processes all components, tree-shaking unused code
@@ -332,6 +309,110 @@ export const CustomToolResult = memo(({ toolInvocation }: Props) => {
 CustomToolResult.displayName = "CustomToolResult";
 ```
 
+### Example 3: Canvas Integration with Chart Tools
+```typescript
+// Canvas integration in chat-bot.tsx
+"use client";
+
+import { useCanvas } from "./canvas-panel";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "ui/resizable";
+
+export function ChatBot() {
+  const {
+    isVisible: isCanvasVisible,
+    artifacts,
+    canvasName,
+    closeCanvas,
+    addArtifact
+  } = useCanvas();
+
+  // Listen for chart tool results and add to Canvas
+  useEffect(() => {
+    const handleChartResult = (result: any) => {
+      if (result.shouldCreateArtifact && result.chartData) {
+        addArtifact({
+          id: result.chartId,
+          type: "chart",
+          title: result.title,
+          data: result.chartData,
+          status: "completed"
+        });
+      }
+    };
+    // Tool result handling...
+  }, [addArtifact]);
+
+  return (
+    <ResizablePanelGroup direction="horizontal">
+      <ResizablePanel defaultSize={isCanvasVisible ? 55 : 100}>
+        {/* Chat Interface */}
+      </ResizablePanel>
+      {isCanvasVisible && (
+        <>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={45}>
+            <CanvasPanel
+              isVisible={isCanvasVisible}
+              onClose={closeCanvas}
+              artifacts={artifacts}
+              canvasName={canvasName}
+              isIntegrated={true}
+            />
+          </ResizablePanel>
+        </>
+      )}
+    </ResizablePanelGroup>
+  );
+}
+```
+
+### Example 4: Creating Chart Tools with Native AI SDK Streaming
+```typescript
+// Chart tool with progressive Canvas building
+import { tool as createTool } from "ai";
+import { z } from "zod";
+
+export const createChartTool = createTool({
+  description: "Create interactive charts that stream to Canvas workspace",
+  inputSchema: z.object({
+    title: z.string(),
+    chartType: z.enum(["bar", "line", "pie"]),
+    data: z.array(z.object({
+      xAxisLabel: z.string(),
+      series: z.array(z.object({
+        seriesName: z.string(),
+        value: z.number()
+      }))
+    }))
+  }),
+
+  execute: async function* ({ title, chartType, data }) {
+    // Stream loading state
+    yield {
+      status: 'loading',
+      message: `Preparing chart: ${title}`,
+      progress: 0
+    };
+
+    // Stream processing state
+    yield {
+      status: 'processing',
+      message: `Creating ${chartType} chart...`,
+      progress: 50
+    };
+
+    // Stream completed chart
+    yield {
+      status: 'success',
+      chartData: { title, chartType, data },
+      shouldCreateArtifact: true // Flag for Canvas
+    };
+
+    return `Created ${chartType} chart "${title}"`;
+  }
+});
+```
+
 ## Evolution & History
 
 ### Version History Patterns
@@ -355,20 +436,7 @@ CustomToolResult.displayName = "CustomToolResult";
 ## Quick Reference
 
 ### Essential Commands
-```bash
-# Run development server to see component changes
-pnpm dev
-
-# Type check components
-pnpm check-types
-
-# Test components
-pnpm test
-pnpm test:e2e
-
-# Build to verify component integration
-pnpm build:local
-```
+*See main project CLAUDE.md for complete command reference*
 
 ### Key Files to Understand First
 1. **ui/button.tsx** - Start here to understand design system patterns
@@ -379,9 +447,12 @@ pnpm build:local
 ### Common Tasks
 - **To add a new UI primitive**: Create in `ui/` directory, follow Radix UI patterns
 - **To modify chat interface**: Work with `chat-bot.tsx` and related chat-* components
+- **To add Canvas functionality**: Work with `canvas-panel.tsx` and `canvas/` directory components
+- **To create new chart types**: Add to `tool-invocation/` directory with Canvas integration
 - **To add tool visualization**: Create component in `tool-invocation/` directory
 - **To extend agent system**: Modify components in `agent/` directory
 - **To enhance workflows**: Work with components in `workflow/` directory
+- **To integrate with Canvas**: Use `useCanvas` hook and ResizablePanelGroup patterns
 
 ## Domain-Specific Intelligence
 
@@ -390,6 +461,16 @@ pnpm build:local
 - Extensive support for different AI model providers (OpenAI, Anthropic, Google, etc.)
 - Tool result visualization optimized for AI-generated content
 - Message threading and conversation management built into component architecture
+- **Canvas integration** for real-time data visualization during AI conversations
+
+### Canvas & Data Visualization Patterns
+- **Multi-grid dashboard layout** using responsive CSS Grid (2x2, scales to chart count)
+- **Progressive chart building** as AI streams tool execution with `yield` statements
+- **Native AI SDK streaming** with `async function*` patterns, no custom middleware
+- **Smart Canvas naming** based on automatic chart content analysis
+- **Responsive scaling** with charts adapting to Canvas panel resizing
+- **Event-driven visibility** with proper Canvas show/hide state management
+- **ResizablePanelGroup integration** for smooth Canvas/chat proportions
 
 ### MCP (Model Context Protocol) Integration
 - Components specifically designed for MCP server management
@@ -414,6 +495,9 @@ pnpm build:local
 - Dynamic imports for heavy features (charts, workflow editor)
 - Virtual scrolling in large lists (thread list, agent gallery)
 - Debounced inputs for search and real-time features
+- **Canvas Optimization**: Charts use `height="100%"` for proper responsive scaling
+- **Event-driven Canvas**: Canvas show/hide managed with proper event listeners to prevent memory leaks
+- **Memoized Canvas Functions**: `useCallback` prevents infinite React loops in Canvas state management
 
 ## Cross-Reference Index
 

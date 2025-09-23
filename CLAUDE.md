@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Backend/Infrastructure:** "better-chatbot" structure preserved (file paths, git history, documentation references)
 - **Upstream Compatibility:** Enables easy merging of updates from the open-source better-chatbot project
 
-**Core Features:** Unified interface to multiple LLM providers (OpenAI, Anthropic, Google, xAI, Ollama, OpenRouter) through Vercel AI SDK abstractions, enhanced with MCP protocol support, custom agents, visual workflows, and comprehensive observability.
+**Core Features:** Unified interface to multiple LLM providers (OpenAI, Anthropic, Google, xAI, Ollama, OpenRouter) through Vercel AI SDK abstractions, enhanced with MCP protocol support, custom agents, visual workflows, **multi-grid Canvas for data visualization and dashboard creation**, and comprehensive observability.
 
 **Foundational Architecture:**
 - **AI Framework:** Vercel AI SDK (foundational - all AI operations built on this)
@@ -99,9 +99,10 @@ pnpm clean
 3. **Model Provider:** `customModelProvider.getModel()` returns Vercel AI SDK models
 4. **AI Processing:** `streamText()` with `experimental_telemetry` for comprehensive tracing
 5. **Tool Execution:** Automatic tool calls through Vercel AI SDK abstractions
-6. **Observability:** Real-time trace capture via Langfuse integration
-7. **Response:** Streaming UI components handle Vercel AI SDK message streams
-8. **Database:** Messages and metadata stored via `chatRepository`
+6. **Canvas Integration:** Chart tools automatically stream to Canvas workspace using progressive building
+7. **Observability:** Real-time trace capture via Langfuse integration
+8. **Response:** Streaming UI components handle Vercel AI SDK message streams
+9. **Database:** Messages and metadata stored via `chatRepository`
 
 **Observability Architecture (Langfuse SDK v4):**
 - **Instrumentation:** `instrumentation.ts` with `NodeTracerProvider` and `LangfuseSpanProcessor`
@@ -151,6 +152,15 @@ pnpm clean
 - **Streaming Support:** Workflow execution integrated with Vercel AI SDK streaming
 - **Node Types:** LLM nodes (using `generateText`) and Tool nodes (MCP/App tools)
 - **Observability:** Workflow execution automatically traced via `experimental_telemetry`
+
+**Canvas System (Multi-Grid Data Visualization):**
+- Multi-grid dashboard layout for progressive chart building
+- Located in `src/components/canvas-panel.tsx` and `src/components/canvas/`
+- **Vercel AI SDK Integration:** Chart tools use native `async function*` streaming patterns
+- **Progressive Building:** Charts appear in Canvas as AI creates them using `yield` statements
+- **Responsive Design:** Charts scale smoothly with Canvas panel resizing
+- **Smart Naming:** Canvas names generated automatically based on chart content analysis
+- **Integration:** ResizablePanelGroup allows Canvas alongside chat interface
 
 ## 🔍 Observability Architecture
 
@@ -207,13 +217,14 @@ better-chatbot/
 │   │   └── api/           # API routes (Vercel AI SDK streaming endpoints)
 │   ├── components/        # React components
 │   │   ├── agent/         # Agent management UI
+│   │   ├── canvas/        # Canvas workspace components
 │   │   ├── layouts/       # App layout components
 │   │   ├── tool-invocation/ # Tool result components (Vercel AI SDK tool results)
 │   │   └── ui/            # Reusable UI components
 │   └── lib/               # Core business logic
 │       ├── ai/            # AI-related functionality (Vercel AI SDK-centric)
 │       │   ├── mcp/       # MCP protocol → Vercel AI SDK tool conversion
-│       │   ├── tools/     # Built-in tools (web search, code execution)
+│       │   ├── tools/     # Built-in tools (web search, code execution, chart creation)
 │       │   ├── workflow/  # Workflow engine → Vercel AI SDK tool integration
 │       │   └── models.ts  # Vercel AI SDK provider configurations
 │       ├── auth/          # Authentication logic
@@ -241,6 +252,8 @@ better-chatbot/
 - **AI Operations:** All AI calls use `streamText`/`generateText` from Vercel AI SDK
 - **Tool Integration:** Convert all tools (MCP, Workflow, App) to Vercel AI SDK tool interface
 - **Streaming:** Leverage `createUIMessageStream` and `experimental_telemetry` for observability
+- **Canvas Integration:** Chart tools use native `async function*` streaming with `yield` statements
+- **Progressive Building:** Canvas artifacts built progressively as AI streams tool execution
 - **Provider Management:** Use `customModelProvider.getModel()` for unified model access
 - **Observability:** Enable `experimental_telemetry` on all AI operations for comprehensive tracing
 
@@ -390,12 +403,15 @@ pnpm build               # Production build with HTTPS
 - `instrumentation.ts` - **🔍 Langfuse observability setup (CRITICAL)** - NodeTracerProvider with LangfuseSpanProcessor
 - `src/app/api/chat/route.ts` - **Main chat API** - Vercel AI SDK streaming with experimental_telemetry
 - `src/lib/ai/models.ts` - **Vercel AI SDK provider configuration** - Unified model interface
-- `src/components/chat-bot.tsx` - **Main chat interface** - Handles Vercel AI SDK streaming responses
+- `src/components/chat-bot.tsx` - **Main chat interface** - Handles Vercel AI SDK streaming responses with Canvas integration
+- `src/components/canvas-panel.tsx` - **Canvas workspace** - Multi-grid dashboard with progressive chart building
 
 ### Integration Files
 - `src/lib/ai/mcp/mcp-manager.ts` - **MCP → Vercel AI SDK conversion** - Converts MCP tools to SDK tools
 - `src/app/api/chat/shared.chat.ts` - **Tool loading pipeline** - Loads all tools as Vercel AI SDK tools
 - `src/lib/ai/workflow/` - **Workflow → Vercel AI SDK integration** - Converts workflows to SDK tools
+- `src/lib/ai/tools/chart-tool.ts` - **Chart creation tool** - Native AI SDK streaming patterns for Canvas
+- `src/components/message-parts.tsx` - **Message rendering** - Handles Canvas integration with "Open Canvas" buttons
 
 ### Configuration Files
 - `src/lib/db/pg/schema.pg.ts` - Database schema
@@ -414,11 +430,27 @@ pnpm build               # Production build with HTTPS
 6. Write tests alongside code
 7. Run quality checks: `pnpm check`
 
+### Adding Canvas Functionality
+1. Create chart tools in `src/lib/ai/tools/` using native AI SDK streaming patterns
+2. Use `async function*` with `yield` statements for progressive building
+3. Add chart components to `src/components/tool-invocation/` with Canvas optimization
+4. Ensure proper Canvas integration with `useCanvas` hook in chat interface
+5. Test Chart tool execution and Canvas display functionality
+6. Verify responsive scaling and multi-grid layout behavior
+
 ### Working with MCP
 1. Test MCP servers in `/mcp` page
 2. Configure server settings and tool customizations
 3. Test tools in `/mcp/test/[id]` page
 4. Tools automatically available in chat sessions
+
+### Working with Canvas
+1. AI automatically opens Canvas when creating charts using `create_chart` tool
+2. Charts appear progressively as AI streams tool execution with `yield` statements
+3. Canvas uses responsive CSS Grid layout (2x2, scales based on chart count)
+4. Charts scale smoothly when Canvas panel is resized
+5. Canvas names generated automatically based on chart content analysis
+6. Use ResizablePanelGroup to adjust Canvas/chat proportions
 
 ### Debugging Performance
 1. Check database queries in Studio
@@ -427,6 +459,8 @@ pnpm build               # Production build with HTTPS
 4. Check MCP server connection health
 5. Monitor Vercel AI SDK streaming performance in Langfuse traces
 6. Check `/api/health/langfuse` for observability system status
+7. Monitor Canvas rendering performance for large datasets
+8. Check chart tool streaming patterns in browser DevTools console
 
 ## 🔧 Langfuse + Vercel AI SDK Troubleshooting
 

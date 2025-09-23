@@ -303,6 +303,34 @@ export const McpOAuthSessionSchema = pgTable(
   ],
 );
 
+// Artifact/Document schema for workspace features
+export const DocumentSchema = pgTable("document", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  title: text("title").notNull(),
+  content: text("content"),
+  kind: varchar("kind", {
+    enum: ["text", "code", "image", "sheet", "charts", "dashboard"],
+  })
+    .notNull()
+    .default("text"),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => UserSchema.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const DocumentVersionSchema = pgTable("document_version", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  documentId: uuid("document_id")
+    .notNull()
+    .references(() => DocumentSchema.id, { onDelete: "cascade" }),
+  content: text("content"),
+  metadata: json("metadata"),
+  version: text("version").notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 export type McpServerEntity = typeof McpServerSchema.$inferSelect;
 export type ChatThreadEntity = typeof ChatThreadSchema.$inferSelect;
 export type ChatMessageEntity = typeof ChatMessageSchema.$inferSelect;
@@ -317,3 +345,6 @@ export type McpServerCustomizationEntity =
 export type ArchiveEntity = typeof ArchiveSchema.$inferSelect;
 export type ArchiveItemEntity = typeof ArchiveItemSchema.$inferSelect;
 export type BookmarkEntity = typeof BookmarkSchema.$inferSelect;
+
+export type DocumentEntity = typeof DocumentSchema.$inferSelect;
+export type DocumentVersionEntity = typeof DocumentVersionSchema.$inferSelect;

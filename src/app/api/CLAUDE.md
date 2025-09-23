@@ -13,45 +13,18 @@ This folder implements the complete backend API layer for the Better Chatbot app
 ## Architectural Context
 
 ### Position in Project Hierarchy
-```
-/Users/sid/Desktop/4. Coding Projects/better-chatbot/
-├── src/
-│   ├── app/
-│   │   ├── (auth)/          # Authentication pages
-│   │   ├── (chat)/          # Chat interface pages
-│   │   └── api/             ← YOU ARE HERE
-│   │       ├── agent/       # AI agent management
-│   │       ├── archive/     # Chat archiving system
-│   │       ├── auth/        # Authentication endpoints
-│   │       ├── bookmark/    # Bookmark functionality
-│   │       ├── chat/        # Core chat functionality
-│   │       ├── mcp/         # MCP protocol integration
-│   │       ├── thread/      # Chat thread management
-│   │       ├── user/        # User preferences
-│   │       └── workflow/    # Visual workflow system
-│   ├── components/          # React UI components
-│   └── lib/                 # Core business logic
-```
+*Backend API layer for Next.js App Router*
 
-### Relationship Map
-```mermaid
-graph TD
-    A[/api/ Routes] --> B[auth/server - Authentication]
-    A --> C[lib/db/repository - Database Layer]
-    A --> D[lib/ai/ - AI Integration Layer]
-    A --> E[app-types/ - Type Definitions]
-    A --> F[lib/cache - Caching Layer]
-    D --> G[lib/ai/mcp - MCP Protocol]
-    D --> H[lib/ai/models - LLM Providers]
-    D --> I[lib/ai/workflow - Workflow Engine]
-    A --> J[Frontend Components via fetch()]
-```
+**Key API domains:**
+- `agent/` - AI agent management
+- `chat/` - Core chat functionality
+- `mcp/` - MCP protocol integration
+- `workflow/` - Visual workflow system
 
 ### Integration Points
-- **Upstream Dependencies**: Database repositories, AI model providers, MCP clients, authentication system
-- **Downstream Consumers**: React components, mobile apps (future), third-party integrations
-- **Sibling Interactions**: Shares types with app-types/, uses lib/ business logic
-- **External Integrations**: OpenAI, Anthropic, Google AI, Ollama, PostgreSQL, Redis
+- **Dependencies**: lib/db/ (database), lib/ai/ (AI integration), auth/server (authentication)
+- **Consumers**: Frontend components, external integrations
+- **External Services**: AI providers, MCP servers, PostgreSQL, Redis
 
 ## Complete Content Inventory
 
@@ -103,17 +76,18 @@ api/
 ### File Categories and Purposes
 
 #### Core Chat System Files (Mission Critical)
-- **chat/route.ts** - **Central Vercel AI SDK streaming endpoint** with comprehensive Langfuse observability
+- **chat/route.ts** - **Central Vercel AI SDK streaming endpoint** with comprehensive Langfuse observability and **Canvas integration**
   - Uses `streamText()` with `experimental_telemetry` for automatic tracing
   - Wrapped with `observe()` decorator for complete conversation tracking
   - Integrates `updateActiveTrace()` and `updateActiveObservation()` for rich metadata
   - Handles all tool execution through Vercel AI SDK tool abstractions
+  - **Chart tool streaming** to Canvas workspace using progressive building patterns
   - Captures user context, model performance, costs, and token usage automatically
 - **chat/shared.chat.ts** - **Vercel AI SDK tool conversion pipeline** - Converts all tool types to SDK interface
   - `loadMcpTools()` - Converts MCP tools to Vercel AI SDK tool format
   - `loadWorkFlowTools()` - Converts workflows to Vercel AI SDK tools
-  - `loadAppDefaultTools()` - Built-in tools as Vercel AI SDK tools
-  - Tool execution abstraction for unified observability
+  - `loadAppDefaultTools()` - Built-in tools as Vercel AI SDK tools including **chart creation tools**
+  - Tool execution abstraction for unified observability and Canvas integration
 - **chat/actions.ts** - Server actions for chat-related operations including agent and MCP server customizations
 
 #### Authentication & Authorization Files
@@ -173,19 +147,13 @@ api/
 ## Technology & Patterns
 
 ### Technology Stack
-- **AI Framework**: Vercel AI SDK (FOUNDATIONAL - all AI operations built on this)
-- **Observability**: Langfuse SDK v4 with OpenTelemetry (`@langfuse/otel`, `@langfuse/tracing`)
-- **Runtime**: Node.js with Next.js 15 App Router
-- **Language**: TypeScript with strict configuration
-- **Framework**: Next.js App Router API Routes (route.ts convention)
-- **Authentication**: Better-Auth with session-based auth
-- **Database**: PostgreSQL with Drizzle ORM
-- **AI Providers**: Multiple providers via Vercel AI SDK abstractions (OpenAI, Anthropic, Google, xAI, Ollama, OpenRouter)
-- **Streaming**: Vercel AI SDK streaming with `experimental_telemetry` for observability
-- **Validation**: Zod schemas from app-types/
-- **Error Handling**: ts-safe library for functional error handling
-- **Caching**: Redis and in-memory caching via lib/cache
-- **Logging**: Custom logger with consola + OpenTelemetry trace logging
+*See main project CLAUDE.md for comprehensive technology details*
+
+Key API-specific technologies:
+- **Next.js API Routes**: App Router route.ts convention
+- **Better-Auth**: Session-based authentication
+- **Zod**: Runtime validation from app-types/
+- **ts-safe**: Functional error handling
 
 ### Design Patterns Detected
 
@@ -219,25 +187,11 @@ const data = SchemaName.parse(body); // Zod validation
 - Runtime type validation for all API inputs
 - Type inference for TypeScript safety
 
-#### **Vercel AI SDK Streaming Pattern**
-- **Foundation**: All AI operations use `streamText()` from Vercel AI SDK
-- **Observability**: `experimental_telemetry` enables automatic tracing
-- **Tool Integration**: All tools converted to Vercel AI SDK tool interface
-- **Real-time**: `createUIMessageStream` with built-in observability
-- **Multi-Provider**: Consistent streaming across all AI providers
-
-#### **Langfuse Observability Pattern**
-- **Wrapper Pattern**: API routes wrapped with `observe()` decorator
-- **Trace Management**: `updateActiveTrace()` and `updateActiveObservation()` for rich metadata
-- **Automatic Tracing**: Vercel AI SDK automatically traces tool calls and LLM interactions
-- **Context Propagation**: User sessions, agent context, and performance metrics captured
-- **Error Boundaries**: Observability failures don't break core functionality
-
-#### **Tool Loading Strategy (Vercel AI SDK Integration)**
-- Dynamic tool loading converted to Vercel AI SDK tool interface
-- Three tool types: MCP tools, Workflow tools, App default tools (all as Vercel AI SDK tools)
-- Filtering based on user permissions and mentions
-- Automatic tool call tracing via `experimental_telemetry`
+#### **API-Specific Patterns**
+- **Streaming AI Responses**: Vercel AI SDK `streamText()` with observability
+- **Tool Integration**: Dynamic loading of MCP, Workflow, and App tools
+- **Authentication**: Universal session validation pattern
+- **Error Handling**: Functional error handling with ts-safe
 
 ### Coding Standards Applied
 - **Naming**: kebab-case for files, camelCase for variables
@@ -266,11 +220,13 @@ const data = SchemaName.parse(body); // Zod validation
 ### Chat System Workflow (Most Complex)
 1. **Message Reception**: Parse chat API schema from client
 2. **Thread Management**: Create or retrieve existing chat thread
-3. **Tool Loading**: Dynamic loading of MCP, workflow, and default tools
+3. **Tool Loading**: Dynamic loading of MCP, workflow, and default tools (including chart tools)
 4. **System Prompt Building**: Merge user preferences, agent instructions, customizations
 5. **AI Streaming**: Process with selected model using Vercel AI SDK
 6. **Tool Execution**: Handle tool calls with streaming updates
-7. **Message Persistence**: Save messages and metadata to database
+7. **Canvas Integration**: Chart tools automatically stream to Canvas using `yield` statements
+8. **Progressive Building**: Charts appear in Canvas workspace as AI creates them
+9. **Message Persistence**: Save messages and metadata to database
 
 ### MCP Integration Workflow
 1. **Server Registration**: Add MCP server configurations
@@ -311,19 +267,25 @@ const data = SchemaName.parse(body); // Zod validation
 
 ## Usage Examples
 
-### Chat API Usage
+### Chat API Usage (with Canvas Integration)
 ```typescript
-// POST /api/chat
+// POST /api/chat - Chart tools automatically stream to Canvas
 const response = await fetch('/api/chat', {
   method: 'POST',
   body: JSON.stringify({
     id: 'thread-id',
-    message: { role: 'user', content: 'Hello' },
+    message: { role: 'user', content: 'Create a bar chart showing sales data' },
     chatModel: { provider: 'openai', model: 'gpt-4' },
     toolChoice: 'auto',
     allowedMcpServers: { 'server-id': { tools: ['tool-name'] } }
   })
 });
+
+// Chart tools will automatically:
+// 1. Stream loading state to Canvas
+// 2. Process chart creation with yield statements
+// 3. Display completed chart in Canvas workspace
+// 4. Show "Open Canvas" button in chat message
 ```
 
 ### Agent Management
@@ -373,21 +335,7 @@ const result = await fetch(`/api/workflow/${workflowId}/execute`, {
 ## Quick Reference
 
 ### Essential Commands
-```bash
-# Start development server
-pnpm dev
-
-# Type checking
-pnpm check-types
-
-# Database operations
-pnpm db:push        # Apply schema changes
-pnpm db:studio      # Open database viewer
-
-# Testing API endpoints
-pnpm test           # Run unit tests
-pnpm test:e2e       # Run integration tests
-```
+*See main project CLAUDE.md for complete command reference*
 
 ### Key Files to Understand First
 1. **chat/route.ts** - Start here to understand the core chat system and AI integration
@@ -398,7 +346,9 @@ pnpm test:e2e       # Run integration tests
 ### Common Tasks
 - **To add a new API endpoint**: Create route.ts with HTTP method exports and session validation
 - **To modify AI chat behavior**: Update chat/route.ts and chat/shared.chat.ts
+- **To add Canvas functionality**: Create chart tools in lib/ai/tools/ with native AI SDK streaming
 - **To add MCP integration**: Update mcp/route.ts and tool loading logic
+- **To debug Canvas issues**: Check chart tool streaming, Canvas state management, and tool result processing
 - **To debug API issues**: Check authentication, input validation, and database connectivity
 
 ### HTTP Method Distribution
@@ -412,8 +362,10 @@ pnpm test:e2e       # Run integration tests
 
 ### AI Chat System Architecture
 - **Multi-model support**: OpenAI, Anthropic, Google, xAI, Ollama
-- **Tool execution pipeline**: MCP tools → Workflow tools → App default tools
+- **Tool execution pipeline**: MCP tools → Workflow tools → App default tools (including chart tools)
 - **Streaming responses**: Real-time AI output with progressive tool execution
+- **Canvas integration**: Chart tools stream to Canvas workspace using native AI SDK patterns
+- **Progressive visualization**: Charts built progressively as AI streams with `yield` statements
 - **Context management**: System prompts, user preferences, agent instructions
 - **Message persistence**: Complete conversation history with metadata
 

@@ -129,9 +129,9 @@ export function LineChart(props: LineChartProps) {
   }, [deduplicateData]);
 
   return (
-    <Card className="bg-card">
-      <CardHeader className="flex flex-col gap-2 relative">
-        <CardTitle className="flex items-center">
+    <Card className="bg-card h-full flex flex-col">
+      <CardHeader className="flex flex-col gap-1 relative pb-1 flex-shrink-0">
+        <CardTitle className="flex items-center text-sm">
           Line Chart - {title}
           <div className="absolute right-4 top-0">
             <JsonViewPopup
@@ -142,12 +142,11 @@ export function LineChart(props: LineChartProps) {
             />
           </div>
         </CardTitle>
-        {description && <CardDescription>{description}</CardDescription>}
+        {description && <CardDescription className="text-xs">{description}</CardDescription>}
       </CardHeader>
-      <CardContent>
-        <div>
-          <ChartContainer config={chartConfig}>
-            <ResponsiveContainer width="100%" height="400px">
+      <CardContent className="flex-1 pb-0 pt-2 min-h-0">
+        <ChartContainer config={chartConfig} className="h-full w-full">
+          <ResponsiveContainer width="100%" height="100%">
               <RechartsLineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
@@ -189,7 +188,6 @@ export function LineChart(props: LineChartProps) {
               </RechartsLineChart>
             </ResponsiveContainer>
           </ChartContainer>
-        </div>
       </CardContent>
     </Card>
   );
