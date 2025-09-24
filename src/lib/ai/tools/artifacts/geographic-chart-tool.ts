@@ -34,13 +34,11 @@ export const geographicChartArtifactTool = createTool({
         z.object({
           regionCode: z
             .string()
-            .describe("Region identifier (ISO country code, US state code, DMA code, etc.)"),
-          regionName: z
-            .string()
-            .describe("Human-readable name of the region"),
-          value: z
-            .number()
-            .describe("Numeric value for this region"),
+            .describe(
+              "Region identifier (ISO country code, US state code, DMA code, etc.)",
+            ),
+          regionName: z.string().describe("Human-readable name of the region"),
+          value: z.number().describe("Numeric value for this region"),
         }),
       )
       .describe("Geographic chart data with region codes and values"),
@@ -57,7 +55,13 @@ export const geographicChartArtifactTool = createTool({
       .describe("Brief description of what the chart shows"),
   }),
 
-  execute: async ({ title, data, geoType, colorScale = "blues", description }) => {
+  execute: async ({
+    title,
+    data,
+    geoType,
+    colorScale = "blues",
+    description,
+  }) => {
     try {
       logger.info(`Creating geographic chart artifact: ${title}`);
 
@@ -68,7 +72,11 @@ export const geographicChartArtifactTool = createTool({
 
       // Validate data structure
       for (const region of data) {
-        if (!region.regionCode || !region.regionName || typeof region.value !== "number") {
+        if (
+          !region.regionCode ||
+          !region.regionName ||
+          typeof region.value !== "number"
+        ) {
           throw new Error(
             "Invalid geographic chart data structure - each region needs regionCode, regionName, and numeric value",
           );
@@ -84,13 +92,15 @@ export const geographicChartArtifactTool = createTool({
       }
 
       // Handle missing region codes gracefully by warning but not failing
-      const missingCodes = data.filter(region => !region.regionCode.trim());
+      const missingCodes = data.filter((region) => !region.regionCode.trim());
       if (missingCodes.length > 0) {
-        logger.warn(`Geographic chart has ${missingCodes.length} regions with missing codes`);
+        logger.warn(
+          `Geographic chart has ${missingCodes.length} regions with missing codes`,
+        );
       }
 
       // Get data range for color scaling
-      const values = data.map(d => d.value);
+      const values = data.map((d) => d.value);
       const minValue = Math.min(...values);
       const maxValue = Math.max(...values);
 
@@ -126,8 +136,8 @@ export const geographicChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return success with artifact creation data (matches existing pattern)
-      const result = {
+      // Create the structured result data
+      const resultData = {
         success: true,
         artifactId,
         artifact: {
@@ -146,17 +156,45 @@ export const geographicChartArtifactTool = createTool({
         componentType: "GeographicChart",
       };
 
-      // Note: Canvas artifact creation happens in ChatBot component via tool result detection
-
-      logger.info(`Geographic chart artifact created successfully: ${artifactId}`);
-      return result;
+      // Return in expected response format with content and structuredContent
+      logger.info(
+        `Geographic chart artifact created successfully: ${artifactId}`,
+      );
+      return {
+        content: [
+          { type: "text", text: resultData.message },
+          {
+            type: "text",
+            text: `Chart Created in Canvas\n\nType: ${resultData.chartType}\n\nChart created successfully. Use the "Open Canvas" button above to view the interactive visualization.`,
+          },
+        ],
+        structuredContent: {
+          result: [resultData],
+        },
+        isError: false,
+      };
     } catch (error) {
       logger.error("Failed to create geographic chart artifact:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        message: `Failed to create geographic chart: ${error instanceof Error ? error.message : "Unknown error"}`,
-        chartType: "geographic",
+        content: [
+          {
+            type: "text",
+            text: `Failed to create geographic chart: ${errorMessage}`,
+          },
+        ],
+        structuredContent: {
+          result: [
+            {
+              success: false,
+              error: errorMessage,
+              message: `Failed to create geographic chart: ${errorMessage}`,
+              chartType: "geographic",
+            },
+          ],
+        },
+        isError: true,
       };
     }
   },

@@ -7,7 +7,15 @@ import { Badge } from "ui/badge";
 import { Alert, AlertDescription } from "ui/alert";
 import { Separator } from "ui/separator";
 import { Progress } from "ui/progress";
-import { AlertTriangle, BarChart3, LineChart, PieChart, TrendingUp, Clock, CheckCircle2 } from "lucide-react";
+import {
+  AlertTriangle,
+  BarChart3,
+  LineChart,
+  PieChart,
+  TrendingUp,
+  Clock,
+  CheckCircle2,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "lib/utils";
 
@@ -86,21 +94,27 @@ interface DashboardData {
 function ProgressToast({
   stage,
   progress,
-  isVisible
+  isVisible,
 }: {
   stage: DashboardOrchestrationStage;
   progress: number;
   isVisible: boolean;
 }) {
   const getStageIcon = (stageType: string, status: string) => {
-    if (status === "error") return <AlertTriangle className="w-4 h-4 text-destructive" />;
-    if (status === "complete") return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+    if (status === "error")
+      return <AlertTriangle className="w-4 h-4 text-destructive" />;
+    if (status === "complete")
+      return <CheckCircle2 className="w-4 h-4 text-green-500" />;
 
     switch (stageType) {
-      case "planning": return <Clock className="w-4 h-4 text-blue-500" />;
-      case "chart_creation": return <BarChart3 className="w-4 h-4 text-purple-500" />;
-      case "layout_building": return <TrendingUp className="w-4 h-4 text-orange-500" />;
-      default: return <Clock className="w-4 h-4 text-muted-foreground" />;
+      case "planning":
+        return <Clock className="w-4 h-4 text-blue-500" />;
+      case "chart_creation":
+        return <BarChart3 className="w-4 h-4 text-purple-500" />;
+      case "layout_building":
+        return <TrendingUp className="w-4 h-4 text-orange-500" />;
+      default:
+        return <Clock className="w-4 h-4 text-muted-foreground" />;
     }
   };
 
@@ -165,15 +179,16 @@ function MetricCard({ metric }: { metric: DashboardMetric }) {
                 {metric.title}
               </h4>
               {metric.badge && (
-                <Badge variant={metric.badge.variant || "secondary"} className="text-xs">
+                <Badge
+                  variant={metric.badge.variant || "secondary"}
+                  className="text-xs"
+                >
                   {metric.badge.text}
                 </Badge>
               )}
             </div>
 
-            <div className="text-2xl font-bold">
-              {metric.value}
-            </div>
+            <div className="text-2xl font-bold">{metric.value}</div>
 
             {metric.subtitle && (
               <div className="text-sm text-muted-foreground">
@@ -182,11 +197,16 @@ function MetricCard({ metric }: { metric: DashboardMetric }) {
             )}
 
             {metric.trend && (
-              <div className={cn(
-                "text-sm font-medium",
-                metric.trend.isPositive ? "text-green-600" :
-                metric.trend.isNeutral ? "text-muted-foreground" : "text-red-600"
-              )}>
+              <div
+                className={cn(
+                  "text-sm font-medium",
+                  metric.trend.isPositive
+                    ? "text-green-600"
+                    : metric.trend.isNeutral
+                      ? "text-muted-foreground"
+                      : "text-red-600",
+                )}
+              >
                 {metric.trend.value}
               </div>
             )}
@@ -200,27 +220,36 @@ function MetricCard({ metric }: { metric: DashboardMetric }) {
 // Chart wrapper component with progressive loading
 function ChartWrapper({
   chart,
-  isVisible
+  isVisible,
 }: {
   chart: DashboardChart;
   isVisible: boolean;
 }) {
   const getChartIcon = (type: string) => {
     switch (type) {
-      case "bar": return <BarChart3 className="w-4 h-4" />;
-      case "line": return <LineChart className="w-4 h-4" />;
-      case "pie": return <PieChart className="w-4 h-4" />;
-      default: return <BarChart3 className="w-4 h-4" />;
+      case "bar":
+        return <BarChart3 className="w-4 h-4" />;
+      case "line":
+        return <LineChart className="w-4 h-4" />;
+      case "pie":
+        return <PieChart className="w-4 h-4" />;
+      default:
+        return <BarChart3 className="w-4 h-4" />;
     }
   };
 
   const getHeightForSize = (size: DashboardChart["size"]) => {
     switch (size) {
-      case "small": return "h-[200px]";
-      case "medium": return "h-[300px]";
-      case "large": return "h-[400px]";
-      case "full": return "h-[500px]";
-      default: return "h-[300px]";
+      case "small":
+        return "h-[200px]";
+      case "medium":
+        return "h-[300px]";
+      case "large":
+        return "h-[400px]";
+      case "full":
+        return "h-[500px]";
+      default:
+        return "h-[300px]";
     }
   };
 
@@ -259,9 +288,9 @@ function ChartWrapper({
         );
       case "pie":
         // Transform data for pie chart
-        const pieData = chart.data.map(point => ({
+        const pieData = chart.data.map((point) => ({
           label: point.xAxisLabel,
-          value: point.series[0]?.value || 0
+          value: point.series[0]?.value || 0,
         }));
         return (
           <PieChartComponent
@@ -314,11 +343,13 @@ function ChartWrapper({
 
 // Main dashboard artifact component
 export function DashboardArtifactContent({
-  artifact,
+  artifact: _artifact, // Available for future metadata access and artifact-specific logic
   content,
   status,
 }: ArtifactContentProps<BaseArtifact>) {
-  const [currentStage, setCurrentStage] = useState<"loading" | "metrics" | "charts" | "complete">("loading");
+  const [currentStage, setCurrentStage] = useState<
+    "loading" | "metrics" | "charts" | "complete"
+  >("loading");
   const [visibleCharts, setVisibleCharts] = useState<Set<string>>(new Set());
   const [progressToastVisible, setProgressToastVisible] = useState(false);
   const [currentProgress, setCurrentProgress] = useState(0);
@@ -350,7 +381,7 @@ export function DashboardArtifactContent({
         // Load charts progressively
         dashboardData.charts.forEach((chart, index) => {
           setTimeout(() => {
-            setVisibleCharts(prev => new Set([...prev, chart.id]));
+            setVisibleCharts((prev) => new Set([...prev, chart.id]));
             if (index === dashboardData.charts.length - 1) {
               setTimeout(() => {
                 setCurrentStage("complete");
@@ -415,178 +446,209 @@ export function DashboardArtifactContent({
 
   // Create mock orchestration stage for progress toast
   const mockStage: DashboardOrchestrationStage = {
-      stage: currentStage === "loading" ? "planning" :
-             currentStage === "metrics" ? "planning" :
-             currentStage === "charts" ? "chart_creation" : "complete",
-      status: currentStage === "complete" ? "complete" : "in_progress",
-      description: currentStage === "loading" ? "Planning dashboard structure..." :
-                   currentStage === "metrics" ? "Setting up key metrics..." :
-                   currentStage === "charts" ? "Creating charts progressively..." :
-                   "Dashboard creation complete!"
-    };
+    stage:
+      currentStage === "loading"
+        ? "planning"
+        : currentStage === "metrics"
+          ? "planning"
+          : currentStage === "charts"
+            ? "chart_creation"
+            : "complete",
+    status: currentStage === "complete" ? "complete" : "in_progress",
+    description:
+      currentStage === "loading"
+        ? "Planning dashboard structure..."
+        : currentStage === "metrics"
+          ? "Setting up key metrics..."
+          : currentStage === "charts"
+            ? "Creating charts progressively..."
+            : "Dashboard creation complete!",
+  };
 
   // Grid layout for metrics
   const getMetricsGridClass = (layout: string) => {
     switch (layout) {
-      case "1/1": return "grid-cols-1";
-      case "2/2": return "grid-cols-1 sm:grid-cols-2";
-      case "2/3": return "grid-cols-2 lg:grid-cols-3";
-      case "3/3": return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
-      case "4/4": return "grid-cols-2 lg:grid-cols-4";
-      default: return "grid-cols-1 sm:grid-cols-2";
+      case "1/1":
+        return "grid-cols-1";
+      case "2/2":
+        return "grid-cols-1 sm:grid-cols-2";
+      case "2/3":
+        return "grid-cols-2 lg:grid-cols-3";
+      case "3/3":
+        return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
+      case "4/4":
+        return "grid-cols-2 lg:grid-cols-4";
+      default:
+        return "grid-cols-1 sm:grid-cols-2";
     }
   };
 
   // Group charts by size
-  const smallCharts = dashboardData.charts.filter(c => c.size === "small");
-  const mediumCharts = dashboardData.charts.filter(c => c.size === "medium" || !c.size);
-  const largeCharts = dashboardData.charts.filter(c => c.size === "large" || c.size === "full");
+  const smallCharts = dashboardData.charts.filter((c) => c.size === "small");
+  const mediumCharts = dashboardData.charts.filter(
+    (c) => c.size === "medium" || !c.size,
+  );
+  const largeCharts = dashboardData.charts.filter(
+    (c) => c.size === "large" || c.size === "full",
+  );
 
   return (
-      <div className="w-full space-y-6 p-4">
-        {/* Progress Toast */}
-        <ProgressToast
-          stage={mockStage}
-          progress={currentProgress}
-          isVisible={progressToastVisible}
-        />
+    <div className="w-full space-y-6 p-4">
+      {/* Progress Toast */}
+      <ProgressToast
+        stage={mockStage}
+        progress={currentProgress}
+        isVisible={progressToastVisible}
+      />
 
-        {/* Dashboard Header */}
+      {/* Dashboard Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-2"
+      >
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">{dashboardData.title}</h1>
+          <Badge variant="secondary" className="text-sm">
+            {dashboardData.charts.length} chart
+            {dashboardData.charts.length !== 1 ? "s" : ""}
+          </Badge>
+        </div>
+
+        {dashboardData.description && (
+          <p className="text-muted-foreground">{dashboardData.description}</p>
+        )}
+
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <span>{dashboardData.metadata.totalDataPoints} data points</span>
+          <span>•</span>
+          <span>{dashboardData.metadata.chartTypes.join(", ")} charts</span>
+          <span>•</span>
+          <span>
+            Created{" "}
+            {new Date(dashboardData.metadata.created).toLocaleTimeString()}
+          </span>
+        </div>
+      </motion.div>
+
+      <Separator />
+
+      {/* Key Metrics Grid */}
+      {dashboardData.metrics.length > 0 && currentStage !== "loading" && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="space-y-4"
+        >
+          <h2 className="text-lg font-semibold">Key Metrics</h2>
+          <div
+            className={cn(
+              "grid gap-4",
+              getMetricsGridClass(dashboardData.layout.metricsLayout),
+            )}
+          >
+            {dashboardData.metrics.map((metric) => (
+              <MetricCard key={metric.id} metric={metric} />
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Charts Section */}
+      {dashboardData.charts.length > 0 && currentStage !== "loading" && (
+        <div className="space-y-6">
+          <h2 className="text-lg font-semibold">Visualizations</h2>
+
+          {/* Large/Full charts - full width */}
+          {largeCharts.map((chart) => (
+            <ChartWrapper
+              key={chart.id}
+              chart={chart}
+              isVisible={visibleCharts.has(chart.id)}
+            />
+          ))}
+
+          {/* Medium charts - 2 column grid */}
+          {mediumCharts.length > 0 && (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              {mediumCharts.map((chart) => (
+                <ChartWrapper
+                  key={chart.id}
+                  chart={chart}
+                  isVisible={visibleCharts.has(chart.id)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Small charts - 3 column grid */}
+          {smallCharts.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {smallCharts.map((chart) => (
+                <ChartWrapper
+                  key={chart.id}
+                  chart={chart}
+                  isVisible={visibleCharts.has(chart.id)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Analysis Section */}
+      {dashboardData.analysis && currentStage === "complete" && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-2"
+          transition={{ delay: 0.5 }}
+          className="space-y-4"
         >
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">{dashboardData.title}</h1>
-            <Badge variant="secondary" className="text-sm">
-              {dashboardData.charts.length} chart{dashboardData.charts.length !== 1 ? 's' : ''}
-            </Badge>
-          </div>
-
-          {dashboardData.description && (
-            <p className="text-muted-foreground">{dashboardData.description}</p>
-          )}
-
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span>{dashboardData.metadata.totalDataPoints} data points</span>
-            <span>•</span>
-            <span>{dashboardData.metadata.chartTypes.join(", ")} charts</span>
-            <span>•</span>
-            <span>Created {new Date(dashboardData.metadata.created).toLocaleTimeString()}</span>
-          </div>
+          <Separator />
+          <h2 className="text-lg font-semibold">Analysis</h2>
+          <Card>
+            <CardContent className="p-4">
+              <p className="leading-relaxed">{dashboardData.analysis}</p>
+            </CardContent>
+          </Card>
         </motion.div>
+      )}
 
-        <Separator />
-
-        {/* Key Metrics Grid */}
-        {dashboardData.metrics.length > 0 && currentStage !== "loading" && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="space-y-4"
-          >
-            <h2 className="text-lg font-semibold">Key Metrics</h2>
-            <div className={cn("grid gap-4", getMetricsGridClass(dashboardData.layout.metricsLayout))}>
-              {dashboardData.metrics.map((metric) => (
-                <MetricCard key={metric.id} metric={metric} />
-              ))}
-            </div>
-          </motion.div>
-        )}
-
-        {/* Charts Section */}
-        {dashboardData.charts.length > 0 && currentStage !== "loading" && (
-          <div className="space-y-6">
-            <h2 className="text-lg font-semibold">Visualizations</h2>
-
-            {/* Large/Full charts - full width */}
-            {largeCharts.map(chart => (
-              <ChartWrapper
-                key={chart.id}
-                chart={chart}
-                isVisible={visibleCharts.has(chart.id)}
-              />
-            ))}
-
-            {/* Medium charts - 2 column grid */}
-            {mediumCharts.length > 0 && (
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                {mediumCharts.map(chart => (
-                  <ChartWrapper
-                    key={chart.id}
-                    chart={chart}
-                    isVisible={visibleCharts.has(chart.id)}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Small charts - 3 column grid */}
-            {smallCharts.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {smallCharts.map(chart => (
-                  <ChartWrapper
-                    key={chart.id}
-                    chart={chart}
-                    isVisible={visibleCharts.has(chart.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Analysis Section */}
-        {dashboardData.analysis && currentStage === "complete" && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="space-y-4"
-          >
-            <Separator />
-            <h2 className="text-lg font-semibold">Analysis</h2>
-            <Card>
-              <CardContent className="p-4">
-                <p className="leading-relaxed">{dashboardData.analysis}</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-
-        {/* Summary Section */}
-        {currentStage === "complete" && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
-            className="space-y-4"
-          >
-            <Separator />
-            <Card className="border-dashed">
-              <CardContent className="p-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    <span className="font-medium">Dashboard Complete</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Successfully created {dashboardData.charts.length} chart{dashboardData.charts.length !== 1 ? 's' : ''}
-                    {dashboardData.metrics.length > 0 && ` and ${dashboardData.metrics.length} key metric${dashboardData.metrics.length !== 1 ? 's' : ''}`}
-                    with {dashboardData.metadata.totalDataPoints} total data points.
-                  </p>
-                  <div className="text-xs text-muted-foreground">
-                    Chart types: {dashboardData.metadata.chartTypes.join(", ")} •
-                    Layout: {dashboardData.layout.chartsLayout} •
-                    Metrics: {dashboardData.layout.metricsLayout}
-                  </div>
+      {/* Summary Section */}
+      {currentStage === "complete" && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+          className="space-y-4"
+        >
+          <Separator />
+          <Card className="border-dashed">
+            <CardContent className="p-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  <span className="font-medium">Dashboard Complete</span>
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-      </div>
-    );
+                <p className="text-sm text-muted-foreground">
+                  Successfully created {dashboardData.charts.length} chart
+                  {dashboardData.charts.length !== 1 ? "s" : ""}
+                  {dashboardData.metrics.length > 0 &&
+                    ` and ${dashboardData.metrics.length} key metric${dashboardData.metrics.length !== 1 ? "s" : ""}`}
+                  with {dashboardData.metadata.totalDataPoints} total data
+                  points.
+                </p>
+                <div className="text-xs text-muted-foreground">
+                  Chart types: {dashboardData.metadata.chartTypes.join(", ")} •
+                  Layout: {dashboardData.layout.chartsLayout} • Metrics:{" "}
+                  {dashboardData.layout.metricsLayout}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+    </div>
+  );
 }

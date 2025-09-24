@@ -34,10 +34,10 @@ export const funnelChartArtifactTool = createTool({
         z.object({
           stage: z
             .string()
-            .describe("Name of the funnel stage (e.g., 'Leads', 'Qualified', 'Customers')"),
-          value: z
-            .number()
-            .describe("Numeric value for this funnel stage"),
+            .describe(
+              "Name of the funnel stage (e.g., 'Leads', 'Qualified', 'Customers')",
+            ),
+          value: z.number().describe("Numeric value for this funnel stage"),
           fill: z
             .string()
             .optional()
@@ -111,8 +111,8 @@ export const funnelChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return success with artifact creation data (matches existing pattern)
-      const result = {
+      // Create the structured result data
+      const resultData = {
         success: true,
         artifactId,
         artifact: {
@@ -131,17 +131,43 @@ export const funnelChartArtifactTool = createTool({
         componentType: "FunnelChart",
       };
 
-      // Note: Canvas artifact creation happens in ChatBot component via tool result detection
-
+      // Return in expected response format with content and structuredContent
       logger.info(`Funnel chart artifact created successfully: ${artifactId}`);
-      return result;
+      return {
+        content: [
+          { type: "text", text: resultData.message },
+          {
+            type: "text",
+            text: `Chart Created in Canvas\n\nType: ${resultData.chartType}\n\nChart created successfully. Use the "Open Canvas" button above to view the interactive visualization.`,
+          },
+        ],
+        structuredContent: {
+          result: [resultData],
+        },
+        isError: false,
+      };
     } catch (error) {
       logger.error("Failed to create funnel chart artifact:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        message: `Failed to create funnel chart: ${error instanceof Error ? error.message : "Unknown error"}`,
-        chartType: "funnel",
+        content: [
+          {
+            type: "text",
+            text: `Failed to create funnel chart: ${errorMessage}`,
+          },
+        ],
+        structuredContent: {
+          result: [
+            {
+              success: false,
+              error: errorMessage,
+              message: `Failed to create funnel chart: ${errorMessage}`,
+              chartType: "funnel",
+            },
+          ],
+        },
+        isError: true,
       };
     }
   },

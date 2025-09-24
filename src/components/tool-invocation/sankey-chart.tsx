@@ -1,9 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  ResponsiveContainer,
-} from "recharts";
+import { ResponsiveContainer } from "recharts";
 
 import {
   Card,
@@ -12,10 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  ChartConfig,
-  ChartContainer,
-} from "@/components/ui/chart";
+import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 
 import { JsonViewPopup } from "../json-view-popup";
 import { generateUniqueKey } from "lib/utils";
@@ -57,28 +52,31 @@ export function SankeyChart(props: SankeyChartProps) {
     x: number;
     y: number;
     data: {
-      type: 'node' | 'link';
+      type: "node" | "link";
       content: any;
     } | null;
   }>({
     visible: false,
     x: 0,
     y: 0,
-    data: null
+    data: null,
   });
 
   const deduplicateData = React.useMemo(() => {
     // Deduplicate nodes
     const nodeNames = new Map<string, string>();
-    const deduplicatedNodes = nodes.reduce((acc, node) => {
-      const existingNames = acc.map(n => n.name);
-      const newName = generateUniqueKey(node.name, existingNames);
-      nodeNames.set(node.id, newName);
-      return [...acc, { ...node, name: newName }];
-    }, [] as SankeyChartProps["nodes"]);
+    const deduplicatedNodes = nodes.reduce(
+      (acc, node) => {
+        const existingNames = acc.map((n) => n.name);
+        const newName = generateUniqueKey(node.name, existingNames);
+        nodeNames.set(node.id, newName);
+        return [...acc, { ...node, name: newName }];
+      },
+      [] as SankeyChartProps["nodes"],
+    );
 
     // Update links with deduplicated node references
-    const deduplicatedLinks = links.map(link => ({
+    const deduplicatedLinks = links.map((link) => ({
       ...link,
       sourceName: nodeNames.get(link.source) || link.source,
       targetName: nodeNames.get(link.target) || link.target,
@@ -110,21 +108,21 @@ export function SankeyChart(props: SankeyChartProps) {
     const nodeColumns = new Map();
 
     // Find source nodes (nodes with no incoming links)
-    const sourceNodes = nodeData.filter(node =>
-      !linkData.some(link => link.target === node.id)
+    const sourceNodes = nodeData.filter(
+      (node) => !linkData.some((link) => link.target === node.id),
     );
 
     // Find sink nodes (nodes with no outgoing links)
-    const sinkNodes = nodeData.filter(node =>
-      !linkData.some(link => link.source === node.id)
+    const sinkNodes = nodeData.filter(
+      (node) => !linkData.some((link) => link.source === node.id),
     );
 
     // Assign columns
-    sourceNodes.forEach(node => nodeColumns.set(node.id, 0));
-    sinkNodes.forEach(node => nodeColumns.set(node.id, 2));
+    sourceNodes.forEach((node) => nodeColumns.set(node.id, 0));
+    sinkNodes.forEach((node) => nodeColumns.set(node.id, 2));
 
     // Middle nodes get column 1
-    nodeData.forEach(node => {
+    nodeData.forEach((node) => {
       if (!nodeColumns.has(node.id)) {
         nodeColumns.set(node.id, 1);
       }
@@ -136,7 +134,7 @@ export function SankeyChart(props: SankeyChartProps) {
     const nodeSpacing = 60;
 
     const columnCounts = [0, 0, 0];
-    nodeData.forEach(node => {
+    nodeData.forEach((node) => {
       const col = nodeColumns.get(node.id);
       const row = columnCounts[col];
       nodePositions.set(node.id, {
@@ -144,7 +142,7 @@ export function SankeyChart(props: SankeyChartProps) {
         y: row * nodeSpacing + 50,
         width: 150,
         height: nodeHeight,
-        column: col
+        column: col,
       });
       columnCounts[col]++;
     });
@@ -155,11 +153,19 @@ export function SankeyChart(props: SankeyChartProps) {
   // Custom SVG-based sankey visualization
   const SankeyVisualization = React.useCallback(() => {
     const { nodePositions } = layout;
-    const maxX = Math.max(...Array.from(nodePositions.values()).map(p => p.x + p.width));
-    const maxY = Math.max(...Array.from(nodePositions.values()).map(p => p.y + p.height));
+    const maxX = Math.max(
+      ...Array.from(nodePositions.values()).map((p) => p.x + p.width),
+    );
+    const maxY = Math.max(
+      ...Array.from(nodePositions.values()).map((p) => p.y + p.height),
+    );
 
     return (
-      <svg width="100%" height="100%" viewBox={`0 0 ${maxX + 100} ${maxY + 100}`}>
+      <svg
+        width="100%"
+        height="100%"
+        viewBox={`0 0 ${maxX + 100} ${maxY + 100}`}
+      >
         {/* Render links */}
         {deduplicateData.links.map((link, index) => {
           const sourcePos = nodePositions.get(link.source);
@@ -185,31 +191,31 @@ export function SankeyChart(props: SankeyChartProps) {
                 strokeWidth={Math.max(3, Math.min(8, link.value / 5))}
                 fill="none"
                 opacity={0.7}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: "pointer" }}
                 onMouseEnter={(e) => {
-                  const rect = e.currentTarget.getBoundingClientRect();
+                  const _rect = e.currentTarget.getBoundingClientRect();
                   setTooltip({
                     visible: true,
                     x: e.clientX,
                     y: e.clientY,
                     data: {
-                      type: 'link',
+                      type: "link",
                       content: {
                         source: link.sourceName || link.source,
                         target: link.targetName || link.target,
-                        value: link.value
-                      }
-                    }
+                        value: link.value,
+                      },
+                    },
                   });
                 }}
                 onMouseLeave={() => {
-                  setTooltip(prev => ({ ...prev, visible: false }));
+                  setTooltip((prev) => ({ ...prev, visible: false }));
                 }}
                 onMouseMove={(e) => {
-                  setTooltip(prev => ({
+                  setTooltip((prev) => ({
                     ...prev,
                     x: e.clientX,
-                    y: e.clientY
+                    y: e.clientY,
                   }));
                 }}
               />
@@ -221,7 +227,7 @@ export function SankeyChart(props: SankeyChartProps) {
                 fontSize="10"
                 fill="hsl(var(--foreground))"
                 fontWeight="500"
-                style={{ pointerEvents: 'none' }}
+                style={{ pointerEvents: "none" }}
               >
                 {link.value.toLocaleString()}
               </text>
@@ -235,11 +241,13 @@ export function SankeyChart(props: SankeyChartProps) {
           if (!pos) return null;
 
           const nodeConnections = deduplicateData.links.filter(
-            link => link.source === node.id || link.target === node.id
+            (link) => link.source === node.id || link.target === node.id,
           );
-          const totalInflow = deduplicateData.links.filter(link => link.target === node.id)
+          const totalInflow = deduplicateData.links
+            .filter((link) => link.target === node.id)
             .reduce((sum, link) => sum + link.value, 0);
-          const totalOutflow = deduplicateData.links.filter(link => link.source === node.id)
+          const totalOutflow = deduplicateData.links
+            .filter((link) => link.source === node.id)
             .reduce((sum, link) => sum + link.value, 0);
 
           return (
@@ -254,31 +262,31 @@ export function SankeyChart(props: SankeyChartProps) {
                 strokeWidth="2"
                 rx="6"
                 opacity={0.9}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: "pointer" }}
                 onMouseEnter={(e) => {
                   setTooltip({
                     visible: true,
                     x: e.clientX,
                     y: e.clientY,
                     data: {
-                      type: 'node',
+                      type: "node",
                       content: {
                         name: node.name,
                         connections: nodeConnections.length,
                         inflow: totalInflow,
-                        outflow: totalOutflow
-                      }
-                    }
+                        outflow: totalOutflow,
+                      },
+                    },
                   });
                 }}
                 onMouseLeave={() => {
-                  setTooltip(prev => ({ ...prev, visible: false }));
+                  setTooltip((prev) => ({ ...prev, visible: false }));
                 }}
                 onMouseMove={(e) => {
-                  setTooltip(prev => ({
+                  setTooltip((prev) => ({
                     ...prev,
                     x: e.clientX,
-                    y: e.clientY
+                    y: e.clientY,
                   }));
                 }}
               />
@@ -290,7 +298,7 @@ export function SankeyChart(props: SankeyChartProps) {
                 fontSize="12"
                 fill="white"
                 fontWeight="bold"
-                style={{ pointerEvents: 'none' }}
+                style={{ pointerEvents: "none" }}
               >
                 {node.name}
               </text>
@@ -315,7 +323,7 @@ export function SankeyChart(props: SankeyChartProps) {
           top: tooltip.y - 10,
         }}
       >
-        {type === 'link' ? (
+        {type === "link" ? (
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
@@ -348,9 +356,7 @@ export function SankeyChart(props: SankeyChartProps) {
               <span className="text-[0.70rem] uppercase text-muted-foreground">
                 Connections
               </span>
-              <span className="font-bold">
-                {content.connections}
-              </span>
+              <span className="font-bold">{content.connections}</span>
             </div>
             {content.inflow > 0 && (
               <div className="flex flex-col">
@@ -392,14 +398,16 @@ export function SankeyChart(props: SankeyChartProps) {
             />
           </div>
         </CardTitle>
-        {description && <CardDescription className="text-xs">{description}</CardDescription>}
+        {description && (
+          <CardDescription className="text-xs">{description}</CardDescription>
+        )}
       </CardHeader>
       <CardContent className="flex-1 pb-0 pt-2 min-h-0">
         <ChartContainer config={chartConfig} className="h-full w-full">
           <ResponsiveContainer width="100%" height="100%">
             <div className="w-full h-full flex items-center justify-center relative">
               <SankeyVisualization />
-              <CustomTooltip />
+              {CustomTooltip}
             </div>
           </ResponsiveContainer>
         </ChartContainer>

@@ -610,6 +610,10 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
           "create_geographic_chart",
           "create_gauge_chart",
           "create_calendar_heatmap",
+          // Basic artifact tools (from artifacts/index.ts)
+          "create_bar_chart_artifact",
+          "create_line_chart_artifact",
+          "create_pie_chart_artifact",
         ];
 
         const chartTools = lastMessage.parts.filter(
@@ -645,14 +649,20 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
           // Support multiple result formats:
           // 1. Original format: shouldCreateArtifact && status === 'success'
           // 2. New format: success === true
+          // 3. New structured format: structuredContent.result[0].success === true && isError === false
           const isCompleted =
             (result?.shouldCreateArtifact && result?.status === "success") ||
-            result?.success === true;
+            result?.success === true ||
+            (result?.structuredContent?.result?.[0]?.success === true &&
+              result?.isError === false);
 
           if (isCompleted) {
             // Use different ID fields depending on format
             const artifactId =
-              result.chartId || result.artifactId || generateUUID();
+              result.chartId ||
+              result.artifactId ||
+              result.structuredContent?.result?.[0]?.artifactId ||
+              generateUUID();
             const toolKey = `${lastMessage.id}-${artifactId}`;
 
             // Check if we've already processed this tool
@@ -686,7 +696,10 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
 
           // Handle different result formats
           const artifactId =
-            result.chartId || result.artifactId || generateUUID();
+            result.chartId ||
+            result.artifactId ||
+            result.structuredContent?.result?.[0]?.artifactId ||
+            generateUUID();
           const existingArtifact = canvasArtifacts.find(
             (a) => a.id === artifactId,
           );
@@ -694,7 +707,10 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
           if (!existingArtifact) {
             console.log("✨ ChatBot Tool Debug: Creating new chart artifact", {
               chartId: artifactId,
-              title: result.title || result.artifact?.title,
+              title:
+                result.title ||
+                result.artifact?.title ||
+                result.structuredContent?.result?.[0]?.artifact?.title,
               toolName,
             });
 
@@ -702,14 +718,17 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
             let chartType;
             let title;
 
-            // Handle new artifact format
-            if (result.artifact) {
-              const artifactContent = JSON.parse(result.artifact.content);
+            // Handle new artifact format - check both old and new structured format
+            const artifactData =
+              result.artifact ||
+              result.structuredContent?.result?.[0]?.artifact;
+            if (artifactData) {
+              const artifactContent = JSON.parse(artifactData.content);
               // Extract the correct chart type
               chartType =
                 artifactContent.metadata?.chartType ||
                 artifactContent.type.replace("-chart", "");
-              title = result.artifact.title;
+              title = artifactData.title;
 
               // Create chartData in the format expected by ChartRenderer
               chartData = {
@@ -738,11 +757,15 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
                 endDate: artifactContent.endDate,
               };
             }
-            // Handle original format
+            // Handle original format - also check structured content for legacy support
             else {
-              chartData = result.chartData;
-              chartType = result.chartType;
-              title = result.title;
+              const structuredResult = result.structuredContent?.result?.[0];
+              chartData = result.chartData || structuredResult?.chartData;
+              chartType = result.chartType || structuredResult?.chartType;
+              title =
+                result.title ||
+                structuredResult?.title ||
+                structuredResult?.message;
             }
 
             const artifact = {

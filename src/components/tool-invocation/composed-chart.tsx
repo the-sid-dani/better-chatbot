@@ -61,7 +61,7 @@ const chartColors = [
 ];
 
 export function ComposedChart(props: ComposedChartProps) {
-  const { title, data, description, xAxisLabel, yAxisLabel } = props;
+  const { title, data, description, yAxisLabel } = props;
 
   const deduplicateData = React.useMemo(() => {
     return data.reduce(
@@ -97,8 +97,8 @@ export function ComposedChart(props: ComposedChartProps) {
   const seriesByType = React.useMemo(() => {
     const grouped = { bar: new Set(), line: new Set(), area: new Set() };
 
-    deduplicateData.forEach(point => {
-      point.series.forEach(series => {
+    deduplicateData.forEach((point) => {
+      point.series.forEach((series) => {
         grouped[series.chartType].add(series.seriesName);
       });
     });
@@ -112,9 +112,13 @@ export function ComposedChart(props: ComposedChartProps) {
 
   // Get all unique series names for configuration
   const allSeriesNames = React.useMemo(() => {
-    return Array.from(new Set(
-      deduplicateData.flatMap(point => point.series.map(s => s.seriesName))
-    ));
+    return Array.from(
+      new Set(
+        deduplicateData.flatMap((point) =>
+          point.series.map((s) => s.seriesName),
+        ),
+      ),
+    );
   }, [deduplicateData]);
 
   // Generate chart configuration dynamically
@@ -165,7 +169,9 @@ export function ComposedChart(props: ComposedChartProps) {
             />
           </div>
         </CardTitle>
-        {description && <CardDescription className="text-xs">{description}</CardDescription>}
+        {description && (
+          <CardDescription className="text-xs">{description}</CardDescription>
+        )}
       </CardHeader>
       <CardContent className="flex-1 pb-0 pt-2 min-h-0">
         <ChartContainer config={chartConfig} className="h-full w-full">
@@ -195,9 +201,7 @@ export function ComposedChart(props: ComposedChartProps) {
                     : undefined
                 }
               />
-              <ChartTooltip
-                content={<ChartTooltipContent />}
-              />
+              <ChartTooltip content={<ChartTooltipContent />} />
 
               {/* Render Area components first (background layers) */}
               {seriesByType.area.map((seriesName, _index) => {
@@ -241,7 +245,10 @@ export function ComposedChart(props: ComposedChartProps) {
                     dataKey={seriesKey}
                     stroke={`var(--color-${sanitizeCssVariableName(seriesName)})`}
                     strokeWidth={3}
-                    dot={{ r: 4, fill: `var(--color-${sanitizeCssVariableName(seriesName)})` }}
+                    dot={{
+                      r: 4,
+                      fill: `var(--color-${sanitizeCssVariableName(seriesName)})`,
+                    }}
                     activeDot={{ r: 6 }}
                   />
                 );

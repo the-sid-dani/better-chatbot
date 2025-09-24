@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { ChartDataPoint } from "app-types/artifacts";
 import {
   BaseCanvas,
   CanvasGrid,
@@ -65,18 +66,17 @@ interface DashboardCanvasProps {
 function DashboardChartRenderer({ chart }: { chart: DashboardChart }) {
   const getHeightForSize = (size: DashboardChart["size"]) => {
     switch (size) {
-      case "small": return "200px";
-      case "medium": return "280px";
-      case "large": return "360px";
-      case "full": return "400px";
-      default: return "280px";
+      case "small":
+        return "200px";
+      case "medium":
+        return "280px";
+      case "large":
+        return "360px";
+      case "full":
+        return "400px";
+      default:
+        return "280px";
     }
-  };
-
-  const _chartProps = {
-    title: chart.title,
-    description: chart.description,
-    yAxisLabel: chart.yAxisLabel
   };
 
   const renderChart = () => {
@@ -105,12 +105,15 @@ function DashboardChartRenderer({ chart }: { chart: DashboardChart }) {
         );
       case "pie":
         // Transform data for pie chart if needed
-        const pieData = Array.isArray(chart.data) && chart.data.length > 0 && 'label' in chart.data[0]
-          ? chart.data as Array<{ label: string; value: number }>
-          : (chart.data as ChartDataPoint[]).map(point => ({
-              label: point.xAxisLabel,
-              value: point.series[0]?.value || 0
-            }));
+        const pieData =
+          Array.isArray(chart.data) &&
+          chart.data.length > 0 &&
+          "label" in chart.data[0]
+            ? (chart.data as Array<{ label: string; value: number }>)
+            : (chart.data as unknown as ChartDataPoint[]).map((point) => ({
+                label: point.xAxisLabel,
+                value: point.series[0]?.value || 0,
+              }));
         return (
           <div className="h-full w-full">
             <PieChart
@@ -139,14 +142,18 @@ function DashboardChartRenderer({ chart }: { chart: DashboardChart }) {
       title={chart.title}
       description={chart.description}
       height={getHeightForSize(chart.size)}
-      badge={chart.type ? {
-        text: chart.type.toUpperCase(),
-        variant: "secondary"
-      } : undefined}
+      badge={
+        chart.type
+          ? {
+              text: chart.type.toUpperCase(),
+              variant: "secondary",
+            }
+          : undefined
+      }
       metadata={{
         chartType: chart.type,
         dataPoints: chart.data.length,
-        lastUpdated: "just now"
+        lastUpdated: "just now",
       }}
     >
       {renderChart()}
@@ -163,12 +170,14 @@ export function DashboardCanvas({
   isLoading = false,
   layout = {
     metricsLayout: "2/2",
-    chartsLayout: "grid"
+    chartsLayout: "grid",
   },
   onExport,
-  onRefresh
+  onRefresh,
 }: DashboardCanvasProps) {
-  const [currentStage, setCurrentStage] = useState<"loading" | "metrics_ready" | "charts_ready" | "complete">("loading");
+  const [currentStage, setCurrentStage] = useState<
+    "loading" | "metrics_ready" | "charts_ready" | "complete"
+  >("loading");
 
   // Simulate progressive loading
   useEffect(() => {
@@ -190,19 +199,21 @@ export function DashboardCanvas({
   }, [isLoading]);
 
   // Convert metrics to grid items
-  const metricItems: GridItem[] = metrics.map(metric => ({
+  const metricItems: GridItem[] = metrics.map((metric) => ({
     id: metric.id,
     title: metric.title,
     value: metric.value,
     subtitle: metric.subtitle,
     trend: metric.trend,
-    badge: metric.badge
+    badge: metric.badge,
   }));
 
   // Organize charts by size for layout
-  const smallCharts = charts.filter(c => c.size === "small");
-  const mediumCharts = charts.filter(c => c.size === "medium" || !c.size);
-  const largeCharts = charts.filter(c => c.size === "large" || c.size === "full");
+  const smallCharts = charts.filter((c) => c.size === "small");
+  const mediumCharts = charts.filter((c) => c.size === "medium" || !c.size);
+  const largeCharts = charts.filter(
+    (c) => c.size === "large" || c.size === "full",
+  );
 
   return (
     <BaseCanvas className="p-4">
@@ -213,13 +224,16 @@ export function DashboardCanvas({
           description={description}
           isLoading={isLoading || currentStage === "loading"}
           badge={{
-            text: `${charts.length} chart${charts.length !== 1 ? 's' : ''}`,
-            variant: "secondary"
+            text: `${charts.length} chart${charts.length !== 1 ? "s" : ""}`,
+            variant: "secondary",
           }}
           metadata={{
             charts: charts.length,
-            dataPoints: charts.reduce((sum, chart) => sum + chart.data.length, 0),
-            updated: "now"
+            dataPoints: charts.reduce(
+              (sum, chart) => sum + chart.data.length,
+              0,
+            ),
+            updated: "now",
           }}
           onExport={onExport}
           onRefresh={onRefresh}
@@ -241,14 +255,14 @@ export function DashboardCanvas({
             <h3 className="text-lg font-semibold">Visualizations</h3>
 
             {/* Large/Full charts - full width */}
-            {largeCharts.map(chart => (
+            {largeCharts.map((chart) => (
               <DashboardChartRenderer key={chart.id} chart={chart} />
             ))}
 
             {/* Medium charts - 2 column grid with proper spacing */}
             {mediumCharts.length > 0 && (
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                {mediumCharts.map(chart => (
+                {mediumCharts.map((chart) => (
                   <div key={chart.id} className="min-h-[300px]">
                     <DashboardChartRenderer chart={chart} />
                   </div>
@@ -259,7 +273,7 @@ export function DashboardCanvas({
             {/* Small charts - 3 column grid with proper spacing */}
             {smallCharts.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {smallCharts.map(chart => (
+                {smallCharts.map((chart) => (
                   <div key={chart.id} className="min-h-[240px]">
                     <DashboardChartRenderer chart={chart} />
                   </div>
@@ -287,12 +301,16 @@ export function DashboardCanvas({
         >
           <div className="space-y-2">
             <p>
-              Dashboard contains {charts.length} chart{charts.length !== 1 ? 's' : ''}
-              {metrics.length > 0 && ` and ${metrics.length} key metric${metrics.length !== 1 ? 's' : ''}`}.
+              Dashboard contains {charts.length} chart
+              {charts.length !== 1 ? "s" : ""}
+              {metrics.length > 0 &&
+                ` and ${metrics.length} key metric${metrics.length !== 1 ? "s" : ""}`}
+              .
             </p>
             {charts.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                Chart types: {[...new Set(charts.map(c => c.type))].join(", ")}
+                Chart types:{" "}
+                {[...new Set(charts.map((c) => c.type))].join(", ")}
               </p>
             )}
           </div>

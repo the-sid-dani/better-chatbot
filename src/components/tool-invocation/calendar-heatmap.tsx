@@ -10,19 +10,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  ChartConfig,
-  ChartContainer,
-} from "@/components/ui/chart";
+import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 
 import { JsonViewPopup } from "../json-view-popup";
 import { generateUniqueKey } from "lib/utils";
 
 // Dynamic import for @uiw/react-heat-map to avoid SSR issues
-const HeatMap = dynamic(
-  () => import("@uiw/react-heat-map"),
-  { ssr: false }
-);
+const HeatMap = dynamic(() => import("@uiw/react-heat-map"), { ssr: false });
 
 // CalendarHeatmap component props interface
 export interface CalendarHeatmapProps {
@@ -47,11 +41,11 @@ export interface CalendarHeatmapProps {
 const colorScales = {
   github: [
     "hsl(var(--muted))",
-    "hsl(var(--chart-5))",  // Very light blue (GitHub style)
-    "hsl(var(--chart-4))",  // Light blue
-    "hsl(var(--chart-3))",  // Medium blue
-    "hsl(var(--chart-2))",  // Blue
-    "hsl(var(--chart-1))",  // Dark blue
+    "hsl(var(--chart-5))", // Very light blue (GitHub style)
+    "hsl(var(--chart-4))", // Light blue
+    "hsl(var(--chart-3))", // Medium blue
+    "hsl(var(--chart-2))", // Blue
+    "hsl(var(--chart-1))", // Dark blue
   ],
   blues: [
     "hsl(var(--muted))",
@@ -78,13 +72,20 @@ const colorScales = {
 };
 
 export function CalendarHeatmap(props: CalendarHeatmapProps) {
-  const { title, data, startDate, endDate, colorScale = "github", description } = props;
+  const {
+    title,
+    data,
+    startDate,
+    endDate,
+    colorScale = "github",
+    description,
+  } = props;
 
   const deduplicateData = React.useMemo(() => {
     // For calendar heatmaps, we need to deduplicate by date
     const dateMap = new Map<string, number>();
 
-    data.forEach(item => {
+    data.forEach((item) => {
       if (dateMap.has(item.date)) {
         // If duplicate date, sum the values
         dateMap.set(item.date, dateMap.get(item.date)! + item.value);
@@ -101,7 +102,7 @@ export function CalendarHeatmap(props: CalendarHeatmapProps) {
 
   // Transform data for @uiw/react-heat-map format
   const heatmapData = React.useMemo(() => {
-    return deduplicateData.map(item => ({
+    return deduplicateData.map((item) => ({
       date: item.date,
       count: item.value,
     }));
@@ -109,7 +110,7 @@ export function CalendarHeatmap(props: CalendarHeatmapProps) {
 
   // Calculate value range for color scaling
   const valueRange = React.useMemo(() => {
-    const values = deduplicateData.map(d => d.value);
+    const values = deduplicateData.map((d) => d.value);
     return {
       min: Math.min(...values),
       max: Math.max(...values),
@@ -129,14 +130,14 @@ export function CalendarHeatmap(props: CalendarHeatmapProps) {
   }, [title, colorScale]);
 
   // Custom tooltip component
-  const CustomTooltip = React.useCallback(({ date, count }: any) => {
+  const _CustomTooltip = React.useCallback(({ date, count }: any) => {
     if (!date) return null;
 
-    const dateStr = new Date(date).toLocaleDateString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+    const dateStr = new Date(date).toLocaleDateString("en-US", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
 
     return (
@@ -146,9 +147,7 @@ export function CalendarHeatmap(props: CalendarHeatmapProps) {
             <span className="text-[0.70rem] uppercase text-muted-foreground">
               Date
             </span>
-            <span className="font-bold text-muted-foreground">
-              {dateStr}
-            </span>
+            <span className="font-bold text-muted-foreground">{dateStr}</span>
           </div>
           <div className="flex flex-col">
             <span className="text-[0.70rem] uppercase text-muted-foreground">
@@ -177,7 +176,9 @@ export function CalendarHeatmap(props: CalendarHeatmapProps) {
             />
           </div>
         </CardTitle>
-        {description && <CardDescription className="text-xs">{description}</CardDescription>}
+        {description && (
+          <CardDescription className="text-xs">{description}</CardDescription>
+        )}
       </CardHeader>
       <CardContent className="flex-1 pb-0 pt-2 min-h-0">
         <ChartContainer config={chartConfig} className="h-full w-full">
@@ -207,8 +208,11 @@ export function CalendarHeatmap(props: CalendarHeatmapProps) {
 
                   // Calculate color intensity based on value
                   const intensity = Math.min(data.count / valueRange.max, 1);
-                  const colorIndex = Math.floor(intensity * (colorScales[colorScale].length - 1));
-                  const color = colorScales[colorScale][Math.max(1, colorIndex + 1)];
+                  const colorIndex = Math.floor(
+                    intensity * (colorScales[colorScale].length - 1),
+                  );
+                  const color =
+                    colorScales[colorScale][Math.max(1, colorIndex + 1)];
 
                   return (
                     <rect

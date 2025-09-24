@@ -129,8 +129,8 @@ export const lineChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return success with artifact creation data
-      const result = {
+      // Create the structured result data
+      const resultData = {
         success: true,
         artifactId,
         artifact: {
@@ -143,20 +143,47 @@ export const lineChartArtifactTool = createTool({
         chartType: "line",
         dataPoints: data.length,
         series: seriesNames,
-        // Additional metadata for Canvas integration
         canvasReady: true,
         componentType: "LineChart",
       };
 
+      // Return in expected response format with content and structuredContent
       logger.info(`Line chart artifact created successfully: ${artifactId}`);
-      return result;
+      return {
+        content: [
+          { type: "text", text: resultData.message },
+          {
+            type: "text",
+            text: `Chart Created in Canvas\n\nType: ${resultData.chartType}\n\nChart created successfully. Use the "Open Canvas" button above to view the interactive visualization.`,
+          },
+        ],
+        structuredContent: {
+          result: [resultData],
+        },
+        isError: false,
+      };
     } catch (error) {
       logger.error("Failed to create line chart artifact:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        message: `Failed to create line chart: ${error instanceof Error ? error.message : "Unknown error"}`,
-        chartType: "line",
+        content: [
+          {
+            type: "text",
+            text: `Failed to create line chart: ${errorMessage}`,
+          },
+        ],
+        structuredContent: {
+          result: [
+            {
+              success: false,
+              error: errorMessage,
+              message: `Failed to create line chart: ${errorMessage}`,
+              chartType: "line",
+            },
+          ],
+        },
+        isError: true,
       };
     }
   },

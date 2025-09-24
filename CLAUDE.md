@@ -105,16 +105,21 @@ pnpm playwright:install   # Install Playwright browsers
 - **Tool Integration:** MCP, Workflow, and App tools conform to Vercel AI SDK tool interface
 - **Observability:** Automatic tracing through Langfuse SDK v4 integration
 
-**Chat System Flow (Vercel AI SDK-Centric):**
+**Chat System Flow (Vercel AI SDK-Centric with Canvas Integration):**
 1. **Request:** `/api/chat/route.ts` handles chat requests with observability
 2. **Tool Loading:** MCP, workflow, and app tools loaded as Vercel AI SDK tools
 3. **Model Provider:** `customModelProvider.getModel()` returns Vercel AI SDK models
 4. **AI Processing:** `streamText()` with `experimental_telemetry` for comprehensive tracing
 5. **Tool Execution:** Automatic tool calls through Vercel AI SDK abstractions
-6. **Canvas Integration:** Chart tools automatically stream to Canvas workspace using progressive building
-7. **Observability:** Real-time trace capture via Langfuse integration
-8. **Response:** Streaming UI components handle Vercel AI SDK message streams
-9. **Database:** Messages and metadata stored via `chatRepository`
+6. **Canvas Processing:** Chart tools stream to Canvas with artifact creation:
+   - Tool execution yields progressive updates (`loading` → `processing` → `success`)
+   - Canvas automatically opens for chart tools unless manually closed by user
+   - Artifacts processed with debounced state management to prevent race conditions
+   - Dual result format support (legacy `shouldCreateArtifact` + new `artifact` format)
+7. **Canvas Artifact Management:** Real-time artifact creation and Canvas state synchronization
+8. **Observability:** Complete tool execution and Canvas interactions traced via Langfuse
+9. **Response:** Streaming UI with "Open Canvas" buttons for chart tool results
+10. **Database:** Messages, metadata, and Canvas states stored via `chatRepository`
 
 **Observability Architecture (Langfuse SDK v4):**
 - **Instrumentation:** `instrumentation.ts` with `NodeTracerProvider` and `LangfuseSpanProcessor`
@@ -166,15 +171,22 @@ pnpm playwright:install   # Install Playwright browsers
 - **Observability:** Workflow execution automatically traced via `experimental_telemetry`
 
 **Canvas System (Multi-Grid Data Visualization):**
-- Multi-grid dashboard layout for progressive chart building
-- Located in `src/components/canvas-panel.tsx` and `src/components/canvas/`
-- **Enhanced Chart Artifacts:** Individual chart tools in `src/lib/ai/tools/artifacts/` (bar-chart-tool.ts, line-chart-tool.ts, pie-chart-tool.ts, area-chart-tool.ts, funnel-chart-tool.ts, radar-chart-tool.ts, scatter-chart-tool.ts, sankey-chart-tool.ts, treemap-chart-tool.ts)
-- **Vercel AI SDK Integration:** Chart tools use native `async function*` streaming patterns
-- **Progressive Building:** Charts appear in Canvas as AI creates them using `yield` statements
-- **Responsive Design:** Charts scale smoothly with Canvas panel resizing
-- **Smart Naming:** Canvas names generated automatically based on chart content analysis via `src/lib/ai/canvas-naming.ts`
-- **Integration:** ResizablePanelGroup allows Canvas alongside chat interface
-- **Dashboard Orchestration:** `dashboard-orchestrator-tool.ts` manages multiple charts in unified dashboards
+- Multi-grid dashboard layout for progressive chart building with real-time artifact creation
+- Located in `src/components/canvas-panel.tsx` with comprehensive Canvas workspace management
+- **Enhanced Chart Artifacts:** 15 specialized chart tools in `src/lib/ai/tools/artifacts/`:
+  - Core charts: `bar-chart-tool.ts`, `line-chart-tool.ts`, `pie-chart-tool.ts`, `area-chart-tool.ts`
+  - Advanced visualizations: `funnel-chart-tool.ts`, `radar-chart-tool.ts`, `scatter-chart-tool.ts`, `treemap-chart-tool.ts`
+  - Specialized charts: `sankey-chart-tool.ts`, `radial-bar-tool.ts`, `composed-chart-tool.ts`
+  - Geographic & metrics: `geographic-chart-tool.ts`, `gauge-chart-tool.ts`, `calendar-heatmap-tool.ts`
+  - Dashboard coordination: `dashboard-orchestrator-tool.ts` for unified multi-chart dashboards
+- **Dual Tool Architecture:** Main `create_chart` tool for basic charts + individual specialized artifact tools
+- **Native AI SDK Streaming:** Chart tools use `async function*` with `yield` statements for progressive building
+- **Canvas Integration:** Automatic Canvas opening when chart tools execute with `shouldCreateArtifact` flag
+- **Responsive Grid System:** CSS Grid layout adapts from 1x1 to 2x2+ based on chart count
+- **Canvas State Management:** `useCanvas` hook with debounced processing and memory leak prevention
+- **Event-Driven Visibility:** "Open Canvas" buttons trigger `canvas:show` events for user-controlled access
+- **Smart Canvas Naming:** Automatic naming based on chart content analysis (e.g., "Sales Performance Dashboard")
+- **ResizablePanelGroup Integration:** Smooth Canvas/chat proportions with drag handles
 
 ## 🔍 Observability Architecture
 
@@ -292,8 +304,10 @@ better-chatbot/
 - **AI Operations:** All AI calls use `streamText`/`generateText` from Vercel AI SDK
 - **Tool Integration:** Convert all tools (MCP, Workflow, App) to Vercel AI SDK tool interface
 - **Streaming:** Leverage `createUIMessageStream` and `experimental_telemetry` for observability
-- **Canvas Integration:** Chart tools use native `async function*` streaming with `yield` statements
-- **Progressive Building:** Canvas artifacts built progressively as AI streams tool execution
+- **Canvas Integration:** Chart tools use native `async function*` streaming with `yield` statements for real-time updates
+- **Progressive Building:** Canvas artifacts created progressively with loading → processing → success states
+- **Dual Tool System:** Main `create_chart` tool + 15 specialized artifact tools for specific chart types
+- **Smart Artifact Processing:** Debounced Canvas updates with race condition protection and duplicate prevention
 - **Provider Management:** Use `customModelProvider.getModel()` for unified model access
 - **Observability:** Enable `experimental_telemetry` on all AI operations for comprehensive tracing
 
@@ -459,7 +473,11 @@ pnpm build               # Production build with HTTPS
 - `src/app/api/chat/shared.chat.ts` - **Tool loading pipeline** - Loads all tools as Vercel AI SDK tools
 - `src/lib/ai/workflow/` - **Workflow → Vercel AI SDK integration** - Converts workflows to SDK tools
 - `src/lib/ai/tools/chart-tool.ts` - **Chart creation tool** - Native AI SDK streaming patterns for Canvas
-- `src/lib/ai/tools/artifacts/` - **Enhanced chart artifact tools** - Individual specialized chart tools for Canvas
+- `src/lib/ai/tools/artifacts/` - **Enhanced chart artifact tools** - 15 specialized chart tools for Canvas:
+  - Core: bar, line, pie, area charts with Canvas optimization
+  - Advanced: funnel, radar, scatter, treemap, sankey, radial-bar, composed charts
+  - Specialized: geographic (with TopoJSON support), gauge, calendar-heatmap
+  - Coordination: dashboard-orchestrator for multi-chart dashboards
 - `src/lib/ai/canvas-naming.ts` - **Canvas naming system** - Intelligent canvas name generation
 - `src/components/message-parts.tsx` - **Message rendering** - Handles Canvas integration with "Open Canvas" buttons
 
@@ -485,13 +503,23 @@ pnpm build               # Production build with HTTPS
 7. Run quality checks: `pnpm check`
 
 ### Adding Canvas Functionality
-1. Create chart artifact tools in `src/lib/ai/tools/artifacts/` using native AI SDK streaming patterns
-2. Use `async function*` with `yield` statements for progressive building
-3. Add chart components to `src/components/tool-invocation/` with Canvas optimization (existing: area-chart.tsx, funnel-chart.tsx, radar-chart.tsx, scatter-chart.tsx)
-4. Ensure proper Canvas integration with `useCanvas` hook in chat interface
-5. Test Chart tool execution and Canvas display functionality
-6. Verify responsive scaling and multi-grid layout behavior
-7. Use `dashboard-orchestrator-tool.ts` for multi-chart dashboard creation
+1. **Create Chart Artifact Tools:** Add tools in `src/lib/ai/tools/artifacts/` using native AI SDK streaming patterns
+   - Use `tool as createTool` from "ai" SDK
+   - Implement `async function*` with `yield` statements for progressive states
+   - Return structured results with `shouldCreateArtifact: true` for Canvas processing
+2. **Chart Component Optimization:** Add/update components in `src/components/tool-invocation/` with Canvas sizing
+   - Use `height="100%"` for responsive scaling (not fixed heights like "400px")
+   - Implement consistent color system using CSS variables (`var(--chart-1)` etc.)
+   - Add proper responsive containers and error handling
+3. **Canvas Integration Testing:** Verify complete Canvas workflow
+   - Tool execution streams to Canvas workspace automatically
+   - "Open Canvas" buttons appear for successful chart tool results
+   - Canvas state management handles multiple artifacts without conflicts
+   - ResizablePanelGroup allows smooth Canvas/chat proportions
+4. **Chart Registry:** Update `src/lib/ai/tools/chart-tool.ts` to include new specialized tools
+5. **Geographic Data:** For geographic charts, ensure TopoJSON files exist in `/public/geo/`
+6. **Dashboard Creation:** Use `dashboard-orchestrator-tool.ts` for coordinated multi-chart dashboards
+7. **Color System Compliance:** Ensure all charts use the established CSS variable color system
 
 ### Working with MCP
 1. Test MCP servers in `/mcp` page
@@ -500,12 +528,32 @@ pnpm build               # Production build with HTTPS
 4. Tools automatically available in chat sessions
 
 ### Working with Canvas
-1. AI automatically opens Canvas when creating charts using `create_chart` tool
-2. Charts appear progressively as AI streams tool execution with `yield` statements
-3. Canvas uses responsive CSS Grid layout (2x2, scales based on chart count)
-4. Charts scale smoothly when Canvas panel is resized
-5. Canvas names generated automatically based on chart content analysis
-6. Use ResizablePanelGroup to adjust Canvas/chat proportions
+1. **Automatic Canvas Opening:** AI opens Canvas when chart tools execute (unless manually closed)
+   - Chart tools detected: `create_chart`, `create_area_chart`, `create_geographic_chart`, etc.
+   - Canvas opens immediately on tool detection with debounced processing
+   - Respects user preference if Canvas was manually closed
+2. **Progressive Chart Building:** Charts stream to Canvas with real-time updates
+   - Tool execution: `loading` → `processing` → `success` states with `yield` statements
+   - Artifacts appear in Canvas as tools complete
+   - Loading placeholders with smooth animations during chart creation
+3. **Canvas Layout System:** Responsive multi-grid dashboard layout
+   - 1 chart: Single full-width display
+   - 2+ charts: CSS Grid 2x2 layout that scales vertically
+   - Smooth scrolling for large numbers of charts
+   - Each chart in rounded card containers with proper spacing
+4. **Canvas State Management:** Advanced state handling with race condition protection
+   - `useCanvas` hook with `useCallback` memoization to prevent infinite loops
+   - Debounced artifact processing (150ms) to prevent rapid-fire updates
+   - Memory leak prevention with proper cleanup and unmount detection
+   - Processed tools tracking to prevent duplicate artifact creation
+5. **Smart Canvas Naming:** Intelligent naming based on chart content and context
+   - Canvas names extracted from chart tool results (e.g., "Sales Performance Dashboard")
+   - Fallback to "Canvas" for generic visualizations
+6. **User Controls:** Flexible Canvas visibility and management
+   - ResizablePanelGroup with drag handles for Canvas/chat proportions
+   - "Open Canvas" buttons in message tool results
+   - Manual close/minimize functionality with state persistence
+   - Event-driven show/hide with `canvas:show` events
 
 ### Debugging Performance
 1. Check database queries in Studio
@@ -514,8 +562,18 @@ pnpm build               # Production build with HTTPS
 4. Check MCP server connection health
 5. Monitor Vercel AI SDK streaming performance in Langfuse traces
 6. Check `/api/health/langfuse` for observability system status
-7. Monitor Canvas rendering performance for large datasets
-8. Check chart tool streaming patterns in browser DevTools console
+7. **Monitor Canvas Performance:** Check rendering with large datasets and multiple charts
+   - Canvas scrolling performance with 5+ charts
+   - Chart responsiveness during Canvas resizing
+   - Memory usage with `useCanvas` hook memory tracking
+8. **Debug Chart Tools:** Streaming patterns and Canvas integration
+   - Check browser DevTools console for Canvas debug logs
+   - Verify tool execution: `loading` → `processing` → `success` states
+   - Test "Open Canvas" button functionality in message tool results
+   - Monitor artifact processing with 150ms debounce timing
+9. **Geographic Chart Data:** Ensure TopoJSON files loaded in `/public/geo/`
+   - `world-countries-110m.json`, `us-states-10m.json`, etc.
+   - Check network requests for geographic data loading
 
 ## 🔧 Langfuse + Vercel AI SDK Troubleshooting
 
@@ -551,3 +609,196 @@ pnpm dev  # Look for "✅ Langfuse instrumentation setup complete!"
 - **Cost Management**: Monitor token usage and costs in Langfuse dashboard
 - **Performance**: Track response latencies and optimization opportunities
 - **CRITICAL LOCALHOST REQUIREMENT**: This project can ONLY run on localhost:3000 and will NOT work on any other ports (3001, 3002, etc.). If port 3000 is busy, restart the existing process instead of trying alternative ports. This is a fundamental constraint of the authentication and observability systems.
+
+## 🎨 Canvas System Architecture
+
+### Canvas Integration Overview
+The Canvas system is a sophisticated multi-grid workspace that provides real-time data visualization during AI conversations. It represents a major enhancement to the better-chatbot platform, enabling progressive chart creation and dashboard building through advanced Vercel AI SDK streaming patterns.
+
+### Canvas Component Architecture
+
+#### Core Components
+- **`canvas-panel.tsx`**: Main Canvas workspace with multi-grid layout, artifact management, and responsive design
+- **`useCanvas` hook**: Advanced state management with debounced processing, memory leak prevention, and race condition protection
+- **Chart Artifact Tools**: 15 specialized tools in `src/lib/ai/tools/artifacts/` for different chart types
+- **Chart Renderers**: Optimized components in `src/components/tool-invocation/` with Canvas-specific sizing
+
+#### Canvas State Management
+```typescript
+// Advanced Canvas state with comprehensive error handling
+export function useCanvas() {
+  const [isVisible, setIsVisible] = useState(false);
+  const [artifacts, setArtifacts] = useState<CanvasArtifact[]>([]);
+  const [userManuallyClosed, setUserManuallyClosed] = useState(false);
+
+  // Debounced processing to prevent race conditions
+  const addArtifact = useCallback((artifact: CanvasArtifact) => {
+    // 150ms debounce prevents rapid-fire updates
+    // Duplicate checking via processed tools tracking
+    // Memory leak prevention with proper cleanup
+  }, []);
+}
+```
+
+#### Chart Tool Integration Patterns
+The Canvas system supports dual tool architectures:
+
+1. **Main Chart Tool (`create_chart`)**: Basic bar, line, pie charts with streaming
+2. **Specialized Artifact Tools**: Individual tools for advanced visualizations
+
+```typescript
+// Example: Geographic chart tool with Canvas integration
+export const geographicChartArtifactTool = createTool({
+  description: "Create geographic map visualizations with TopoJSON support",
+  inputSchema: z.object({
+    title: z.string(),
+    data: z.array(z.object({
+      regionCode: z.string(),
+      regionName: z.string(),
+      value: z.number()
+    })),
+    geoType: z.enum(["world", "usa-states", "usa-counties", "usa-dma"]),
+    colorScale: z.enum(["blues", "reds", "greens", "viridis"])
+  }),
+
+  execute: async ({ title, data, geoType, colorScale }) => {
+    // Validate geographic data availability
+    const geoDataPath = `/geo/${geoType === "world" ? "world-countries-110m.json" : "us-states-10m.json"}`;
+
+    // Create Canvas-ready artifact
+    const chartContent = {
+      type: "geographic-chart",
+      title,
+      data,
+      geoType,
+      colorScale,
+      metadata: {
+        chartType: "geographic",
+        dataPoints: data.length,
+        responsive: true,
+        sizing: { width: "100%", height: "400px" }
+      }
+    };
+
+    return {
+      content: [{ type: "text", text: `Created ${geoType} map "${title}"` }],
+      structuredContent: {
+        result: [{
+          success: true,
+          artifact: {
+            kind: "charts",
+            title: `Geographic Map: ${title}`,
+            content: JSON.stringify(chartContent, null, 2),
+            metadata: chartContent.metadata
+          },
+          canvasReady: true
+        }]
+      },
+      isError: false
+    };
+  }
+});
+```
+
+### Canvas Performance Optimizations
+
+#### Memory Management
+- **Processed Tools Tracking**: Prevents duplicate artifact creation
+- **Unmount Detection**: `isMountedRef` prevents state updates after component unmount
+- **Memory Usage Monitoring**: Browser memory tracking for debugging large datasets
+
+#### Responsive Design
+- **CSS Grid Layout**: Adapts from 1x1 to 2x2+ based on chart count
+- **Chart Sizing**: All charts use `height="100%"` for responsive scaling
+- **Smooth Scrolling**: Optimized for 5+ charts with proper container heights
+
+#### State Management Optimizations
+```typescript
+// Debounced artifact processing prevents race conditions
+const processingDebounceRef = useRef<NodeJS.Timeout>();
+
+useEffect(() => {
+  if (processingDebounceRef.current) {
+    clearTimeout(processingDebounceRef.current);
+  }
+
+  processingDebounceRef.current = setTimeout(() => {
+    // Process chart tools with duplicate prevention
+    const completedCharts = chartTools.filter(/* ... */);
+    // Create Canvas artifacts with proper state management
+  }, 150); // 150ms debounce
+
+  return () => {
+    if (processingDebounceRef.current) {
+      clearTimeout(processingDebounceRef.current);
+    }
+  };
+}, [messages, /* ... */]);
+```
+
+### Geographic Chart Capabilities
+
+#### Supported Geographic Data
+- **World Map**: `world-countries-110m.json` with ISO country codes
+- **US States**: `us-states-10m.json` with 2-letter state codes (CA, TX, NY, etc.)
+- **US Counties**: `us-counties-10m.json` for county-level granularity
+- **Nielsen DMA**: `nielsentopo.json` for market area analysis
+
+#### Geographic Data Management
+- **Local TopoJSON Files**: All geographic data served from `/public/geo/`
+- **Dynamic Projections**: `geoNaturalEarth1` for world, `geoAlbersUsa` for US maps
+- **Smart Region Mapping**: Automatic code resolution based on geography type
+- **Download Script**: `public/geo/download-geo-data.js` for future data updates
+
+### Chart Color System Integration
+
+#### CSS Variable Architecture
+All Canvas charts use the established color system:
+```css
+:root {
+  --chart-1: hsl(221.2 83.2% 53.3%);  /* Beautiful blue */
+  --chart-2: hsl(212 95% 68%);         /* Light blue */
+  --chart-3: hsl(216 92% 60%);         /* Medium blue */
+  --chart-4: hsl(210 98% 78%);         /* Lighter blue */
+  --chart-5: hsl(212 97% 87%);         /* Very light blue */
+}
+```
+
+#### Chart Component Integration
+```typescript
+// CORRECT pattern for Canvas chart colors
+const chartColors = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+];
+
+// Usage in Recharts components:
+fill={`var(--color-${sanitizeCssVariableName(seriesName)})`}
+```
+
+### Canvas Development Best Practices
+
+#### Tool Development Guidelines
+1. **Use Native AI SDK Streaming**: Implement `async function*` with `yield` statements
+2. **Return Structured Results**: Include `shouldCreateArtifact: true` for Canvas processing
+3. **Responsive Chart Sizing**: Use `height="100%"` not fixed pixel heights
+4. **CSS Variable Colors**: Never hardcode colors, use established design system
+5. **Error Handling**: Implement comprehensive validation and error states
+
+#### Performance Considerations
+1. **Debounced Processing**: 150ms debounce prevents rapid artifact updates
+2. **Memory Tracking**: Monitor heap usage with large datasets
+3. **Cleanup Patterns**: Proper useEffect cleanup and ref management
+4. **Responsive Grid**: CSS Grid handles layout optimization automatically
+
+#### Testing Patterns
+1. **Chart Tool Execution**: Verify streaming states (loading → processing → success)
+2. **Canvas Integration**: Test automatic opening and "Open Canvas" buttons
+3. **State Management**: Verify no infinite loops or memory leaks
+4. **Geographic Data**: Ensure TopoJSON files load correctly
+5. **Multi-Chart Dashboards**: Test layout scaling with 5+ charts
+
+This Canvas system represents a significant advancement in AI-powered data visualization, providing users with a seamless, real-time dashboard creation experience that integrates naturally with conversational AI interactions.

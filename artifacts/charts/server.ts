@@ -1,10 +1,7 @@
 import { smoothStream, streamText } from "ai";
 import { customModelProvider } from "@/lib/ai/models";
 import { createDocumentHandler } from "../../src/lib/artifacts/server";
-import {
-  ChartDataPoint,
-  ChartArtifactMetadata
-} from "app-types/artifacts";
+import { ChartDataPoint, ChartArtifactMetadata } from "app-types/artifacts";
 import logger from "logger";
 
 // Chart generation prompts
@@ -91,20 +88,29 @@ function validateChartData(data: any): ChartDataPoint[] {
       throw new Error(`Invalid series data at index ${index}`);
     }
 
-    const validatedSeries = item.series.map((seriesItem: any, seriesIndex: number) => {
-      if (!seriesItem.seriesName || typeof seriesItem.seriesName !== "string") {
-        throw new Error(`Invalid seriesName at data index ${index}, series index ${seriesIndex}`);
-      }
+    const validatedSeries = item.series.map(
+      (seriesItem: any, seriesIndex: number) => {
+        if (
+          !seriesItem.seriesName ||
+          typeof seriesItem.seriesName !== "string"
+        ) {
+          throw new Error(
+            `Invalid seriesName at data index ${index}, series index ${seriesIndex}`,
+          );
+        }
 
-      if (typeof seriesItem.value !== "number" || isNaN(seriesItem.value)) {
-        throw new Error(`Invalid value at data index ${index}, series index ${seriesIndex}`);
-      }
+        if (typeof seriesItem.value !== "number" || isNaN(seriesItem.value)) {
+          throw new Error(
+            `Invalid value at data index ${index}, series index ${seriesIndex}`,
+          );
+        }
 
-      return {
-        seriesName: seriesItem.seriesName,
-        value: seriesItem.value,
-      };
-    });
+        return {
+          seriesName: seriesItem.seriesName,
+          value: seriesItem.value,
+        };
+      },
+    );
 
     return {
       xAxisLabel: item.xAxisLabel,
@@ -117,7 +123,9 @@ function validateChartMetadata(metadata: any): ChartArtifactMetadata {
   const validChartTypes = ["bar", "line", "pie"];
 
   if (!metadata.chartType || !validChartTypes.includes(metadata.chartType)) {
-    throw new Error(`Invalid chart type. Must be one of: ${validChartTypes.join(", ")}`);
+    throw new Error(
+      `Invalid chart type. Must be one of: ${validChartTypes.join(", ")}`,
+    );
   }
 
   return {
@@ -132,7 +140,10 @@ function validateChartMetadata(metadata: any): ChartArtifactMetadata {
 }
 
 // Chart content processing
-function processChartResponse(response: string): { metadata: ChartArtifactMetadata; data: ChartDataPoint[] } {
+function processChartResponse(response: string): {
+  metadata: ChartArtifactMetadata;
+  data: ChartDataPoint[];
+} {
   try {
     const parsed = JSON.parse(response);
 
@@ -151,7 +162,9 @@ function processChartResponse(response: string): { metadata: ChartArtifactMetada
     return { metadata, data };
   } catch (error) {
     logger.error("Failed to process chart response:", error, response);
-    throw new Error(`Invalid chart data format: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(
+      `Invalid chart data format: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -160,7 +173,7 @@ export const chartsDocumentHandler = createDocumentHandler<"charts">({
   kind: "charts",
 
   // Called when a new chart is created
-  onCreateDocument: async ({ title, dataStream, userId, metadata }) => {
+  onCreateDocument: async ({ title, dataStream, userId }) => {
     logger.info(`Creating chart artifact: ${title} for user: ${userId}`);
 
     let chartContent = "";
@@ -169,7 +182,7 @@ export const chartsDocumentHandler = createDocumentHandler<"charts">({
       // Get the default model for chart generation
       const model = customModelProvider.getModel({
         provider: "openai",
-        model: "gpt-4o-mini"
+        model: "gpt-4o-mini",
       });
 
       // Stream chart generation
@@ -197,7 +210,8 @@ export const chartsDocumentHandler = createDocumentHandler<"charts">({
       }
 
       // Process and validate the generated chart
-      const { metadata: chartMetadata, data: chartData } = processChartResponse(chartContent);
+      const { metadata: chartMetadata, data: chartData } =
+        processChartResponse(chartContent);
 
       // Stream the final chart data
       dataStream.write({
@@ -207,12 +221,15 @@ export const chartsDocumentHandler = createDocumentHandler<"charts">({
       });
 
       // Return the structured chart content
-      return JSON.stringify({
-        title,
-        ...chartMetadata,
-        data: chartData,
-      }, null, 2);
-
+      return JSON.stringify(
+        {
+          title,
+          ...chartMetadata,
+          data: chartData,
+        },
+        null,
+        2,
+      );
     } catch (error) {
       logger.error("Failed to create chart:", error);
 
@@ -232,13 +249,13 @@ export const chartsDocumentHandler = createDocumentHandler<"charts">({
         data: [
           {
             xAxisLabel: "Sample 1",
-            series: [{ seriesName: "Value", value: 10 }]
+            series: [{ seriesName: "Value", value: 10 }],
           },
           {
             xAxisLabel: "Sample 2",
-            series: [{ seriesName: "Value", value: 20 }]
-          }
-        ]
+            series: [{ seriesName: "Value", value: 20 }],
+          },
+        ],
       };
 
       return JSON.stringify(fallbackChart, null, 2);
@@ -246,7 +263,7 @@ export const chartsDocumentHandler = createDocumentHandler<"charts">({
   },
 
   // Called when updating an existing chart
-  onUpdateDocument: async ({ document, description, dataStream, userId, metadata }) => {
+  onUpdateDocument: async ({ document, description, dataStream, userId }) => {
     logger.info(`Updating chart artifact: ${document.id} for user: ${userId}`);
 
     let updatedContent = "";
@@ -258,13 +275,13 @@ export const chartsDocumentHandler = createDocumentHandler<"charts">({
       // Get the default model for chart updates
       const model = customModelProvider.getModel({
         provider: "openai",
-        model: "gpt-4o-mini"
+        model: "gpt-4o-mini",
       });
 
       // Create system prompt with existing chart context
       const systemPrompt = CHART_UPDATE_SYSTEM_PROMPT.replace(
         "{{CURRENT_CHART_DATA}}",
-        JSON.stringify(existingChart, null, 2)
+        JSON.stringify(existingChart, null, 2),
       );
 
       // Stream chart update
@@ -292,7 +309,8 @@ export const chartsDocumentHandler = createDocumentHandler<"charts">({
       }
 
       // Process and validate the updated chart
-      const { metadata: chartMetadata, data: chartData } = processChartResponse(updatedContent);
+      const { metadata: chartMetadata, data: chartData } =
+        processChartResponse(updatedContent);
 
       // Stream the updated chart data
       dataStream.write({
@@ -302,12 +320,15 @@ export const chartsDocumentHandler = createDocumentHandler<"charts">({
       });
 
       // Return the updated structured chart content
-      return JSON.stringify({
-        title: document.title,
-        ...chartMetadata,
-        data: chartData,
-      }, null, 2);
-
+      return JSON.stringify(
+        {
+          title: document.title,
+          ...chartMetadata,
+          data: chartData,
+        },
+        null,
+        2,
+      );
     } catch (error) {
       logger.error("Failed to update chart:", error);
 
@@ -326,7 +347,7 @@ export const chartsDocumentHandler = createDocumentHandler<"charts">({
 // Helper functions for chart generation
 export function generateSampleChartData(
   chartType: ChartArtifactMetadata["chartType"],
-  title: string
+  title: string,
 ): { metadata: ChartArtifactMetadata; data: ChartDataPoint[] } {
   const baseMetadata: ChartArtifactMetadata = {
     chartType,
@@ -344,10 +365,34 @@ export function generateSampleChartData(
           yAxisLabel: "Values",
         },
         data: [
-          { xAxisLabel: "Q1", series: [{ seriesName: "Sales", value: 1200 }, { seriesName: "Profit", value: 400 }] },
-          { xAxisLabel: "Q2", series: [{ seriesName: "Sales", value: 1400 }, { seriesName: "Profit", value: 500 }] },
-          { xAxisLabel: "Q3", series: [{ seriesName: "Sales", value: 1100 }, { seriesName: "Profit", value: 300 }] },
-          { xAxisLabel: "Q4", series: [{ seriesName: "Sales", value: 1600 }, { seriesName: "Profit", value: 600 }] },
+          {
+            xAxisLabel: "Q1",
+            series: [
+              { seriesName: "Sales", value: 1200 },
+              { seriesName: "Profit", value: 400 },
+            ],
+          },
+          {
+            xAxisLabel: "Q2",
+            series: [
+              { seriesName: "Sales", value: 1400 },
+              { seriesName: "Profit", value: 500 },
+            ],
+          },
+          {
+            xAxisLabel: "Q3",
+            series: [
+              { seriesName: "Sales", value: 1100 },
+              { seriesName: "Profit", value: 300 },
+            ],
+          },
+          {
+            xAxisLabel: "Q4",
+            series: [
+              { seriesName: "Sales", value: 1600 },
+              { seriesName: "Profit", value: 600 },
+            ],
+          },
         ],
       };
 
@@ -359,10 +404,34 @@ export function generateSampleChartData(
           yAxisLabel: "Value",
         },
         data: [
-          { xAxisLabel: "Jan", series: [{ seriesName: "Trend A", value: 65 }, { seriesName: "Trend B", value: 45 }] },
-          { xAxisLabel: "Feb", series: [{ seriesName: "Trend A", value: 78 }, { seriesName: "Trend B", value: 52 }] },
-          { xAxisLabel: "Mar", series: [{ seriesName: "Trend A", value: 72 }, { seriesName: "Trend B", value: 48 }] },
-          { xAxisLabel: "Apr", series: [{ seriesName: "Trend A", value: 85 }, { seriesName: "Trend B", value: 61 }] },
+          {
+            xAxisLabel: "Jan",
+            series: [
+              { seriesName: "Trend A", value: 65 },
+              { seriesName: "Trend B", value: 45 },
+            ],
+          },
+          {
+            xAxisLabel: "Feb",
+            series: [
+              { seriesName: "Trend A", value: 78 },
+              { seriesName: "Trend B", value: 52 },
+            ],
+          },
+          {
+            xAxisLabel: "Mar",
+            series: [
+              { seriesName: "Trend A", value: 72 },
+              { seriesName: "Trend B", value: 48 },
+            ],
+          },
+          {
+            xAxisLabel: "Apr",
+            series: [
+              { seriesName: "Trend A", value: 85 },
+              { seriesName: "Trend B", value: 61 },
+            ],
+          },
         ],
       };
 
@@ -370,9 +439,18 @@ export function generateSampleChartData(
       return {
         metadata: baseMetadata,
         data: [
-          { xAxisLabel: "Desktop", series: [{ seriesName: "Usage", value: 45 }] },
-          { xAxisLabel: "Mobile", series: [{ seriesName: "Usage", value: 35 }] },
-          { xAxisLabel: "Tablet", series: [{ seriesName: "Usage", value: 20 }] },
+          {
+            xAxisLabel: "Desktop",
+            series: [{ seriesName: "Usage", value: 45 }],
+          },
+          {
+            xAxisLabel: "Mobile",
+            series: [{ seriesName: "Usage", value: 35 }],
+          },
+          {
+            xAxisLabel: "Tablet",
+            series: [{ seriesName: "Usage", value: 20 }],
+          },
         ],
       };
 

@@ -8,7 +8,19 @@ import { Tool } from "ai";
 import { httpFetchTool } from "./http/fetch";
 import { jsExecutionTool } from "./code/js-run-tool";
 import { pythonExecutionTool } from "./code/python-run-tool";
-import { chartTools } from "./chart-tool";
+// Direct imports to avoid circular dependency in chart-tool.ts aggregation
+import { createChartTool, updateChartTool } from "./chart-tool";
+import { treemapChartArtifactTool } from "./artifacts/treemap-chart-tool";
+import { areaChartArtifactTool } from "./artifacts/area-chart-tool";
+import { scatterChartArtifactTool } from "./artifacts/scatter-chart-tool";
+import { radarChartArtifactTool } from "./artifacts/radar-chart-tool";
+import { funnelChartArtifactTool } from "./artifacts/funnel-chart-tool";
+import { sankeyChartArtifactTool } from "./artifacts/sankey-chart-tool";
+import { radialBarChartArtifactTool } from "./artifacts/radial-bar-tool";
+import { composedChartArtifactTool } from "./artifacts/composed-chart-tool";
+import { geographicChartArtifactTool } from "./artifacts/geographic-chart-tool";
+import { gaugeChartArtifactTool } from "./artifacts/gauge-chart-tool";
+import { calendarHeatmapArtifactTool } from "./artifacts/calendar-heatmap-tool";
 
 export const APP_DEFAULT_TOOL_KIT: Record<
   AppDefaultToolkit,
@@ -32,20 +44,21 @@ export const APP_DEFAULT_TOOL_KIT: Record<
     [DefaultToolName.PythonExecution]: pythonExecutionTool,
   },
   [AppDefaultToolkit.Artifacts]: {
-    [DefaultToolName.CreateChart]: chartTools.create_chart,
-    [DefaultToolName.UpdateChart]: chartTools.update_chart,
-    // Recharts-native chart tools
-    [DefaultToolName.CreateAreaChart]: chartTools.create_area_chart,
-    [DefaultToolName.CreateScatterChart]: chartTools.create_scatter_chart,
-    [DefaultToolName.CreateRadarChart]: chartTools.create_radar_chart,
-    [DefaultToolName.CreateFunnelChart]: chartTools.create_funnel_chart,
-    [DefaultToolName.CreateTreemapChart]: chartTools.create_treemap_chart,
-    [DefaultToolName.CreateSankeyChart]: chartTools.create_sankey_chart,
-    [DefaultToolName.CreateRadialBarChart]: chartTools.create_radial_bar_chart,
-    [DefaultToolName.CreateComposedChart]: chartTools.create_composed_chart,
+    // Main chart tools - direct imports to avoid circular dependency
+    [DefaultToolName.CreateChart]: createChartTool,
+    [DefaultToolName.UpdateChart]: updateChartTool,
+    // Recharts-native chart tools - all 15 specialized tools restored
+    [DefaultToolName.CreateAreaChart]: areaChartArtifactTool,
+    [DefaultToolName.CreateScatterChart]: scatterChartArtifactTool,
+    [DefaultToolName.CreateRadarChart]: radarChartArtifactTool,
+    [DefaultToolName.CreateFunnelChart]: funnelChartArtifactTool,
+    [DefaultToolName.CreateTreemapChart]: treemapChartArtifactTool,
+    [DefaultToolName.CreateSankeyChart]: sankeyChartArtifactTool,
+    [DefaultToolName.CreateRadialBarChart]: radialBarChartArtifactTool,
+    [DefaultToolName.CreateComposedChart]: composedChartArtifactTool,
     // External library chart tools
-    [DefaultToolName.CreateGeographicChart]: chartTools.create_geographic_chart,
-    [DefaultToolName.CreateGaugeChart]: chartTools.create_gauge_chart,
-    [DefaultToolName.CreateCalendarHeatmap]: chartTools.create_calendar_heatmap,
+    [DefaultToolName.CreateGeographicChart]: geographicChartArtifactTool,
+    [DefaultToolName.CreateGaugeChart]: gaugeChartArtifactTool,
+    [DefaultToolName.CreateCalendarHeatmap]: calendarHeatmapArtifactTool,
   },
 };

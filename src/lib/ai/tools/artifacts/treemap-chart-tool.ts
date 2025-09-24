@@ -32,18 +32,14 @@ export const treemapChartArtifactTool = createTool({
     data: z
       .array(
         z.object({
-          name: z
-            .string()
-            .describe("Name of the top-level category or item"),
+          name: z.string().describe("Name of the top-level category or item"),
           value: z
             .number()
             .describe("Value for this item (used for sizing if no children)"),
           children: z
             .array(
               z.object({
-                name: z
-                  .string()
-                  .describe("Name of the child item"),
+                name: z.string().describe("Name of the child item"),
                 value: z
                   .number()
                   .describe("Value for this child item (determines size)"),
@@ -80,7 +76,9 @@ export const treemapChartArtifactTool = createTool({
         // Handle negative values appropriately - convert to absolute values
         if (item.value < 0) {
           item.value = Math.abs(item.value);
-          logger.warn(`Converted negative value to absolute for treemap: ${item.name}`);
+          logger.warn(
+            `Converted negative value to absolute for treemap: ${item.name}`,
+          );
         }
 
         if (item.children) {
@@ -94,7 +92,9 @@ export const treemapChartArtifactTool = createTool({
             // Handle negative values in children
             if (child.value < 0) {
               child.value = Math.abs(child.value);
-              logger.warn(`Converted negative child value to absolute for treemap: ${child.name}`);
+              logger.warn(
+                `Converted negative child value to absolute for treemap: ${child.name}`,
+              );
             }
           }
         }
@@ -103,7 +103,7 @@ export const treemapChartArtifactTool = createTool({
       // Calculate total items for metadata
       const totalItems = data.reduce(
         (total, item) => total + (item.children ? item.children.length : 1),
-        0
+        0,
       );
 
       // Create the chart artifact content that matches TreemapChart component props
@@ -134,8 +134,8 @@ export const treemapChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return success with artifact creation data (matches existing pattern)
-      const result = {
+      // Create the structured result data
+      const resultData = {
         success: true,
         artifactId,
         artifact: {
@@ -153,17 +153,43 @@ export const treemapChartArtifactTool = createTool({
         componentType: "TreemapChart",
       };
 
-      // Note: Canvas artifact creation happens in ChatBot component via tool result detection
-
+      // Return in expected response format with content and structuredContent
       logger.info(`Treemap chart artifact created successfully: ${artifactId}`);
-      return result;
+      return {
+        content: [
+          { type: "text", text: resultData.message },
+          {
+            type: "text",
+            text: `Chart Created in Canvas\n\nType: ${resultData.chartType}\n\nChart created successfully. Use the "Open Canvas" button above to view the interactive visualization.`,
+          },
+        ],
+        structuredContent: {
+          result: [resultData],
+        },
+        isError: false,
+      };
     } catch (error) {
       logger.error("Failed to create treemap chart artifact:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        message: `Failed to create treemap chart: ${error instanceof Error ? error.message : "Unknown error"}`,
-        chartType: "treemap",
+        content: [
+          {
+            type: "text",
+            text: `Failed to create treemap chart: ${errorMessage}`,
+          },
+        ],
+        structuredContent: {
+          result: [
+            {
+              success: false,
+              error: errorMessage,
+              message: `Failed to create treemap chart: ${errorMessage}`,
+              chartType: "treemap",
+            },
+          ],
+        },
+        isError: true,
       };
     }
   },

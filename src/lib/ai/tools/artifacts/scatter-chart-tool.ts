@@ -39,37 +39,43 @@ export const scatterChartArtifactTool = createTool({
           series: z
             .array(
               z.object({
-                seriesName: z
-                  .string()
-                  .describe("Name of this data series"),
+                seriesName: z.string().describe("Name of this data series"),
                 x: z.number().describe("X-axis value for this data point"),
                 y: z.number().describe("Y-axis value for this data point"),
-                z: z.number().optional().describe("Optional size value for bubble charts"),
+                z: z
+                  .number()
+                  .optional()
+                  .describe("Optional size value for bubble charts"),
               }),
             )
             .describe("Data series for this data point group"),
         }),
       )
-      .describe("Scatter chart data with x, y coordinates and optional bubble sizes"),
+      .describe(
+        "Scatter chart data with x, y coordinates and optional bubble sizes",
+      ),
     showBubbles: z
       .boolean()
       .optional()
-      .describe("Whether to show bubbles with sizes based on z values (default: false)"),
-    xAxisLabel: z
-      .string()
-      .optional()
-      .describe("Label for the x-axis"),
-    yAxisLabel: z
-      .string()
-      .optional()
-      .describe("Label for the y-axis"),
+      .describe(
+        "Whether to show bubbles with sizes based on z values (default: false)",
+      ),
+    xAxisLabel: z.string().optional().describe("Label for the x-axis"),
+    yAxisLabel: z.string().optional().describe("Label for the y-axis"),
     description: z
       .string()
       .optional()
       .describe("Brief description of what the chart shows"),
   }),
 
-  execute: async ({ title, data, showBubbles = false, xAxisLabel, yAxisLabel, description }) => {
+  execute: async ({
+    title,
+    data,
+    showBubbles = false,
+    xAxisLabel,
+    yAxisLabel,
+    description,
+  }) => {
     try {
       logger.info(`Creating scatter chart artifact: ${title}`);
 
@@ -87,13 +93,21 @@ export const scatterChartArtifactTool = createTool({
         }
 
         for (const series of point.series) {
-          if (!series.seriesName || typeof series.x !== "number" || typeof series.y !== "number") {
+          if (
+            !series.seriesName ||
+            typeof series.x !== "number" ||
+            typeof series.y !== "number"
+          ) {
             throw new Error(
               "Invalid series data - each series needs seriesName, numeric x, and numeric y",
             );
           }
 
-          if (showBubbles && series.z !== undefined && typeof series.z !== "number") {
+          if (
+            showBubbles &&
+            series.z !== undefined &&
+            typeof series.z !== "number"
+          ) {
             throw new Error(
               "Invalid bubble data - z value must be numeric for bubble charts",
             );
@@ -125,7 +139,10 @@ export const scatterChartArtifactTool = createTool({
           theme: "light",
           animated: true,
           seriesCount: seriesNames.length,
-          dataPoints: data.reduce((total, group) => total + group.series.length, 0),
+          dataPoints: data.reduce(
+            (total, group) => total + group.series.length,
+            0,
+          ),
           // Optimize sizing for Canvas cards
           sizing: {
             width: "100%",
@@ -139,8 +156,8 @@ export const scatterChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return success with artifact creation data (matches existing pattern)
-      const result = {
+      // Create the structured result data
+      const resultData = {
         success: true,
         artifactId,
         artifact: {
@@ -158,17 +175,43 @@ export const scatterChartArtifactTool = createTool({
         componentType: "ScatterChart",
       };
 
-      // Note: Canvas artifact creation happens in ChatBot component via tool result detection
-
+      // Return in expected response format with content and structuredContent
       logger.info(`Scatter chart artifact created successfully: ${artifactId}`);
-      return result;
+      return {
+        content: [
+          { type: "text", text: resultData.message },
+          {
+            type: "text",
+            text: `Chart Created in Canvas\n\nType: ${resultData.chartType}\n\nChart created successfully. Use the "Open Canvas" button above to view the interactive visualization.`,
+          },
+        ],
+        structuredContent: {
+          result: [resultData],
+        },
+        isError: false,
+      };
     } catch (error) {
       logger.error("Failed to create scatter chart artifact:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        message: `Failed to create scatter chart: ${error instanceof Error ? error.message : "Unknown error"}`,
-        chartType: "scatter",
+        content: [
+          {
+            type: "text",
+            text: `Failed to create scatter chart: ${errorMessage}`,
+          },
+        ],
+        structuredContent: {
+          result: [
+            {
+              success: false,
+              error: errorMessage,
+              message: `Failed to create scatter chart: ${errorMessage}`,
+              chartType: "scatter",
+            },
+          ],
+        },
+        isError: true,
       };
     }
   },

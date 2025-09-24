@@ -38,14 +38,16 @@ export const radarChartArtifactTool = createTool({
           series: z
             .array(
               z.object({
-                seriesName: z
-                  .string()
-                  .describe("Name of this data series"),
-                value: z.number().describe("Value for this metric in this series"),
+                seriesName: z.string().describe("Name of this data series"),
+                value: z
+                  .number()
+                  .describe("Value for this metric in this series"),
                 fullMark: z
                   .number()
                   .optional()
-                  .describe("Maximum value for this metric (default: auto-calculated)"),
+                  .describe(
+                    "Maximum value for this metric (default: auto-calculated)",
+                  ),
               }),
             )
             .describe("Data series for this metric"),
@@ -102,7 +104,7 @@ export const radarChartArtifactTool = createTool({
           theme: "light",
           animated: true,
           seriesCount: seriesNames.length,
-          metrics: data.map(d => d.metric),
+          metrics: data.map((d) => d.metric),
           aspectRatio: "square", // Radar charts need square aspect ratio
           // Optimize sizing for Canvas cards
           sizing: {
@@ -117,8 +119,8 @@ export const radarChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return success with artifact creation data (matches existing pattern)
-      const result = {
+      // Create the structured result data
+      const resultData = {
         success: true,
         artifactId,
         artifact: {
@@ -136,17 +138,43 @@ export const radarChartArtifactTool = createTool({
         componentType: "RadarChart",
       };
 
-      // Note: Canvas artifact creation happens in ChatBot component via tool result detection
-
+      // Return in expected response format with content and structuredContent
       logger.info(`Radar chart artifact created successfully: ${artifactId}`);
-      return result;
+      return {
+        content: [
+          { type: "text", text: resultData.message },
+          {
+            type: "text",
+            text: `Chart Created in Canvas\n\nType: ${resultData.chartType}\n\nChart created successfully. Use the "Open Canvas" button above to view the interactive visualization.`,
+          },
+        ],
+        structuredContent: {
+          result: [resultData],
+        },
+        isError: false,
+      };
     } catch (error) {
       logger.error("Failed to create radar chart artifact:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        message: `Failed to create radar chart: ${error instanceof Error ? error.message : "Unknown error"}`,
-        chartType: "radar",
+        content: [
+          {
+            type: "text",
+            text: `Failed to create radar chart: ${errorMessage}`,
+          },
+        ],
+        structuredContent: {
+          result: [
+            {
+              success: false,
+              error: errorMessage,
+              message: `Failed to create radar chart: ${errorMessage}`,
+              chartType: "radar",
+            },
+          ],
+        },
+        isError: true,
       };
     }
   },

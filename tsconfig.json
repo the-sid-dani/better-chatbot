@@ -13,8 +13,12 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    "assumeChangesOnlyAffectDirectDependencies": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
+    "useDefineForClassFields": true,
+    "disableSourceOfProjectReferenceRedirect": true,
+    "disableSolutionSearching": true,
     "noUnusedLocals": true,
     "strictPropertyInitialization": false,
     "noUnusedParameters": false,
@@ -46,5 +50,16 @@
     "drizzle.config.ts",
     "tests/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "trees/**/*",
+    "artifacts/**/*",
+    ".next",
+    "dist",
+    "build",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/examples/**",
+    "**/test/**"
+  ]
 }

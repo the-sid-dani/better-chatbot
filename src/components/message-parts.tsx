@@ -1033,6 +1033,7 @@ export const ToolMessagePart = memo(
                         const chartToolNames = [
                           "create_chart",
                           "create_dashboard",
+                          // Main chart artifact tools
                           "create_area_chart",
                           "create_scatter_chart",
                           "create_radar_chart",
@@ -1044,12 +1045,20 @@ export const ToolMessagePart = memo(
                           "create_geographic_chart",
                           "create_gauge_chart",
                           "create_calendar_heatmap",
+                          // Basic artifact tools (from artifacts/index.ts)
+                          "create_bar_chart_artifact",
+                          "create_line_chart_artifact",
+                          "create_pie_chart_artifact",
                         ];
 
                         const isChartTool = chartToolNames.includes(toolName);
                         const isSuccessful =
                           (result as any)?.status === "success" ||
-                          (result as any)?.success === true;
+                          (result as any)?.success === true ||
+                          // New format: check structuredContent.result[0].success and isError
+                          ((result as any)?.structuredContent?.result?.[0]
+                            ?.success === true &&
+                            (result as any)?.isError === false);
 
                         return isChartTool && isSuccessful;
                       })() && (

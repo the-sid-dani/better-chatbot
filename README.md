@@ -12,7 +12,7 @@
 **Better Chatbot** - A better open-source AI chatbot for individuals and teams, inspired by ChatGPT, Claude, Grok, and Gemini.
 
 • **Multi-AI Support** - Integrates all major LLMs: OpenAI, Anthropic, Google, xAI, Ollama, and more  
-• **Powerful Tools** - MCP protocol, web search, JS/Python code execution, data visualization  
+• **Powerful Tools** - MCP protocol, web search, JS/Python code execution, Canvas workspace with 15+ chart types  
 • **Automation** - Custom agents, visual workflows, artifact generation  
 • **Collaboration** - Share agents, workflows, and MCP configurations with your team  
 • **Voice Assistant** - Realtime voice chat with full MCP tool integration  
@@ -221,7 +221,12 @@ It is a simple JS execution tool.
 - **Pagination**: Handle large datasets with built-in pagination
 - **Data Type Support**: Proper formatting for strings, numbers, dates, and booleans
 
-**Chart Generation**: Visualize data with various chart types (bar, line, pie charts)
+**Canvas Workspace**: Advanced multi-grid dashboard system with 15+ chart types
+- **Real-time Visualization**: Charts stream progressively as AI creates them
+- **Comprehensive Chart Library**: Bar, line, pie, area, funnel, radar, scatter, treemap, sankey, geographic maps, gauge, calendar heatmap
+- **Geographic Maps**: World and US maps with TopoJSON support (states, counties, DMA regions)
+- **Responsive Dashboard**: Multi-chart layouts that scale from single charts to complex dashboards
+- **Interactive Canvas**: ResizablePanelGroup allows seamless workspace management alongside chat
 
 > Additionally, many other tools are provided, such as an HTTP client for API requests and more.
 

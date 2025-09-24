@@ -1,6 +1,20 @@
 "use client";
 
-import { BarChart as RechartsBarChart, LineChart as RechartsLineChart, PieChart as RechartsPieChart, ResponsiveContainer, Bar, Line, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import {
+  BarChart as RechartsBarChart,
+  LineChart as RechartsLineChart,
+  PieChart as RechartsPieChart,
+  ResponsiveContainer,
+  Bar,
+  Line,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
 import { ChartDataPoint } from "app-types/artifacts";
 
 // Dashboard-optimized chart colors
@@ -22,18 +36,26 @@ interface DashboardChartProps {
 }
 
 // Dashboard Bar Chart - optimized for card containers
-export function DashboardBarChart({ data, title, className }: DashboardChartProps) {
+export function DashboardBarChart({
+  data,
+  title: _title,
+  className,
+}: DashboardChartProps) {
+  // title is used for accessibility and passed from parent Card component
   // Transform data for Recharts
-  const chartData = (data as ChartDataPoint[]).map(item => {
+  const chartData = (data as ChartDataPoint[]).map((item) => {
     const result: any = { name: item.xAxisLabel };
-    item.series.forEach(series => {
+    item.series.forEach((series) => {
       result[series.seriesName] = series.value;
     });
     return result;
   });
 
   // Get all series names for bars
-  const seriesNames = data.length > 0 ? (data[0] as ChartDataPoint).series.map(s => s.seriesName) : [];
+  const seriesNames =
+    data.length > 0
+      ? (data[0] as ChartDataPoint).series.map((s) => s.seriesName)
+      : [];
 
   return (
     <div className={`w-full h-full ${className}`}>
@@ -42,7 +64,11 @@ export function DashboardBarChart({ data, title, className }: DashboardChartProp
           data={chartData}
           margin={{ top: 5, right: 15, left: 5, bottom: 25 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground))" opacity={0.2} />
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke="hsl(var(--muted-foreground))"
+            opacity={0.2}
+          />
           <XAxis
             dataKey="name"
             axisLine={false}
@@ -63,7 +89,7 @@ export function DashboardBarChart({ data, title, className }: DashboardChartProp
               border: "1px solid hsl(var(--border))",
               borderRadius: "6px",
               fontSize: "11px",
-              padding: "8px"
+              padding: "8px",
             }}
           />
           {seriesNames.map((seriesName, index) => (
@@ -82,18 +108,26 @@ export function DashboardBarChart({ data, title, className }: DashboardChartProp
 }
 
 // Dashboard Line Chart - optimized for card containers
-export function DashboardLineChart({ data, title, className }: DashboardChartProps) {
+export function DashboardLineChart({
+  data,
+  title: _title,
+  className,
+}: DashboardChartProps) {
+  // title is used for accessibility and passed from parent Card component
   // Transform data for Recharts
-  const chartData = (data as ChartDataPoint[]).map(item => {
+  const chartData = (data as ChartDataPoint[]).map((item) => {
     const result: any = { name: item.xAxisLabel };
-    item.series.forEach(series => {
+    item.series.forEach((series) => {
       result[series.seriesName] = series.value;
     });
     return result;
   });
 
   // Get all series names for lines
-  const seriesNames = data.length > 0 ? (data[0] as ChartDataPoint).series.map(s => s.seriesName) : [];
+  const seriesNames =
+    data.length > 0
+      ? (data[0] as ChartDataPoint).series.map((s) => s.seriesName)
+      : [];
 
   return (
     <div className={`w-full h-full ${className}`}>
@@ -102,7 +136,11 @@ export function DashboardLineChart({ data, title, className }: DashboardChartPro
           data={chartData}
           margin={{ top: 5, right: 15, left: 5, bottom: 25 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground))" opacity={0.2} />
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke="hsl(var(--muted-foreground))"
+            opacity={0.2}
+          />
           <XAxis
             dataKey="name"
             axisLine={false}
@@ -123,7 +161,7 @@ export function DashboardLineChart({ data, title, className }: DashboardChartPro
               border: "1px solid hsl(var(--border))",
               borderRadius: "6px",
               fontSize: "11px",
-              padding: "8px"
+              padding: "8px",
             }}
           />
           {seriesNames.map((seriesName, index) => (
@@ -133,7 +171,10 @@ export function DashboardLineChart({ data, title, className }: DashboardChartPro
               dataKey={seriesName}
               stroke={DASHBOARD_COLORS[index % DASHBOARD_COLORS.length]}
               strokeWidth={2}
-              dot={{ r: 2, fill: DASHBOARD_COLORS[index % DASHBOARD_COLORS.length] }}
+              dot={{
+                r: 2,
+                fill: DASHBOARD_COLORS[index % DASHBOARD_COLORS.length],
+              }}
               activeDot={{ r: 3 }}
             />
           ))}
@@ -144,14 +185,20 @@ export function DashboardLineChart({ data, title, className }: DashboardChartPro
 }
 
 // Dashboard Pie Chart - optimized for card containers
-export function DashboardPieChart({ data, title, className }: DashboardChartProps) {
+export function DashboardPieChart({
+  data,
+  title: _title,
+  className,
+}: DashboardChartProps) {
+  // title is used for accessibility and passed from parent Card component
   // Transform data for pie chart
-  const pieData = Array.isArray(data) && data.length > 0 && 'label' in data[0]
-    ? data as Array<{ label: string; value: number }>
-    : (data as ChartDataPoint[]).map(point => ({
-        name: point.xAxisLabel,
-        value: point.series[0]?.value || 0
-      }));
+  const pieData =
+    Array.isArray(data) && data.length > 0 && "label" in data[0]
+      ? (data as Array<{ label: string; value: number }>)
+      : (data as ChartDataPoint[]).map((point) => ({
+          name: point.xAxisLabel,
+          value: point.series[0]?.value || 0,
+        }));
 
   return (
     <div className={`w-full h-full ${className}`}>
@@ -179,7 +226,7 @@ export function DashboardPieChart({ data, title, className }: DashboardChartProp
               border: "1px solid hsl(var(--border))",
               borderRadius: "6px",
               fontSize: "11px",
-              padding: "6px"
+              padding: "6px",
             }}
           />
           <Legend

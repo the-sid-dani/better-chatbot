@@ -118,32 +118,58 @@ export const barChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return simple, serializable result for Vercel AI SDK
-      const result = {
+      // Create the structured result data
+      const resultData = {
         success: true,
         artifactId: artifactId,
-        title: title,
-        message: `Created bar chart "${title}" with ${data.length} data points`,
+        artifact: {
+          kind: "charts" as const,
+          title: `Bar Chart: ${title}`,
+          content: JSON.stringify(chartContent, null, 2),
+          metadata: chartContent.metadata,
+        },
+        message: `Created bar chart "${title}" with ${data.length} data points and ${seriesNames.length} series. The chart is now available in the Canvas workspace with beautiful styling.`,
         chartType: "bar",
         dataPoints: data.length,
         series: seriesNames.join(", "),
-        // Include artifact data as serializable JSON string
-        artifactContent: JSON.stringify(chartContent),
-        artifactTitle: `Bar Chart: ${title}`,
-        artifactKind: "charts"
+        canvasReady: true,
+        componentType: "BarChart",
       };
 
-      // Note: Canvas artifact creation happens in ChatBot component via tool result detection
-
+      // Return in expected response format with content and structuredContent
       logger.info(`Bar chart artifact created successfully: ${artifactId}`);
-      return result;
+      return {
+        content: [
+          { type: "text", text: resultData.message },
+          {
+            type: "text",
+            text: `Chart Created in Canvas\n\nType: ${resultData.chartType}\n\nChart created successfully. Use the "Open Canvas" button above to view the interactive visualization.`,
+          },
+        ],
+        structuredContent: {
+          result: [resultData],
+        },
+        isError: false,
+      };
     } catch (error) {
       logger.error("Failed to create bar chart artifact:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        message: `Failed to create bar chart: ${error instanceof Error ? error.message : "Unknown error"}`,
-        chartType: "bar",
+        content: [
+          { type: "text", text: `Failed to create bar chart: ${errorMessage}` },
+        ],
+        structuredContent: {
+          result: [
+            {
+              success: false,
+              error: errorMessage,
+              message: `Failed to create bar chart: ${errorMessage}`,
+              chartType: "bar",
+            },
+          ],
+        },
+        isError: true,
       };
     }
   },

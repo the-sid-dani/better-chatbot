@@ -3,18 +3,7 @@ import { z } from "zod";
 import { generateUUID } from "lib/utils";
 import logger from "logger";
 
-// Import all new chart artifact tools
-import { areaChartArtifactTool } from "./artifacts/area-chart-tool";
-import { scatterChartArtifactTool } from "./artifacts/scatter-chart-tool";
-import { radarChartArtifactTool } from "./artifacts/radar-chart-tool";
-import { funnelChartArtifactTool } from "./artifacts/funnel-chart-tool";
-import { treemapChartArtifactTool } from "./artifacts/treemap-chart-tool";
-import { sankeyChartArtifactTool } from "./artifacts/sankey-chart-tool";
-import { radialBarChartArtifactTool } from "./artifacts/radial-bar-tool";
-import { composedChartArtifactTool } from "./artifacts/composed-chart-tool";
-import { geographicChartArtifactTool } from "./artifacts/geographic-chart-tool";
-import { gaugeChartArtifactTool } from "./artifacts/gauge-chart-tool";
-import { calendarHeatmapArtifactTool } from "./artifacts/calendar-heatmap-tool";
+// Chart artifact tools now imported directly in tool-kit.ts to avoid circular dependency
 
 // Chart creation tool using native AI SDK 5 streaming patterns
 export const createChartTool = createTool({
@@ -31,22 +20,37 @@ export const createChartTool = createTool({
 
   inputSchema: z.object({
     title: z.string().describe("Title for the chart artifact"),
-    chartType: z.enum(["bar", "line", "pie"]).describe("Type of chart to create"),
-    canvasName: z.string().describe("Name for the canvas/dashboard this chart belongs to (e.g., 'Global Market Analytics', 'Sales Performance Dashboard')"),
-    data: z.array(
-      z.object({
-        xAxisLabel: z.string().describe("Label for this data point on the x-axis"),
-        series: z.array(
-          z.object({
-            seriesName: z.string().describe("Name of this data series"),
-            value: z.number().describe("Numeric value for this series")
-          })
-        ).describe("Data series for this point")
-      })
-    ).describe("Chart data points"),
+    chartType: z
+      .enum(["bar", "line", "pie"])
+      .describe("Type of chart to create"),
+    canvasName: z
+      .string()
+      .describe(
+        "Name for the canvas/dashboard this chart belongs to (e.g., 'Global Market Analytics', 'Sales Performance Dashboard')",
+      ),
+    data: z
+      .array(
+        z.object({
+          xAxisLabel: z
+            .string()
+            .describe("Label for this data point on the x-axis"),
+          series: z
+            .array(
+              z.object({
+                seriesName: z.string().describe("Name of this data series"),
+                value: z.number().describe("Numeric value for this series"),
+              }),
+            )
+            .describe("Data series for this point"),
+        }),
+      )
+      .describe("Chart data points"),
     xAxisLabel: z.string().optional().describe("Label for the x-axis"),
     yAxisLabel: z.string().optional().describe("Label for the y-axis"),
-    description: z.string().optional().describe("Brief description of what the chart shows")
+    description: z
+      .string()
+      .optional()
+      .describe("Brief description of what the chart shows"),
   }),
 
   execute: async function* ({
@@ -56,7 +60,7 @@ export const createChartTool = createTool({
     data,
     xAxisLabel,
     yAxisLabel,
-    description
+    description,
   }) {
     const chartId = generateUUID();
 
@@ -72,12 +76,12 @@ export const createChartTool = createTool({
 
       // Stream loading state using correct AI SDK streaming format
       yield {
-        status: 'loading' as const,
+        status: "loading" as const,
         message: `Preparing chart: ${title}`,
         title,
         chartType,
         chartId,
-        progress: 0
+        progress: 0,
       };
 
       // Validate data structure
@@ -94,11 +98,11 @@ export const createChartTool = createTool({
 
       // Stream progress update
       yield {
-        status: 'processing' as const,
+        status: "processing" as const,
         message: `Creating ${chartType} chart visualization...`,
         title,
         chartType,
-        progress: 50
+        progress: 50,
       };
 
       // Create chart data structure
@@ -110,12 +114,12 @@ export const createChartTool = createTool({
         yAxisLabel,
         description,
         theme: "light",
-        animated: true
+        animated: true,
       };
 
       // Stream completed chart - this is the final result
       yield {
-        status: 'success' as const,
+        status: "success" as const,
         message: `Created ${chartType} chart "${title}" with ${data.length} data points`,
         chartId,
         title,
@@ -127,27 +131,26 @@ export const createChartTool = createTool({
         description,
         dataPoints: data.length,
         // Flag for Canvas to process this result
-        shouldCreateArtifact: true
+        shouldCreateArtifact: true,
       };
 
       // Return simple success message for chat
       return `Created ${chartType} chart "${title}" with ${data.length} data points. The chart is now available in the Canvas workspace.`;
-
     } catch (error) {
       logger.error("Failed to create chart:", error);
 
       // Stream error state using correct format
       yield {
-        status: 'error' as const,
+        status: "error" as const,
         message: `Failed to create chart: ${error instanceof Error ? error.message : "Unknown error"}`,
         title,
         chartType,
-        error: error instanceof Error ? error.message : "Unknown error"
+        error: error instanceof Error ? error.message : "Unknown error",
       };
 
       throw error;
     }
-  }
+  },
 });
 
 // Chart update tool for editing existing charts
@@ -166,21 +169,40 @@ export const updateChartTool = createTool({
     canvasName: z.string().describe("Name of the canvas this chart belongs to"),
     changes: z.string().describe("Description of what changes to make"),
     newTitle: z.string().optional().describe("New chart title (if changing)"),
-    newChartType: z.enum(["bar", "line", "pie"]).optional().describe("New chart type (if changing)"),
-    newData: z.array(
-      z.object({
-        xAxisLabel: z.string().describe("Label for this data point on the x-axis"),
-        series: z.array(
-          z.object({
-            seriesName: z.string().describe("Name of this data series"),
-            value: z.number().describe("Numeric value for this series")
-          })
-        ).describe("Data series for this point")
-      })
-    ).optional().describe("New chart data (if updating data)"),
-    newXAxisLabel: z.string().optional().describe("New x-axis label (if changing)"),
-    newYAxisLabel: z.string().optional().describe("New y-axis label (if changing)"),
-    newDescription: z.string().optional().describe("New chart description (if changing)")
+    newChartType: z
+      .enum(["bar", "line", "pie"])
+      .optional()
+      .describe("New chart type (if changing)"),
+    newData: z
+      .array(
+        z.object({
+          xAxisLabel: z
+            .string()
+            .describe("Label for this data point on the x-axis"),
+          series: z
+            .array(
+              z.object({
+                seriesName: z.string().describe("Name of this data series"),
+                value: z.number().describe("Numeric value for this series"),
+              }),
+            )
+            .describe("Data series for this point"),
+        }),
+      )
+      .optional()
+      .describe("New chart data (if updating data)"),
+    newXAxisLabel: z
+      .string()
+      .optional()
+      .describe("New x-axis label (if changing)"),
+    newYAxisLabel: z
+      .string()
+      .optional()
+      .describe("New y-axis label (if changing)"),
+    newDescription: z
+      .string()
+      .optional()
+      .describe("New chart description (if changing)"),
   }),
 
   execute: async function* ({
@@ -192,27 +214,27 @@ export const updateChartTool = createTool({
     newData,
     newXAxisLabel,
     newYAxisLabel,
-    newDescription
+    newDescription,
   }) {
     try {
       logger.info(`Updating chart: ${chartId} with changes: ${changes}`);
 
       // Stream loading state
       yield {
-        status: 'loading' as const,
+        status: "loading" as const,
         message: `Updating chart...`,
         chartId,
         canvasName,
-        progress: 0
+        progress: 0,
       };
 
       // Stream processing state
       yield {
-        status: 'processing' as const,
+        status: "processing" as const,
         message: `Applying changes: ${changes}`,
         chartId,
         canvasName,
-        progress: 50
+        progress: 50,
       };
 
       // Create updated chart data
@@ -224,12 +246,12 @@ export const updateChartTool = createTool({
         yAxisLabel: newYAxisLabel,
         description: newDescription,
         theme: "light",
-        animated: true
+        animated: true,
       };
 
       // Stream completed update
       yield {
-        status: 'success' as const,
+        status: "success" as const,
         message: `Updated chart with changes: ${changes}`,
         chartId,
         canvasName,
@@ -239,43 +261,29 @@ export const updateChartTool = createTool({
         changes,
         progress: 100,
         // Flag for Canvas to process this result
-        shouldUpdateArtifact: true
+        shouldUpdateArtifact: true,
       };
 
       return `Updated chart with changes: ${changes}. The updated chart is now available in the Canvas workspace.`;
-
     } catch (error) {
       logger.error("Failed to update chart:", error);
 
       // Stream error state
       yield {
-        status: 'error' as const,
+        status: "error" as const,
         message: `Failed to update chart: ${error instanceof Error ? error.message : "Unknown error"}`,
         chartId,
         canvasName,
-        error: error instanceof Error ? error.message : "Unknown error"
+        error: error instanceof Error ? error.message : "Unknown error",
       };
 
       throw error;
     }
-  }
+  },
 });
 
-// Export chart tools for integration with the tool system
+// Export main chart tools - artifact tools now registered directly in tool-kit.ts
 export const chartTools = {
   create_chart: createChartTool,
   update_chart: updateChartTool,
-  // Recharts-native tools
-  create_area_chart: areaChartArtifactTool,
-  create_scatter_chart: scatterChartArtifactTool,
-  create_radar_chart: radarChartArtifactTool,
-  create_funnel_chart: funnelChartArtifactTool,
-  create_treemap_chart: treemapChartArtifactTool,
-  create_sankey_chart: sankeyChartArtifactTool,
-  create_radial_bar_chart: radialBarChartArtifactTool,
-  create_composed_chart: composedChartArtifactTool,
-  // External library tools
-  create_geographic_chart: geographicChartArtifactTool,
-  create_gauge_chart: gaugeChartArtifactTool,
-  create_calendar_heatmap: calendarHeatmapArtifactTool,
 };

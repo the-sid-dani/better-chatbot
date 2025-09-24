@@ -28,7 +28,7 @@ import { AlertTriangle } from "lucide-react";
  * but optimized for Canvas display with proper sizing and container handling.
  */
 export function ChartArtifactContent({
-  artifact,
+  artifact: _artifact, // Available for future metadata access and artifact-specific logic
   content,
   status,
 }: ArtifactContentProps<BaseArtifact>) {

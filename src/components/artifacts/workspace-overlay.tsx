@@ -15,7 +15,7 @@ import {
   BarChart3,
   FileText,
   Code,
-  Image as ImageIcon
+  Image as ImageIcon,
 } from "lucide-react";
 import { ArtifactComponent } from "./artifact";
 import { getArtifactDefinition } from "./registry";
@@ -31,8 +31,6 @@ export function WorkspaceOverlay() {
     setActiveArtifact,
     removeArtifact,
     updateArtifact,
-    hideWorkspace,
-    toggleWorkspace
   } = useArtifactsStore();
 
   const [isMaximized, setIsMaximized] = useState(false);
@@ -43,7 +41,10 @@ export function WorkspaceOverlay() {
     return null;
   }
 
-  const activeArtifact = artifacts.find(a => a.id === activeArtifactId) || artifacts[currentTab] || artifacts[0];
+  const activeArtifact =
+    artifacts.find((a) => a.id === activeArtifactId) ||
+    artifacts[currentTab] ||
+    artifacts[0];
 
   const getArtifactIcon = (kind: ArtifactKind) => {
     switch (kind) {
@@ -92,7 +93,7 @@ export function WorkspaceOverlay() {
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className={cn(
           "fixed right-0 top-0 h-full z-50 shadow-2xl",
-          isMaximized ? "w-full" : "w-[50vw] min-w-[400px] max-w-[800px]"
+          isMaximized ? "w-full" : "w-[50vw] min-w-[400px] max-w-[800px]",
         )}
       >
         <Card className="h-full rounded-none border-l border-t-0 border-r-0 border-b-0">
@@ -144,7 +145,11 @@ export function WorkspaceOverlay() {
                   onClick={() => setIsMaximized(!isMaximized)}
                   className="h-7 w-7 p-0"
                 >
-                  {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                  {isMaximized ? (
+                    <Minimize2 className="w-4 h-4" />
+                  ) : (
+                    <Maximize2 className="w-4 h-4" />
+                  )}
                 </Button>
                 <Button
                   variant="ghost"
@@ -165,8 +170,12 @@ export function WorkspaceOverlay() {
                 <ArtifactComponent
                   artifact={activeArtifact}
                   definition={getArtifactDefinition(activeArtifact.kind)!}
-                  onUpdateArtifact={(updates) => updateArtifact(activeArtifact.id, updates)}
-                  onSaveContent={(content) => updateArtifact(activeArtifact.id, { content })}
+                  onUpdateArtifact={(updates) =>
+                    updateArtifact(activeArtifact.id, updates)
+                  }
+                  onSaveContent={(content) =>
+                    updateArtifact(activeArtifact.id, { content })
+                  }
                   className="h-full border-0 rounded-none"
                 />
               </div>

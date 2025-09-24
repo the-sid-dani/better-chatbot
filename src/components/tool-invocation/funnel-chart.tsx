@@ -15,10 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  ChartConfig,
-  ChartContainer,
-} from "@/components/ui/chart";
+import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 
 import { JsonViewPopup } from "../json-view-popup";
 import { generateUniqueKey } from "lib/utils";
@@ -96,7 +93,7 @@ export function FunnelChart(props: FunnelChartProps) {
   }, [sortedData]);
 
   // Custom tooltip content
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0];
       return (
@@ -139,7 +136,9 @@ export function FunnelChart(props: FunnelChartProps) {
             />
           </div>
         </CardTitle>
-        {description && <CardDescription className="text-xs">{description}</CardDescription>}
+        {description && (
+          <CardDescription className="text-xs">{description}</CardDescription>
+        )}
       </CardHeader>
       <CardContent className="flex-1 pb-0 pt-2 min-h-0">
         <ChartContainer config={chartConfig} className="h-full w-full">

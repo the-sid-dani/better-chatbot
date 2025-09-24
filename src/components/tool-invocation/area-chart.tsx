@@ -60,7 +60,7 @@ const chartColors = [
 ];
 
 export function AreaChart(props: AreaChartProps) {
-  const { title, data, description, xAxisLabel, yAxisLabel, areaType = "standard" } = props;
+  const { title, data, description, yAxisLabel, areaType = "standard" } = props;
 
   const deduplicateData = React.useMemo(() => {
     return data.reduce(
@@ -144,7 +144,9 @@ export function AreaChart(props: AreaChartProps) {
             />
           </div>
         </CardTitle>
-        {description && <CardDescription className="text-xs">{description}</CardDescription>}
+        {description && (
+          <CardDescription className="text-xs">{description}</CardDescription>
+        )}
       </CardHeader>
       <CardContent className="flex-1 pb-0 pt-2 min-h-0">
         <ChartContainer config={chartConfig} className="h-full w-full">

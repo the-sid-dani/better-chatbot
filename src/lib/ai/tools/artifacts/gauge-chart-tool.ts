@@ -29,9 +29,7 @@ export const gaugeChartArtifactTool = createTool({
 
   inputSchema: z.object({
     title: z.string().describe("Title for the gauge chart"),
-    value: z
-      .number()
-      .describe("Current value to display on the gauge"),
+    value: z.number().describe("Current value to display on the gauge"),
     minValue: z
       .number()
       .default(0)
@@ -42,7 +40,9 @@ export const gaugeChartArtifactTool = createTool({
       .describe("Maximum value of the gauge scale (default: 100)"),
     gaugeType: z
       .enum(["speedometer", "semi-circle", "radial"])
-      .describe("Type of gauge display: speedometer (full circle), semi-circle, or radial"),
+      .describe(
+        "Type of gauge display: speedometer (full circle), semi-circle, or radial",
+      ),
     unit: z
       .string()
       .optional()
@@ -50,9 +50,7 @@ export const gaugeChartArtifactTool = createTool({
     thresholds: z
       .array(
         z.object({
-          value: z
-            .number()
-            .describe("Threshold value"),
+          value: z.number().describe("Threshold value"),
           color: z
             .string()
             .describe("Color for this threshold (hex format, e.g., #FF0000)"),
@@ -70,7 +68,16 @@ export const gaugeChartArtifactTool = createTool({
       .describe("Brief description of what the gauge shows"),
   }),
 
-  execute: async ({ title, value, minValue = 0, maxValue = 100, gaugeType, unit, thresholds, description }) => {
+  execute: async ({
+    title,
+    value,
+    minValue = 0,
+    maxValue = 100,
+    gaugeType,
+    unit,
+    thresholds,
+    description,
+  }) => {
     try {
       logger.info(`Creating gauge chart artifact: ${title}`);
 
@@ -86,7 +93,9 @@ export const gaugeChartArtifactTool = createTool({
       // Clamp value to min/max bounds as per PRP requirements
       const clampedValue = Math.max(minValue, Math.min(maxValue, value));
       if (clampedValue !== value) {
-        logger.warn(`Clamped gauge value from ${value} to ${clampedValue} (range: ${minValue}-${maxValue})`);
+        logger.warn(
+          `Clamped gauge value from ${value} to ${clampedValue} (range: ${minValue}-${maxValue})`,
+        );
       }
 
       // Validate thresholds if provided
@@ -132,7 +141,9 @@ export const gaugeChartArtifactTool = createTool({
           description,
           theme: "light",
           animated: true,
-          percentage: Math.round(((clampedValue - minValue) / (maxValue - minValue)) * 100),
+          percentage: Math.round(
+            ((clampedValue - minValue) / (maxValue - minValue)) * 100,
+          ),
           aspectRatio: "square", // Gauges need square aspect ratio
           thresholdCount: thresholds?.length || 0,
           // Optimize sizing for Canvas cards
@@ -148,8 +159,8 @@ export const gaugeChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return success with artifact creation data (matches existing pattern)
-      const result = {
+      // Create the structured result data
+      const resultData = {
         success: true,
         artifactId,
         artifact: {
@@ -166,22 +177,47 @@ export const gaugeChartArtifactTool = createTool({
         maxValue,
         unit: unit || "",
         percentage: chartContent.metadata.percentage,
-        // Additional metadata for Canvas integration
         canvasReady: true,
         componentType: "GaugeChart",
       };
 
-      // Note: Canvas artifact creation happens in ChatBot component via tool result detection
-
+      // Return in expected response format with content and structuredContent
       logger.info(`Gauge chart artifact created successfully: ${artifactId}`);
-      return result;
+      return {
+        content: [
+          { type: "text", text: resultData.message },
+          {
+            type: "text",
+            text: `Chart Created in Canvas\n\nType: ${resultData.chartType}\n\nChart created successfully. Use the "Open Canvas" button above to view the interactive visualization.`,
+          },
+        ],
+        structuredContent: {
+          result: [resultData],
+        },
+        isError: false,
+      };
     } catch (error) {
       logger.error("Failed to create gauge chart artifact:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        message: `Failed to create gauge chart: ${error instanceof Error ? error.message : "Unknown error"}`,
-        chartType: "gauge",
+        content: [
+          {
+            type: "text",
+            text: `Failed to create gauge chart: ${errorMessage}`,
+          },
+        ],
+        structuredContent: {
+          result: [
+            {
+              success: false,
+              error: errorMessage,
+              message: `Failed to create gauge chart: ${errorMessage}`,
+              chartType: "gauge",
+            },
+          ],
+        },
+        isError: true,
       };
     }
   },

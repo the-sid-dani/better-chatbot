@@ -38,29 +38,21 @@ export const composedChartArtifactTool = createTool({
           series: z
             .array(
               z.object({
-                seriesName: z
-                  .string()
-                  .describe("Name of this data series"),
-                value: z
-                  .number()
-                  .describe("Numeric value for this series"),
+                seriesName: z.string().describe("Name of this data series"),
+                value: z.number().describe("Numeric value for this series"),
                 chartType: z
                   .enum(["bar", "line", "area"])
-                  .describe("Type of chart for this series (bar, line, or area)"),
+                  .describe(
+                    "Type of chart for this series (bar, line, or area)",
+                  ),
               }),
             )
             .describe("Data series for this data point"),
         }),
       )
       .describe("Composed chart data with x-axis points and mixed chart types"),
-    xAxisLabel: z
-      .string()
-      .optional()
-      .describe("Label for the x-axis"),
-    yAxisLabel: z
-      .string()
-      .optional()
-      .describe("Label for the y-axis"),
+    xAxisLabel: z.string().optional().describe("Label for the x-axis"),
+    yAxisLabel: z.string().optional().describe("Label for the y-axis"),
     description: z
       .string()
       .optional()
@@ -85,7 +77,11 @@ export const composedChartArtifactTool = createTool({
         }
 
         for (const series of point.series) {
-          if (!series.seriesName || typeof series.value !== "number" || !series.chartType) {
+          if (
+            !series.seriesName ||
+            typeof series.value !== "number" ||
+            !series.chartType
+          ) {
             throw new Error(
               "Invalid series data - each series needs seriesName, numeric value, and chartType",
             );
@@ -101,12 +97,14 @@ export const composedChartArtifactTool = createTool({
 
       // Get unique series names and their types for metadata
       const seriesInfo = new Map();
-      data.forEach(point => {
-        point.series.forEach(series => {
+      data.forEach((point) => {
+        point.series.forEach((series) => {
           if (!seriesInfo.has(series.seriesName)) {
             seriesInfo.set(series.seriesName, series.chartType);
           } else if (seriesInfo.get(series.seriesName) !== series.chartType) {
-            logger.warn(`Inconsistent chart type for series "${series.seriesName}"`);
+            logger.warn(
+              `Inconsistent chart type for series "${series.seriesName}"`,
+            );
           }
         });
       });
@@ -147,8 +145,8 @@ export const composedChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return success with artifact creation data (matches existing pattern)
-      const result = {
+      // Create the structured result data
+      const resultData = {
         success: true,
         artifactId,
         artifact: {
@@ -167,17 +165,45 @@ export const composedChartArtifactTool = createTool({
         componentType: "ComposedChart",
       };
 
-      // Note: Canvas artifact creation happens in ChatBot component via tool result detection
-
-      logger.info(`Composed chart artifact created successfully: ${artifactId}`);
-      return result;
+      // Return in expected response format with content and structuredContent
+      logger.info(
+        `Composed chart artifact created successfully: ${artifactId}`,
+      );
+      return {
+        content: [
+          { type: "text", text: resultData.message },
+          {
+            type: "text",
+            text: `Chart Created in Canvas\n\nType: ${resultData.chartType}\n\nChart created successfully. Use the "Open Canvas" button above to view the interactive visualization.`,
+          },
+        ],
+        structuredContent: {
+          result: [resultData],
+        },
+        isError: false,
+      };
     } catch (error) {
       logger.error("Failed to create composed chart artifact:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        message: `Failed to create composed chart: ${error instanceof Error ? error.message : "Unknown error"}`,
-        chartType: "composed",
+        content: [
+          {
+            type: "text",
+            text: `Failed to create composed chart: ${errorMessage}`,
+          },
+        ],
+        structuredContent: {
+          result: [
+            {
+              success: false,
+              error: errorMessage,
+              message: `Failed to create composed chart: ${errorMessage}`,
+              chartType: "composed",
+            },
+          ],
+        },
+        isError: true,
       };
     }
   },

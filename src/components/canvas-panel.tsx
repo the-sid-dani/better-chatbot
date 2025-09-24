@@ -4,14 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import * as React from "react";
 import { Button } from "ui/button";
 import { Badge } from "ui/badge";
-import {
-  X,
-  Minimize2,
-  BarChart3,
-  FileText,
-  Code,
-  Image as ImageIcon,
-} from "lucide-react";
+import { X, Minimize2, BarChart3 } from "lucide-react";
 import { cn } from "lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { BarChart } from "./tool-invocation/bar-chart";
@@ -116,7 +109,7 @@ function ChartRenderer({ artifact }: { artifact: CanvasArtifact }) {
     innerRadius,
     outerRadius,
     startDate,
-    endDate
+    endDate,
   } = artifact.data;
 
   const chartProps = {
@@ -482,9 +475,9 @@ export function useCanvas() {
     if (
       typeof window !== "undefined" &&
       window.performance &&
-      window.performance.memory
+      (window.performance as any).memory
     ) {
-      const memory = window.performance.memory;
+      const memory = (window.performance as any).memory;
       console.log(`${debugPrefix} Memory Usage:`, {
         used: Math.round(memory.usedJSHeapSize / 1024 / 1024) + "MB",
         total: Math.round(memory.totalJSHeapSize / 1024 / 1024) + "MB",

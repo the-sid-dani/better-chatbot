@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "ui/card";
+import { Card, CardContent } from "ui/card";
 import { cn } from "lib/utils";
 
 interface CanvasSectionProps {
@@ -18,7 +18,7 @@ export function CanvasSection({
   children,
   isLoading = false,
   className,
-  variant = "default"
+  variant = "default",
 }: CanvasSectionProps) {
   if (isLoading) {
     return (
@@ -43,39 +43,27 @@ export function CanvasSection({
       {(title || description) && (
         <div className="space-y-1">
           {title && (
-            <h3 className="text-base font-semibold text-foreground">
-              {title}
-            </h3>
+            <h3 className="text-base font-semibold text-foreground">{title}</h3>
           )}
           {description && (
-            <p className="text-sm text-muted-foreground">
-              {description}
-            </p>
+            <p className="text-sm text-muted-foreground">{description}</p>
           )}
         </div>
       )}
-      <div className="text-sm leading-relaxed text-foreground">
-        {children}
-      </div>
+      <div className="text-sm leading-relaxed text-foreground">{children}</div>
     </div>
   );
 
   if (variant === "outlined") {
     return (
       <Card className={cn("w-full", className)}>
-        <CardContent className="p-4">
-          {content}
-        </CardContent>
+        <CardContent className="p-4">{content}</CardContent>
       </Card>
     );
   }
 
   if (variant === "minimal") {
-    return (
-      <div className={cn("space-y-3", className)}>
-        {content}
-      </div>
-    );
+    return <div className={cn("space-y-3", className)}>{content}</div>;
   }
 
   // Default variant

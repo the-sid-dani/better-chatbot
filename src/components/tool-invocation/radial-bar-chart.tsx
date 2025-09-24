@@ -53,7 +53,13 @@ const chartColors = [
 ];
 
 export function RadialBarChart(props: RadialBarChartProps) {
-  const { title, data, description, innerRadius = 30, outerRadius = 80 } = props;
+  const {
+    title,
+    data,
+    description,
+    innerRadius = 30,
+    outerRadius = 80,
+  } = props;
 
   const deduplicateData = React.useMemo(() => {
     return data.reduce(
@@ -74,8 +80,9 @@ export function RadialBarChart(props: RadialBarChartProps) {
 
   // Process data for Recharts RadialBarChart
   const chartData = React.useMemo(() => {
-    return deduplicateData.map((item, index) => {
-      const maxVal = item.maxValue || Math.max(...deduplicateData.map(d => d.value)) * 1.2;
+    return deduplicateData.map((item, _index) => {
+      const maxVal =
+        item.maxValue || Math.max(...deduplicateData.map((d) => d.value)) * 1.2;
       const percentage = (item.value / maxVal) * 100;
 
       return {
@@ -168,7 +175,9 @@ export function RadialBarChart(props: RadialBarChartProps) {
             />
           </div>
         </CardTitle>
-        {description && <CardDescription className="text-xs">{description}</CardDescription>}
+        {description && (
+          <CardDescription className="text-xs">{description}</CardDescription>
+        )}
       </CardHeader>
       <CardContent className="flex-1 pb-0 pt-2 min-h-0">
         <ChartContainer config={chartConfig} className="h-full w-full">
@@ -188,9 +197,7 @@ export function RadialBarChart(props: RadialBarChartProps) {
                 cornerRadius={10}
                 background={{ fill: "hsl(var(--muted))", opacity: 0.1 }}
               />
-              <ChartTooltip
-                content={<CustomTooltip />}
-              />
+              <ChartTooltip content={<CustomTooltip />} />
               {/* Center text showing average */}
               <text
                 x="50%"
@@ -199,7 +206,11 @@ export function RadialBarChart(props: RadialBarChartProps) {
                 dominantBaseline="middle"
                 className="fill-foreground text-lg font-bold"
               >
-                {Math.round(chartData.reduce((sum, item) => sum + item.percentage, 0) / chartData.length)}%
+                {Math.round(
+                  chartData.reduce((sum, item) => sum + item.percentage, 0) /
+                    chartData.length,
+                )}
+                %
               </text>
               <text
                 x="50%"

@@ -1,11 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  Treemap,
-  ResponsiveContainer,
-  Tooltip,
-} from "recharts";
+import { Treemap, ResponsiveContainer, Tooltip } from "recharts";
 
 import {
   Card,
@@ -14,10 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  ChartConfig,
-  ChartContainer,
-} from "@/components/ui/chart";
+import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 
 import { JsonViewPopup } from "../json-view-popup";
 import { sanitizeCssVariableName } from "./shared.tool-invocation";
@@ -66,7 +59,10 @@ export function TreemapChart(props: TreemapChartProps) {
               ? item.children.reduce(
                   (acc, child) => {
                     const childNames = acc.map((child) => child.name);
-                    const newChildName = generateUniqueKey(child.name, childNames);
+                    const newChildName = generateUniqueKey(
+                      child.name,
+                      childNames,
+                    );
                     return [
                       ...acc,
                       {
@@ -88,7 +84,9 @@ export function TreemapChart(props: TreemapChartProps) {
   // Transform data for Recharts Treemap - proper format for flat data
   const chartData = React.useMemo(() => {
     // For flat data, wrap in a root object with children array (required by Recharts Treemap)
-    const hasChildren = deduplicateData.some(item => item.children && item.children.length > 0);
+    const hasChildren = deduplicateData.some(
+      (item) => item.children && item.children.length > 0,
+    );
 
     if (hasChildren) {
       // Already hierarchical data - add colors to children
@@ -102,14 +100,16 @@ export function TreemapChart(props: TreemapChartProps) {
       }));
     } else {
       // Flat data - wrap all items as children under a root
-      return [{
-        name: "root",
-        children: deduplicateData.map((item, index) => ({
-          name: item.name,
-          size: item.value,
-          fill: `var(--color-${sanitizeCssVariableName(item.name)})`,
-        })),
-      }];
+      return [
+        {
+          name: "root",
+          children: deduplicateData.map((item, _index) => ({
+            name: item.name,
+            size: item.value,
+            fill: `var(--color-${sanitizeCssVariableName(item.name)})`,
+          })),
+        },
+      ];
     }
   }, [deduplicateData]);
 
@@ -145,7 +145,9 @@ export function TreemapChart(props: TreemapChartProps) {
             />
           </div>
         </CardTitle>
-        {description && <CardDescription className="text-xs">{description}</CardDescription>}
+        {description && (
+          <CardDescription className="text-xs">{description}</CardDescription>
+        )}
       </CardHeader>
       <CardContent className="flex-1 pb-0 pt-2 min-h-0">
         <ChartContainer config={chartConfig} className="h-full w-full">
@@ -153,14 +155,19 @@ export function TreemapChart(props: TreemapChartProps) {
             <Treemap
               data={chartData}
               dataKey="size"
-              aspectRatio={4/3}
+              aspectRatio={4 / 3}
               stroke="hsl(var(--border))"
               animationBegin={0}
               animationDuration={0}
             >
               <Tooltip
                 content={({ active, payload }) => {
-                  if (active && payload && payload.length && payload[0]?.payload) {
+                  if (
+                    active &&
+                    payload &&
+                    payload.length &&
+                    payload[0]?.payload
+                  ) {
                     const data = payload[0].payload;
                     return (
                       <div className="rounded-lg border bg-background p-2 shadow-sm">

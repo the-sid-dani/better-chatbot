@@ -32,27 +32,17 @@ export const sankeyChartArtifactTool = createTool({
     nodes: z
       .array(
         z.object({
-          id: z
-            .string()
-            .describe("Unique identifier for this node"),
-          name: z
-            .string()
-            .describe("Display name for this node"),
+          id: z.string().describe("Unique identifier for this node"),
+          name: z.string().describe("Display name for this node"),
         }),
       )
       .describe("Array of nodes in the sankey diagram"),
     links: z
       .array(
         z.object({
-          source: z
-            .string()
-            .describe("ID of the source node"),
-          target: z
-            .string()
-            .describe("ID of the target node"),
-          value: z
-            .number()
-            .describe("Flow value from source to target"),
+          source: z.string().describe("ID of the source node"),
+          target: z.string().describe("ID of the target node"),
+          value: z.number().describe("Flow value from source to target"),
         }),
       )
       .describe("Array of links/flows between nodes"),
@@ -79,9 +69,7 @@ export const sankeyChartArtifactTool = createTool({
       const nodeIds = new Set<string>();
       for (const node of nodes) {
         if (!node.id || !node.name) {
-          throw new Error(
-            "Invalid node data - each node needs id and name",
-          );
+          throw new Error("Invalid node data - each node needs id and name");
         }
 
         if (nodeIds.has(node.id)) {
@@ -99,11 +87,15 @@ export const sankeyChartArtifactTool = createTool({
         }
 
         if (!nodeIds.has(link.source)) {
-          throw new Error(`Link references unknown source node: ${link.source}`);
+          throw new Error(
+            `Link references unknown source node: ${link.source}`,
+          );
         }
 
         if (!nodeIds.has(link.target)) {
-          throw new Error(`Link references unknown target node: ${link.target}`);
+          throw new Error(
+            `Link references unknown target node: ${link.target}`,
+          );
         }
 
         if (link.source === link.target) {
@@ -111,18 +103,27 @@ export const sankeyChartArtifactTool = createTool({
         }
 
         if (link.value <= 0) {
-          throw new Error(`Link value must be positive: ${link.source} -> ${link.target}`);
+          throw new Error(
+            `Link value must be positive: ${link.source} -> ${link.target}`,
+          );
         }
       }
 
       // Simple circular reference detection
-      const hasPath = (start: string, end: string, visited = new Set<string>()): boolean => {
+      const hasPath = (
+        start: string,
+        end: string,
+        visited = new Set<string>(),
+      ): boolean => {
         if (visited.has(start)) return false;
         if (start === end) return true;
 
         visited.add(start);
         for (const link of links) {
-          if (link.source === start && hasPath(link.target, end, new Set(visited))) {
+          if (
+            link.source === start &&
+            hasPath(link.target, end, new Set(visited))
+          ) {
             return true;
           }
         }
@@ -131,7 +132,9 @@ export const sankeyChartArtifactTool = createTool({
 
       for (const link of links) {
         if (hasPath(link.target, link.source)) {
-          logger.warn(`Potential circular reference detected: ${link.source} <-> ${link.target}`);
+          logger.warn(
+            `Potential circular reference detected: ${link.source} <-> ${link.target}`,
+          );
         }
       }
 
@@ -165,8 +168,8 @@ export const sankeyChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return success with artifact creation data (matches existing pattern)
-      const result = {
+      // Create the structured result data
+      const resultData = {
         success: true,
         artifactId,
         artifact: {
@@ -185,17 +188,43 @@ export const sankeyChartArtifactTool = createTool({
         componentType: "SankeyChart",
       };
 
-      // Note: Canvas artifact creation happens in ChatBot component via tool result detection
-
+      // Return in expected response format with content and structuredContent
       logger.info(`Sankey chart artifact created successfully: ${artifactId}`);
-      return result;
+      return {
+        content: [
+          { type: "text", text: resultData.message },
+          {
+            type: "text",
+            text: `Chart Created in Canvas\n\nType: ${resultData.chartType}\n\nChart created successfully. Use the "Open Canvas" button above to view the interactive visualization.`,
+          },
+        ],
+        structuredContent: {
+          result: [resultData],
+        },
+        isError: false,
+      };
     } catch (error) {
       logger.error("Failed to create sankey chart artifact:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        message: `Failed to create sankey chart: ${error instanceof Error ? error.message : "Unknown error"}`,
-        chartType: "sankey",
+        content: [
+          {
+            type: "text",
+            text: `Failed to create sankey chart: ${errorMessage}`,
+          },
+        ],
+        structuredContent: {
+          result: [
+            {
+              success: false,
+              error: errorMessage,
+              message: `Failed to create sankey chart: ${errorMessage}`,
+              chartType: "sankey",
+            },
+          ],
+        },
+        isError: true,
       };
     }
   },

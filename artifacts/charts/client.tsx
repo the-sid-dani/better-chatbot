@@ -4,12 +4,18 @@ import { Artifact } from "@/components/artifacts/artifact";
 import {
   ChartArtifactMetadata as ChartMetadata,
   ChartDataPoint,
-  isChartStreamPart
+  isChartStreamPart,
 } from "app-types/artifacts";
 import { BarChart } from "@/components/tool-invocation/bar-chart";
 import { LineChart } from "@/components/tool-invocation/line-chart";
 import { PieChart } from "@/components/tool-invocation/pie-chart";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "ui/card";
 import { Button } from "ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "ui/tabs";
 import { Separator } from "ui/separator";
@@ -17,7 +23,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from "ui/dropdown-menu";
 import {
   BarChart3,
@@ -27,7 +33,7 @@ import {
   Download,
   RefreshCw,
   Settings,
-  ChevronDown
+  ChevronDown,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -42,8 +48,7 @@ function ChartComponent({
   title,
   data,
   description,
-  xAxisLabel,
-  yAxisLabel
+  yAxisLabel,
 }: {
   chartType: ChartMetadata["chartType"];
   title: string;
@@ -54,18 +59,41 @@ function ChartComponent({
 }) {
   switch (chartType) {
     case "bar":
-      return <BarChart title={title} data={data} description={description} yAxisLabel={yAxisLabel} />;
+      return (
+        <BarChart
+          title={title}
+          data={data}
+          description={description}
+          yAxisLabel={yAxisLabel}
+        />
+      );
     case "line":
-      return <LineChart title={title} data={data} description={description} yAxisLabel={yAxisLabel} />;
+      return (
+        <LineChart
+          title={title}
+          data={data}
+          description={description}
+          yAxisLabel={yAxisLabel}
+        />
+      );
     case "pie":
       // Transform data for pie chart format
-      const pieData = data.map(point => ({
+      const pieData = data.map((point) => ({
         label: point.xAxisLabel,
-        value: point.series[0]?.value || 0
+        value: point.series[0]?.value || 0,
       }));
-      return <PieChart title={title} data={pieData} description={description} />;
+      return (
+        <PieChart title={title} data={pieData} description={description} />
+      );
     default:
-      return <BarChart title={title} data={data} description={description} yAxisLabel={yAxisLabel} />;
+      return (
+        <BarChart
+          title={title}
+          data={data}
+          description={description}
+          yAxisLabel={yAxisLabel}
+        />
+      );
   }
 }
 
@@ -74,7 +102,7 @@ function ChartEditPanel({
   data,
   metadata,
   onDataChange,
-  onMetadataChange
+  onMetadataChange,
 }: {
   data: ChartDataPoint[];
   metadata: ChartMetadata;
@@ -106,24 +134,36 @@ function ChartEditPanel({
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="w-full justify-between">
                 <span className="flex items-center space-x-2">
-                  {metadata.chartType === "bar" && <BarChart3 className="w-4 h-4" />}
-                  {metadata.chartType === "line" && <LineChartIcon className="w-4 h-4" />}
-                  {metadata.chartType === "pie" && <PieChartIcon className="w-4 h-4" />}
+                  {metadata.chartType === "bar" && (
+                    <BarChart3 className="w-4 h-4" />
+                  )}
+                  {metadata.chartType === "line" && (
+                    <LineChartIcon className="w-4 h-4" />
+                  )}
+                  {metadata.chartType === "pie" && (
+                    <PieChartIcon className="w-4 h-4" />
+                  )}
                   <span className="capitalize">{metadata.chartType}</span>
                 </span>
                 <ChevronDown className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => onMetadataChange({ chartType: "bar" })}>
+              <DropdownMenuItem
+                onClick={() => onMetadataChange({ chartType: "bar" })}
+              >
                 <BarChart3 className="w-4 h-4 mr-2" />
                 Bar Chart
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onMetadataChange({ chartType: "line" })}>
+              <DropdownMenuItem
+                onClick={() => onMetadataChange({ chartType: "line" })}
+              >
                 <LineChartIcon className="w-4 h-4 mr-2" />
                 Line Chart
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onMetadataChange({ chartType: "pie" })}>
+              <DropdownMenuItem
+                onClick={() => onMetadataChange({ chartType: "pie" })}
+              >
                 <PieChartIcon className="w-4 h-4 mr-2" />
                 Pie Chart
               </DropdownMenuItem>
@@ -139,7 +179,9 @@ function ChartEditPanel({
               <input
                 type="text"
                 value={metadata.xAxisLabel || ""}
-                onChange={(e) => onMetadataChange({ xAxisLabel: e.target.value })}
+                onChange={(e) =>
+                  onMetadataChange({ xAxisLabel: e.target.value })
+                }
                 className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
                 placeholder="Enter X-axis label"
               />
@@ -149,7 +191,9 @@ function ChartEditPanel({
               <input
                 type="text"
                 value={metadata.yAxisLabel || ""}
-                onChange={(e) => onMetadataChange({ yAxisLabel: e.target.value })}
+                onChange={(e) =>
+                  onMetadataChange({ yAxisLabel: e.target.value })
+                }
                 className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
                 placeholder="Enter Y-axis label"
               />
@@ -193,7 +237,8 @@ function ChartEditPanel({
 // Charts artifact definition
 export const chartsArtifact = new Artifact<"charts", ExtendedChartMetadata>({
   kind: "charts",
-  description: "Interactive charts and data visualizations with real-time streaming updates",
+  description:
+    "Interactive charts and data visualizations with real-time streaming updates",
 
   // Initialize the chart artifact
   initialize: async ({ documentId, setMetadata }) => {
@@ -245,15 +290,13 @@ export const chartsArtifact = new Artifact<"charts", ExtendedChartMetadata>({
   // Render the chart content
   content: ({
     mode,
-    status,
     content,
-    isCurrentVersion,
     currentVersionIndex,
     onSaveContent,
     getDocumentContentById,
     isLoading,
     metadata,
-    artifact
+    artifact,
   }) => {
     const [activeTab, setActiveTab] = useState("chart");
 
@@ -278,7 +321,7 @@ export const chartsArtifact = new Artifact<"charts", ExtendedChartMetadata>({
       chartType: "bar",
       description: "Chart visualization",
       animated: true,
-      theme: "light"
+      theme: "light",
     };
 
     try {
@@ -292,7 +335,7 @@ export const chartsArtifact = new Artifact<"charts", ExtendedChartMetadata>({
           description: parsed.description,
           theme: parsed.theme || "light",
           animated: parsed.animated !== false,
-          ...metadata
+          ...metadata,
         };
       }
     } catch (error) {
@@ -328,18 +371,26 @@ export const chartsArtifact = new Artifact<"charts", ExtendedChartMetadata>({
     }
 
     const handleDataChange = (newData: ChartDataPoint[]) => {
-      const updatedContent = JSON.stringify({
-        ...JSON.parse(content || "{}"),
-        data: newData
-      }, null, 2);
+      const updatedContent = JSON.stringify(
+        {
+          ...JSON.parse(content || "{}"),
+          data: newData,
+        },
+        null,
+        2,
+      );
       onSaveContent(updatedContent);
     };
 
     const handleMetadataChange = (updates: Partial<ChartMetadata>) => {
-      const updatedContent = JSON.stringify({
-        ...JSON.parse(content || "{}"),
-        ...updates
-      }, null, 2);
+      const updatedContent = JSON.stringify(
+        {
+          ...JSON.parse(content || "{}"),
+          ...updates,
+        },
+        null,
+        2,
+      );
       onSaveContent(updatedContent);
     };
 
@@ -370,7 +421,9 @@ export const chartsArtifact = new Artifact<"charts", ExtendedChartMetadata>({
                   <CardContent>
                     <div className="text-center">
                       <BarChart3 className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                      <h3 className="text-lg font-semibold mb-2">No Chart Data</h3>
+                      <h3 className="text-lg font-semibold mb-2">
+                        No Chart Data
+                      </h3>
                       <p className="text-muted-foreground">
                         Ask AI to generate chart data or edit manually
                       </p>
@@ -407,7 +460,9 @@ export const chartsArtifact = new Artifact<"charts", ExtendedChartMetadata>({
                   </pre>
                   <Button
                     onClick={() => {
-                      navigator.clipboard.writeText(JSON.stringify(chartData, null, 2));
+                      navigator.clipboard.writeText(
+                        JSON.stringify(chartData, null, 2),
+                      );
                       toast.success("Chart data copied to clipboard");
                     }}
                     className="w-full mt-4"
