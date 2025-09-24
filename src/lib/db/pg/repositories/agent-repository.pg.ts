@@ -158,6 +158,7 @@ export const pgAgentRepository: AgentRepository = {
             or(
               eq(AgentSchema.visibility, "public"),
               eq(AgentSchema.visibility, "readonly"),
+              eq(AgentSchema.visibility, "admin-shared"),
             ),
           ),
         );
@@ -168,6 +169,7 @@ export const pgAgentRepository: AgentRepository = {
             or(
               eq(AgentSchema.visibility, "public"),
               eq(AgentSchema.visibility, "readonly"),
+              eq(AgentSchema.visibility, "admin-shared"),
             ),
             sql`${BookmarkSchema.id} IS NOT NULL`,
           ),
@@ -184,6 +186,7 @@ export const pgAgentRepository: AgentRepository = {
               or(
                 eq(AgentSchema.visibility, "public"),
                 eq(AgentSchema.visibility, "readonly"),
+                eq(AgentSchema.visibility, "admin-shared"),
               ),
             ),
           ),

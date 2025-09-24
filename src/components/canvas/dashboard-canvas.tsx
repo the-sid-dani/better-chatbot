@@ -105,12 +105,12 @@ function DashboardChartRenderer({ chart }: { chart: DashboardChart }) {
         );
       case "pie":
         // Transform data for pie chart if needed
-        const pieData =
+        const pieData: Array<{ label: string; value: number }> =
           Array.isArray(chart.data) &&
           chart.data.length > 0 &&
           "label" in chart.data[0]
             ? (chart.data as Array<{ label: string; value: number }>)
-            : (chart.data as unknown as ChartDataPoint[]).map((point) => ({
+            : chart.data.map((point) => ({
                 label: point.xAxisLabel,
                 value: point.series[0]?.value || 0,
               }));

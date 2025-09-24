@@ -10,24 +10,32 @@ interface CanvasArtifact {
 }
 
 // LLM-based Canvas naming system
-export async function generateCanvasName(artifacts: CanvasArtifact[]): Promise<string> {
+export async function generateCanvasName(
+  artifacts: CanvasArtifact[],
+): Promise<string> {
   if (artifacts.length === 0) return "Canvas";
 
   try {
     // Extract chart information for LLM analysis
-    const chartInfo = artifacts.map(artifact => ({
+    const chartInfo = artifacts.map((artifact) => ({
       title: artifact.title,
       type: artifact.type,
       chartType: artifact.metadata?.chartType,
       dataPoints: artifact.metadata?.dataPoints,
     }));
 
-    const chartDescriptions = chartInfo.map(chart =>
-      `${chart.title} (${chart.chartType || chart.type} chart, ${chart.dataPoints || 0} data points)`
-    ).join(", ");
+    const chartDescriptions = chartInfo
+      .map(
+        (chart) =>
+          `${chart.title} (${chart.chartType || chart.type} chart, ${chart.dataPoints || 0} data points)`,
+      )
+      .join(", ");
 
     // Use LLM to generate contextual dashboard name
-    const model = customModelProvider.getModel("gpt-4.1");
+    const model = customModelProvider.getModel({
+      provider: "openai",
+      model: "gpt-4-turbo",
+    });
 
     const result = await generateText({
       model,
@@ -48,20 +56,22 @@ Examples of good names:
 - For mixed business data: "Business Overview"
 
 Dashboard Name:`,
-      maxTokens: 20,
       temperature: 0.7,
     });
 
-    const generatedName = result.text.trim().replace(/['"]/g, '');
+    const generatedName = result.text.trim().replace(/['"]/g, "");
 
     // Validate the generated name (fallback to current system if invalid)
-    if (generatedName && generatedName.length > 0 && generatedName.length < 50) {
+    if (
+      generatedName &&
+      generatedName.length > 0 &&
+      generatedName.length < 50
+    ) {
       return generatedName;
     }
 
     // Fallback to current keyword-based system
     return generateCanvasNameFallback(artifacts);
-
   } catch (error) {
     console.warn("LLM Canvas naming failed, using fallback:", error);
     return generateCanvasNameFallback(artifacts);
@@ -72,27 +82,57 @@ Dashboard Name:`,
 function generateCanvasNameFallback(artifacts: CanvasArtifact[]): string {
   if (artifacts.length === 0) return "Canvas";
 
-  const chartTitles = artifacts.map(a => a.title.toLowerCase());
+  const chartTitles = artifacts.map((a) => a.title.toLowerCase());
   const keywords = chartTitles.join(" ");
 
   // Enhanced keyword analysis
-  if (keywords.includes("sales") || keywords.includes("revenue") || keywords.includes("financial")) {
+  if (
+    keywords.includes("sales") ||
+    keywords.includes("revenue") ||
+    keywords.includes("financial")
+  ) {
     return "Sales Analytics";
-  } else if (keywords.includes("market") && (keywords.includes("global") || keywords.includes("share"))) {
+  } else if (
+    keywords.includes("market") &&
+    (keywords.includes("global") || keywords.includes("share"))
+  ) {
     return "Market Intelligence";
-  } else if (keywords.includes("population") || keywords.includes("demographic")) {
+  } else if (
+    keywords.includes("population") ||
+    keywords.includes("demographic")
+  ) {
     return "Global Demographics";
   } else if (keywords.includes("performance") || keywords.includes("kpi")) {
     return "Performance Metrics";
-  } else if (keywords.includes("user") || keywords.includes("traffic") || keywords.includes("engagement")) {
+  } else if (
+    keywords.includes("user") ||
+    keywords.includes("traffic") ||
+    keywords.includes("engagement")
+  ) {
     return "User Analytics";
-  } else if (keywords.includes("temperature") || keywords.includes("weather") || keywords.includes("climate")) {
+  } else if (
+    keywords.includes("temperature") ||
+    keywords.includes("weather") ||
+    keywords.includes("climate")
+  ) {
     return "Climate Data";
-  } else if (keywords.includes("stock") || keywords.includes("price") || keywords.includes("trading")) {
+  } else if (
+    keywords.includes("stock") ||
+    keywords.includes("price") ||
+    keywords.includes("trading")
+  ) {
     return "Financial Markets";
-  } else if (keywords.includes("production") || keywords.includes("manufacturing") || keywords.includes("output")) {
+  } else if (
+    keywords.includes("production") ||
+    keywords.includes("manufacturing") ||
+    keywords.includes("output")
+  ) {
     return "Production Analytics";
-  } else if (keywords.includes("emission") || keywords.includes("environmental") || keywords.includes("co2")) {
+  } else if (
+    keywords.includes("emission") ||
+    keywords.includes("environmental") ||
+    keywords.includes("co2")
+  ) {
     return "Environmental Data";
   } else if (artifacts.length > 3) {
     return "Multi-Chart Dashboard";
@@ -105,7 +145,7 @@ function generateCanvasNameFallback(artifacts: CanvasArtifact[]): string {
 export function detectCanvasType(artifacts: CanvasArtifact[]): string {
   if (artifacts.length === 0) return "general";
 
-  const keywords = artifacts.map(a => a.title.toLowerCase()).join(" ");
+  const keywords = artifacts.map((a) => a.title.toLowerCase()).join(" ");
 
   if (keywords.includes("sales") || keywords.includes("revenue")) {
     return "sales";
@@ -113,9 +153,15 @@ export function detectCanvasType(artifacts: CanvasArtifact[]): string {
     return "marketing";
   } else if (keywords.includes("financial") || keywords.includes("finance")) {
     return "finance";
-  } else if (keywords.includes("analytics") || keywords.includes("performance")) {
+  } else if (
+    keywords.includes("analytics") ||
+    keywords.includes("performance")
+  ) {
     return "analytics";
-  } else if (keywords.includes("operations") || keywords.includes("production")) {
+  } else if (
+    keywords.includes("operations") ||
+    keywords.includes("production")
+  ) {
     return "operations";
   } else {
     return "general";

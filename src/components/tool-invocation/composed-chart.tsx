@@ -205,15 +205,15 @@ export function ComposedChart(props: ComposedChartProps) {
 
               {/* Render Area components first (background layers) */}
               {seriesByType.area.map((seriesName, _index) => {
-                const seriesKey = sanitizeCssVariableName(seriesName);
+                const seriesKey = sanitizeCssVariableName(String(seriesName));
 
                 return (
                   <Area
                     key={`area-${seriesName}`}
                     type="monotone"
                     dataKey={seriesKey}
-                    stroke={`var(--color-${sanitizeCssVariableName(seriesName)})`}
-                    fill={`var(--color-${sanitizeCssVariableName(seriesName)})`}
+                    stroke={`var(--color-${sanitizeCssVariableName(String(seriesName))})`}
+                    fill={`var(--color-${sanitizeCssVariableName(String(seriesName))})`}
                     fillOpacity={0.3}
                     strokeWidth={2}
                   />
@@ -222,13 +222,13 @@ export function ComposedChart(props: ComposedChartProps) {
 
               {/* Render Bar components */}
               {seriesByType.bar.map((seriesName, _index) => {
-                const seriesKey = sanitizeCssVariableName(seriesName);
+                const seriesKey = sanitizeCssVariableName(String(seriesName));
 
                 return (
                   <Bar
                     key={`bar-${seriesName}`}
                     dataKey={seriesKey}
-                    fill={`var(--color-${sanitizeCssVariableName(seriesName)})`}
+                    fill={`var(--color-${sanitizeCssVariableName(String(seriesName))})`}
                     radius={[2, 2, 0, 0]}
                   />
                 );

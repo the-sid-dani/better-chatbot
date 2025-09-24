@@ -640,7 +640,7 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
 
         // Process completed charts with duplicate prevention
         const completedCharts = chartTools.filter((part) => {
-          if (part.state !== "output-available") {
+          if (!isToolUIPart(part) || part.state !== "output-available") {
             return false;
           }
 
@@ -691,6 +691,7 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
         });
 
         completedCharts.forEach((part) => {
+          if (!isToolUIPart(part)) return;
           const result = part.output as any;
           const toolName = getToolName(part);
 

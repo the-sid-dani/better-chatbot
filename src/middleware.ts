@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
+import { getEnhancedSession } from "@/lib/auth/server";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -11,11 +12,26 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith("/ping")) {
     return new Response("pong", { status: 200 });
   }
+
   const sessionCookie = getSessionCookie(request);
 
   if (!sessionCookie) {
     return NextResponse.redirect(new URL("/sign-in", request.url));
   }
+
+  // Admin route protection
+  if (pathname.startsWith("/admin")) {
+    try {
+      const session = await getEnhancedSession();
+      if (session?.user?.role !== "admin") {
+        return NextResponse.redirect(new URL("/unauthorized", request.url));
+      }
+    } catch (_error) {
+      // If domain validation fails or other errors, redirect to sign-in
+      return NextResponse.redirect(new URL("/sign-in", request.url));
+    }
+  }
+
   return NextResponse.next();
 }
 

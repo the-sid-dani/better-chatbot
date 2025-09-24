@@ -13,7 +13,6 @@ import {
 import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 
 import { JsonViewPopup } from "../json-view-popup";
-import { generateUniqueKey } from "lib/utils";
 
 // Dynamic import for @uiw/react-heat-map to avoid SSR issues
 const HeatMap = dynamic(() => import("@uiw/react-heat-map"), { ssr: false });
@@ -129,38 +128,7 @@ export function CalendarHeatmap(props: CalendarHeatmapProps) {
     return config;
   }, [title, colorScale]);
 
-  // Custom tooltip component
-  const _CustomTooltip = React.useCallback(({ date, count }: any) => {
-    if (!date) return null;
-
-    const dateStr = new Date(date).toLocaleDateString("en-US", {
-      weekday: "short",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-
-    return (
-      <div className="rounded-lg border bg-background p-2 shadow-sm">
-        <div className="grid grid-cols-2 gap-2">
-          <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
-              Date
-            </span>
-            <span className="font-bold text-muted-foreground">{dateStr}</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
-              Value
-            </span>
-            <span className="font-bold text-foreground">
-              {count?.toLocaleString() || 0}
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  }, []);
+  // Custom tooltip functionality (currently unused)
 
   return (
     <Card className="bg-card h-full flex flex-col">

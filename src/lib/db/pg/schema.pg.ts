@@ -48,7 +48,7 @@ export const AgentSchema = pgTable("agent", {
     .references(() => UserSchema.id),
   instructions: json("instructions").$type<Agent["instructions"]>(),
   visibility: varchar("visibility", {
-    enum: ["public", "private", "readonly"],
+    enum: ["public", "private", "readonly", "admin-shared"],
   })
     .notNull()
     .default("private"),
@@ -94,6 +94,7 @@ export const UserSchema = pgTable("user", {
   emailVerified: boolean("email_verified").default(false).notNull(),
   password: text("password"),
   image: text("image"),
+  role: varchar("role", { enum: ["admin", "user"] }).default("user"),
   preferences: json("preferences").default({}).$type<UserPreferences>(),
   createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: timestamp("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),

@@ -11,6 +11,7 @@ import {
   UserSchema,
   VerificationSchema,
 } from "lib/db/pg/schema.pg";
+import { eq } from "drizzle-orm";
 import { getAuthConfig } from "./config";
 
 import logger from "logger";
@@ -73,7 +74,25 @@ export const auth = betterAuth({
       }
     },
   },
-  socialProviders: socialAuthenticationProviders,
+  socialProviders: {
+    ...socialAuthenticationProviders,
+    google: socialAuthenticationProviders.google
+      ? {
+          ...socialAuthenticationProviders.google,
+          mapProfileToUser: (profile: any) => {
+            // Restrict to Samba domain
+            if (!profile.email?.endsWith("@sambatv.com")) {
+              throw new Error("Access restricted to Samba employees");
+            }
+            return {
+              name: profile.name,
+              email: profile.email,
+              image: profile.picture,
+            };
+          },
+        }
+      : undefined,
+  },
 });
 
 export const getSession = async () => {
@@ -91,4 +110,41 @@ export const getSession = async () => {
     redirect("/sign-in");
   }
   return session!;
+};
+
+export const getEnhancedSession = async () => {
+  "use server";
+  const session = await auth.api
+    .getSession({
+      headers: await headers(),
+    })
+    .catch((e) => {
+      logger.error(e);
+      return null;
+    });
+
+  if (!session?.user?.id) return null;
+
+  // Query user role from database
+  const user = await pgDb
+    .select({
+      role: UserSchema.role,
+      email: UserSchema.email,
+    })
+    .from(UserSchema)
+    .where(eq(UserSchema.id, session.user.id))
+    .limit(1);
+
+  // Verify Samba domain (double-check)
+  if (user[0]?.email && !user[0].email.endsWith("@sambatv.com")) {
+    throw new Error("Access restricted to Samba employees");
+  }
+
+  return {
+    ...session,
+    user: {
+      ...session.user,
+      role: user[0]?.role || "user",
+    },
+  };
 };
