@@ -172,6 +172,7 @@ export function AreaChart(props: AreaChartProps) {
                         value: yAxisLabel,
                         angle: -90,
                         position: "insideLeft",
+                        style: { textAnchor: "middle" },
                       }
                     : undefined
                 }

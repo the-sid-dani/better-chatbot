@@ -174,7 +174,7 @@ export function TreemapChart(props: TreemapChartProps) {
                         <div className="grid grid-cols-2 gap-2">
                           <div className="flex flex-col">
                             <span className="text-[0.70rem] uppercase text-muted-foreground">
-                              Item
+                              Name
                             </span>
                             <span className="font-bold text-muted-foreground">
                               {data.name}
@@ -182,7 +182,7 @@ export function TreemapChart(props: TreemapChartProps) {
                           </div>
                           <div className="flex flex-col">
                             <span className="text-[0.70rem] uppercase text-muted-foreground">
-                              Budget
+                              Value
                             </span>
                             <span className="font-bold">
                               {data.size?.toLocaleString()}

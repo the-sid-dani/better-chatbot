@@ -142,53 +142,53 @@ export function LineChart(props: LineChartProps) {
             />
           </div>
         </CardTitle>
-        {description && <CardDescription className="text-xs">{description}</CardDescription>}
+        {description && (
+          <CardDescription className="text-xs">{description}</CardDescription>
+        )}
       </CardHeader>
       <CardContent className="flex-1 pb-0 pt-2 min-h-0">
         <ChartContainer config={chartConfig} className="h-full w-full">
           <ResponsiveContainer width="100%" height="100%">
-              <RechartsLineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="label"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
+            <RechartsLineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="label"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+              />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tickMargin={10}
+                tickFormatter={formatChartNumber}
+                label={
+                  yAxisLabel
+                    ? {
+                        value: yAxisLabel,
+                        angle: -90,
+                        position: "insideLeft",
+                        style: { textAnchor: "middle" },
+                      }
+                    : undefined
+                }
+              />
+              <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+              <Legend />
+              {seriesNames.map((seriesName, index) => (
+                <Line
+                  key={index}
+                  type="monotone"
+                  name={seriesName}
+                  dataKey={sanitizeCssVariableName(seriesName)}
+                  stroke={`var(--color-${sanitizeCssVariableName(seriesName)})`}
+                  strokeWidth={2}
+                  dot={false}
                 />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={10}
-                  tickFormatter={formatChartNumber}
-                  label={
-                    yAxisLabel
-                      ? {
-                          value: yAxisLabel,
-                          angle: -90,
-                          position: "insideLeft",
-                        }
-                      : undefined
-                  }
-                />
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent />}
-                />
-                <Legend />
-                {seriesNames.map((seriesName, index) => (
-                  <Line
-                    key={index}
-                    type="monotone"
-                    name={seriesName}
-                    dataKey={sanitizeCssVariableName(seriesName)}
-                    stroke={`var(--color-${sanitizeCssVariableName(seriesName)})`}
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                ))}
-              </RechartsLineChart>
-            </ResponsiveContainer>
-          </ChartContainer>
+              ))}
+            </RechartsLineChart>
+          </ResponsiveContainer>
+        </ChartContainer>
       </CardContent>
     </Card>
   );

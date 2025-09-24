@@ -140,51 +140,54 @@ export function BarChart(props: BarChartProps) {
             />
           </div>
         </CardTitle>
-        {description && <CardDescription className="text-xs">{description}</CardDescription>}
+        {description && (
+          <CardDescription className="text-xs">{description}</CardDescription>
+        )}
       </CardHeader>
       <CardContent className="flex-1 pb-0 pt-2 min-h-0">
         <ChartContainer config={chartConfig} className="h-full w-full">
           <ResponsiveContainer width="100%" height="100%">
-              <RechartsBarChart data={chartData}>
-                <CartesianGrid vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  tickLine={false}
-                  tickMargin={10}
-                  axisLine={false}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={10}
-                  tickFormatter={formatChartNumber}
-                  label={
-                    yAxisLabel
-                      ? {
-                          value: yAxisLabel,
-                          angle: -90,
-                          position: "insideLeft",
-                        }
-                      : undefined
-                  }
-                />
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent indicator="dashed" />}
-                />
-                {seriesNames.map((seriesName, index) => {
-                  return (
-                    <Bar
-                      key={index}
-                      dataKey={sanitizeCssVariableName(seriesName)}
-                      fill={`var(--color-${sanitizeCssVariableName(seriesName)})`}
-                      radius={4}
-                    />
-                  );
-                })}
-              </RechartsBarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
+            <RechartsBarChart data={chartData}>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="name"
+                tickLine={false}
+                tickMargin={10}
+                axisLine={false}
+              />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tickMargin={10}
+                tickFormatter={formatChartNumber}
+                label={
+                  yAxisLabel
+                    ? {
+                        value: yAxisLabel,
+                        angle: -90,
+                        position: "insideLeft",
+                        style: { textAnchor: "middle" },
+                      }
+                    : undefined
+                }
+              />
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent indicator="dashed" />}
+              />
+              {seriesNames.map((seriesName, index) => {
+                return (
+                  <Bar
+                    key={index}
+                    dataKey={sanitizeCssVariableName(seriesName)}
+                    fill={`var(--color-${sanitizeCssVariableName(seriesName)})`}
+                    radius={4}
+                  />
+                );
+              })}
+            </RechartsBarChart>
+          </ResponsiveContainer>
+        </ChartContainer>
       </CardContent>
     </Card>
   );

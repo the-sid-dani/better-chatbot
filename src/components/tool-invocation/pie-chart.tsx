@@ -95,7 +95,9 @@ export function PieChart(props: PieChartProps) {
             <JsonViewPopup data={props} />
           </div>
         </CardTitle>
-        {description && <CardDescription className="text-left">{description}</CardDescription>}
+        {description && (
+          <CardDescription className="text-left">{description}</CardDescription>
+        )}
       </CardHeader>
       <CardContent className="flex-1 pb-0 flex items-center justify-center">
         <ChartContainer
@@ -105,7 +107,7 @@ export function PieChart(props: PieChartProps) {
           <RechartsPieChart>
             <ChartTooltip
               cursor={false}
-              content={<ChartTooltipContent hideLabel />}
+              content={<ChartTooltipContent indicator="dot" />}
             />
             <Pie
               data={chartData}
