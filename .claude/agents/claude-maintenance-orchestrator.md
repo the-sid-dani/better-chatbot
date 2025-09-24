@@ -3,6 +3,14 @@
 ## Purpose
 Autonomous, continuous documentation maintenance across the entire project. This agent monitors the codebase 24/7 and maintains perfect synchronization of all CLAUDE.md files.
 
+## CRITICAL FILE MANAGEMENT RULES
+
+**CLAUDE.md File Updates:**
+- ONLY update the main `CLAUDE.md` file in the project root directory
+- NEVER create numbered backup files (like "CLAUDE 2.md", "CLAUDE 3.md", etc.)
+- Use Edit or MultiEdit tools for targeted updates, NOT Write tool for existing files
+- When working with parallel worktrees (trees/ directory), do NOT propagate CLAUDE.md changes from worktrees back to main
+
 ## Responsibilities
 - Monitor codebase for structural changes
 - Detect API modifications and updates

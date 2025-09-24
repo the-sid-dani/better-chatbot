@@ -86,32 +86,81 @@ When creating new tests:
    - Verify no regressions were introduced
    - Ensure all validation gates pass
 
-## Common Validation Commands by Language
+## Better-Chatbot Specific Validation Commands
 
-### JavaScript/TypeScript
+### Essential Validation (Run First)
+```bash
+# 1. Observability Health Check (CRITICAL)
+curl -f http://localhost:3000/api/health/langfuse || echo "⚠️ Langfuse health check failed"
+
+# 2. Core Quality Gates (matches project's pnpm check)
+pnpm lint            # Biome linting + ESLint
+pnpm check-types     # TypeScript strict mode validation
+pnpm test           # Vitest unit tests (19+ test files)
+pnpm build:local    # Next.js App Router build validation
+```
+
+### Canvas System Validation
+```bash
+# Canvas and Chart Tools (15 specialized tools)
+pnpm test --grep "canvas|chart"
+pnpm test src/lib/ai/tools/artifacts/
+pnmp test src/components/tool-invocation/
+pnpm test src/lib/ai/canvas-naming.ts
+
+# Geographic Chart Data Validation
+ls public/geo/us-*.json public/geo/world-*.json || echo "⚠️ Geographic data files missing"
+```
+
+### MCP Server Validation
+```bash
+# MCP Core System
+pnpm test src/lib/ai/mcp/
+pnpm db:check  # Database MCP configurations
+
+# MCP Server Health (requires dev server running)
+curl -s http://localhost:3000/api/mcp/list || echo "⚠️ MCP API not accessible"
+node -e "import('./src/lib/ai/mcp/mcp-manager.ts').then(m => m.initMCPManager().then(() => console.log('✅ MCP Manager OK')).catch(e => console.log('❌ MCP Manager Failed:', e.message)))"
+```
+
+### Agent System Validation
+```bash
+# Critical Agent Tool Access Patterns
+pnpm test src/app/api/chat/ --grep "agent"
+pnpm test --grep "allowedMcpServers|allowedAppDefaultToolkit"
+
+# Tool Loading Pipeline Validation
+pnpm test --grep "loadMcpTools|loadWorkFlowTools|loadAppDefaultTools"
+```
+
+### Database & Authentication
+```bash
+# Database Health
+pnpm db:check
+pnpm db:push --check || echo "⚠️ Database schema mismatch"
+
+# Authentication System (Better-Auth)
+pnpm test src/lib/auth/
+```
+
+### Full Stack Validation (Extended)
+```bash
+# Complete E2E Validation (requires PostgreSQL)
+pnpm test:e2e --project=chromium
+
+# Development Server Health
+curl -f http://localhost:3000/api/health || echo "⚠️ Server not responding"
+```
+
+## Legacy Commands (For Reference)
+
+### JavaScript/TypeScript (Generic)
 ```bash
 npm run lint          # or: npx eslint .
 npm run typecheck     # or: npx tsc --noEmit
 npm run test         # or: npx jest
 npm run test:coverage # Check coverage
 npm run build        # Verify build
-```
-
-### Python
-```bash
-ruff check .         # Linting
-mypy .              # Type checking
-pytest              # Run tests
-pytest --cov        # With coverage
-python -m build     # Build check
-```
-
-### Go
-```bash
-go fmt ./...        # Format
-go vet ./...        # Linting
-go test ./...       # Run tests
-go build .          # Build validation
 ```
 
 ## Quality Metrics to Track

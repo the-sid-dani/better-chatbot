@@ -25,3 +25,9 @@ Each agent will independently implement the engineering plan detailed in PLAN_TO
 When the subagent completes it's work, have the subagent to report their final changes made in a comprehensive `RESULTS.md` file at the root of their respective workspace.
 
 Make sure agents don't run any tests or other code - focus on the code changes only.
+
+## IMPORTANT: Documentation Management
+- Agents working in parallel worktrees (trees/) should NOT update the main CLAUDE.md file
+- Any CLAUDE.md updates should only be made to the main project directory AFTER parallel work is complete
+- Do NOT propagate CLAUDE.md changes from worktrees back to the main branch
+- This prevents creation of numbered backup files (CLAUDE 2.md, CLAUDE 3.md, etc.)
