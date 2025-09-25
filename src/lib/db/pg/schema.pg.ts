@@ -48,10 +48,22 @@ export const AgentSchema = pgTable("agent", {
     .references(() => UserSchema.id),
   instructions: json("instructions").$type<Agent["instructions"]>(),
   visibility: varchar("visibility", {
-    enum: ["public", "private", "readonly", "admin-shared"],
+    enum: [
+      "public",
+      "private",
+      "readonly",
+      "admin-shared",
+      "admin-all",
+      "admin-selective",
+    ],
   })
     .notNull()
     .default("private"),
+  status: varchar("status", {
+    enum: ["active", "inactive", "archived", "draft"],
+  })
+    .notNull()
+    .default("active"),
   createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: timestamp("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
@@ -196,7 +208,14 @@ export const WorkflowSchema = pgTable("workflow", {
   description: text("description"),
   isPublished: boolean("is_published").notNull().default(false),
   visibility: varchar("visibility", {
-    enum: ["public", "private", "readonly"],
+    enum: [
+      "public",
+      "private",
+      "readonly",
+      "admin-shared",
+      "admin-all",
+      "admin-selective",
+    ],
   })
     .notNull()
     .default("private"),
@@ -332,6 +351,37 @@ export const DocumentVersionSchema = pgTable("document_version", {
   createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
+// Agent-User Permission Junction Table for Granular Access Control
+export const AgentUserPermissionSchema = pgTable(
+  "agent_user_permission",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => AgentSchema.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => UserSchema.id, { onDelete: "cascade" }),
+    grantedBy: uuid("granted_by")
+      .notNull()
+      .references(() => UserSchema.id),
+    grantedAt: timestamp("granted_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    permissionLevel: varchar("permission_level", {
+      enum: ["use", "edit"],
+    })
+      .default("use")
+      .notNull(),
+  },
+  (table) => [
+    unique().on(table.agentId, table.userId),
+    index("idx_agent_user_permission_agent_id").on(table.agentId),
+    index("idx_agent_user_permission_user_id").on(table.userId),
+    index("idx_agent_user_permission_granted_by").on(table.grantedBy),
+  ],
+);
+
 export type McpServerEntity = typeof McpServerSchema.$inferSelect;
 export type ChatThreadEntity = typeof ChatThreadSchema.$inferSelect;
 export type ChatMessageEntity = typeof ChatMessageSchema.$inferSelect;
@@ -349,3 +399,5 @@ export type BookmarkEntity = typeof BookmarkSchema.$inferSelect;
 
 export type DocumentEntity = typeof DocumentSchema.$inferSelect;
 export type DocumentVersionEntity = typeof DocumentVersionSchema.$inferSelect;
+export type AgentUserPermissionEntity =
+  typeof AgentUserPermissionSchema.$inferSelect;

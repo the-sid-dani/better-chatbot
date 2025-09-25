@@ -30,6 +30,13 @@ export const AgentCreateSchema = z
     visibility: VisibilitySchema.optional().default("private"),
   })
   .strip();
+export const AgentStatusSchema = z.enum([
+  "active",
+  "inactive",
+  "archived",
+  "draft",
+]);
+
 export const AgentUpdateSchema = z
   .object({
     name: z.string().min(1).max(100).optional(),
@@ -43,6 +50,7 @@ export const AgentUpdateSchema = z
       .optional(),
     instructions: AgentInstructionsSchema.optional(),
     visibility: VisibilitySchema.optional(),
+    status: AgentStatusSchema.optional(),
   })
   .strip();
 
@@ -54,6 +62,8 @@ export const AgentQuerySchema = z.object({
 
 export type AgentVisibility = z.infer<typeof VisibilitySchema>;
 
+export type AgentStatus = "active" | "inactive" | "archived" | "draft";
+
 export type AgentSummary = {
   id: string;
   name: string;
@@ -61,6 +71,7 @@ export type AgentSummary = {
   icon?: AgentIcon;
   userId: string;
   visibility: AgentVisibility;
+  status: AgentStatus;
   createdAt: Date;
   updatedAt: Date;
   userName?: string;

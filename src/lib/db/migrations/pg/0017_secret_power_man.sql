@@ -1,0 +1,1 @@
+ALTER TABLE "agent" ADD COLUMN "status" varchar DEFAULT 'active' NOT NULL;
