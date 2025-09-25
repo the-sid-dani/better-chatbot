@@ -6,7 +6,7 @@ import { BackgroundPaths } from "ui/background-paths";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "ui/tabs";
 import { AdminAgentsTable } from "./admin-agents-table";
 import { AdminUsersTable } from "./admin-users-table";
-import { AgentStatus } from "src/types/agent";
+import { AgentStatus } from "@/types/agent";
 
 // Agent data interface for admin dashboard
 interface AdminAgentTableRow {
@@ -21,7 +21,7 @@ interface AdminAgentTableRow {
     | "admin-all"
     | "readonly"
     | "public";
-  status: "active" | "inactive";
+  status: AgentStatus;
   createdAt: Date;
   permissionCount: number;
   permissions: Array<{

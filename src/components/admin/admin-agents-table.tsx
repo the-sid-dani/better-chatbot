@@ -21,12 +21,11 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from "ui/dropdown-menu";
-import { Badge } from "ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "ui/avatar";
 import Link from "next/link";
 import { AgentPermissionDropdown } from "./agent-permission-dropdown";
 import { AgentStatusDropdown } from "./agent-status-dropdown";
-import { AgentStatus } from "src/types/agent";
+import { AgentStatus } from "@/types/agent";
 
 // Agent data interface for table
 interface AdminAgentTableRow {

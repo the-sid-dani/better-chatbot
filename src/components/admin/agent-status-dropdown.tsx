@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
 } from "ui/dropdown-menu";
 import { ChevronDown, Circle, Pause, Archive, FileEdit } from "lucide-react";
-import { AgentStatus } from "src/types/agent";
+import { AgentStatus } from "@/types/agent";
 
 interface AgentStatusDropdownProps {
   agentId: string;

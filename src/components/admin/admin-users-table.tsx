@@ -42,7 +42,7 @@ interface AdminUserTableRow {
 interface Column {
   key: keyof AdminUserTableRow | "actions" | "roleManagement";
   label: string;
-  type?: "string" | "date" | "custom";
+  type?: "string" | "number" | "date" | "custom";
   sortable?: boolean;
 }
 
@@ -314,11 +314,7 @@ export function AdminUsersTable({ users, onRoleUpdate }: AdminUsersTableProps) {
                       : index === visibleColumnsArray.length - 1
                         ? "pr-6"
                         : ""
-                  } ${
-                    column.type === "number" || column.type === "date"
-                      ? "text-center"
-                      : ""
-                  }`}
+                  } ${column.type === "date" ? "text-center" : ""}`}
                 >
                   {column.sortable ? (
                     <div
@@ -366,11 +362,7 @@ export function AdminUsersTable({ users, onRoleUpdate }: AdminUsersTableProps) {
                           : index === visibleColumnsArray.length - 1
                             ? "pr-6"
                             : ""
-                      } ${
-                        column.type === "number" || column.type === "date"
-                          ? "text-center"
-                          : ""
-                      }`}
+                      } ${column.type === "date" ? "text-center" : ""}`}
                     >
                       {column.key === "name" ? (
                         <div className="flex items-center gap-3">
