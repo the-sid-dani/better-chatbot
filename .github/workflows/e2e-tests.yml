@@ -83,7 +83,7 @@ jobs:
           touch .env
 
       - name: Run database migrations
-        run: pnpm db:push
+        run: pnpm db:reset
 
       - name: Build application
         run: pnpm build:local
