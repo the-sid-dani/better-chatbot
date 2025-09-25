@@ -15,11 +15,25 @@ export const fetcher = async (url: string, options?: RequestInit) => {
 
   if (!res.ok) {
     let errorPayload;
-    try {
-      errorPayload = await res.json();
-    } catch {
-      errorPayload = { message: `Request failed with status ${res.status}` };
+
+    // Check content type to handle HTML responses (auth redirects)
+    const contentType = res.headers.get("content-type");
+
+    if (contentType?.includes("text/html")) {
+      // Handle HTML responses from authentication redirects
+      errorPayload = {
+        message: `Authentication required - redirected to login page (status ${res.status})`,
+        isAuthRedirect: true,
+      };
+    } else {
+      // Try to parse JSON error response
+      try {
+        errorPayload = await res.json();
+      } catch {
+        errorPayload = { message: `Request failed with status ${res.status}` };
+      }
     }
+
     const error = new Error(
       errorPayload.message || "An error occurred while fetching the data.",
     );
@@ -27,7 +41,23 @@ export const fetcher = async (url: string, options?: RequestInit) => {
     throw error;
   }
 
-  return res.json();
+  // Check content type before attempting JSON parsing
+  const contentType = res.headers.get("content-type");
+
+  if (contentType?.includes("application/json")) {
+    return res.json();
+  } else if (contentType?.includes("text/html")) {
+    throw new Error(
+      "Received HTML response instead of JSON - possible authentication redirect",
+    );
+  } else {
+    // For other content types, attempt JSON parsing but with better error handling
+    try {
+      return res.json();
+    } catch {
+      throw new Error(`Unexpected response format: ${contentType}`);
+    }
+  }
 };
 
 export const createIncrement =
@@ -45,13 +75,13 @@ export const randomRange = (min: number, max: number) =>
 
 export const formatChartNumber = (value: number): string => {
   if (value >= 1000000000) {
-    return (value / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
+    return (value / 1000000000).toFixed(1).replace(/\.0$/, "") + "B";
   }
   if (value >= 1000000) {
-    return (value / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+    return (value / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
   }
   if (value >= 1000) {
-    return (value / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+    return (value / 1000).toFixed(1).replace(/\.0$/, "") + "K";
   }
   return value.toString();
 };

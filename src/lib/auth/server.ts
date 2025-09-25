@@ -13,6 +13,7 @@ import {
 } from "lib/db/pg/schema.pg";
 import { eq } from "drizzle-orm";
 import { getAuthConfig } from "./config";
+import { BASE_URL } from "@/lib/const";
 
 import logger from "logger";
 import { redirect } from "next/navigation";
@@ -39,7 +40,7 @@ const getTrustedOrigins = () => {
 
 export const auth = betterAuth({
   plugins: [nextCookies()],
-  baseURL: process.env.NEXT_PUBLIC_BASE_URL,
+  baseURL: BASE_URL,
   trustedOrigins: getTrustedOrigins(),
   database: drizzleAdapter(pgDb, {
     provider: "pg",
