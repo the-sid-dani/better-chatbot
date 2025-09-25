@@ -1,10 +1,10 @@
 import { agentRepository } from "lib/db/repository";
-import { getSession } from "auth/server";
+import { getEnhancedSession } from "@/lib/auth/server";
 import { notFound } from "next/navigation";
 import { AgentsList } from "@/components/agent/agents-list";
 
 export default async function AgentsPage() {
-  const session = await getSession();
+  const session = await getEnhancedSession();
 
   if (!session?.user.id) {
     notFound();

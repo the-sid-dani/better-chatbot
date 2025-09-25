@@ -21,10 +21,11 @@ import { ComposedChart } from "./tool-invocation/composed-chart";
 import { GeographicChart } from "./tool-invocation/geographic-chart";
 import { GaugeChart } from "./tool-invocation/gauge-chart";
 import { CalendarHeatmap } from "./tool-invocation/calendar-heatmap";
+import { InteractiveTable } from "./tool-invocation/interactive-table";
 
 interface CanvasArtifact {
   id: string;
-  type: "chart" | "dashboard" | "code" | "text" | "image" | "data";
+  type: "chart" | "table" | "dashboard" | "code" | "text" | "image" | "data";
   title: string;
   canvasName?: string;
   data?: any;
@@ -222,6 +223,41 @@ function CanvasEmptyState() {
   );
 }
 
+// Table renderer component
+function TableRenderer({ artifact }: { artifact: CanvasArtifact }) {
+  if (artifact.status === "loading") {
+    return <LoadingPlaceholder artifact={artifact} />;
+  }
+
+  if (!artifact.data) {
+    return (
+      <div className="h-full flex items-center justify-center p-4">
+        <div className="text-center text-muted-foreground">
+          <p className="text-sm">No table data available</p>
+        </div>
+      </div>
+    );
+  }
+
+  const tableProps = {
+    title: artifact.title,
+    ...artifact.data,
+  };
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="p-4 border-b border-border/20">
+        <h3 className="font-semibold text-sm truncate">{artifact.title}</h3>
+      </div>
+      <div className="flex-1 p-4 overflow-hidden">
+        <div className="h-full max-h-[350px]">
+          <InteractiveTable {...tableProps} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Error Boundary for Canvas Panel
 class CanvasPanelErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -390,6 +426,8 @@ export function CanvasPanel({
                       <LoadingPlaceholder artifact={artifact} />
                     ) : artifact.type === "chart" ? (
                       <ChartRenderer artifact={artifact} />
+                    ) : artifact.type === "table" ? (
+                      <TableRenderer artifact={artifact} />
                     ) : null}
                   </div>
                 ))}
@@ -470,21 +508,14 @@ export function useCanvas() {
     [isVisible, artifacts.length, activeArtifactId, userManuallyClosed],
   );
 
-  // Track memory usage for debugging
+  // Lightweight memory tracking for debugging (simplified to prevent freezing)
   const memoryTracker = useCallback(() => {
-    if (
-      typeof window !== "undefined" &&
-      window.performance &&
-      (window.performance as any).memory
-    ) {
-      const memory = (window.performance as any).memory;
-      console.log(`${debugPrefix} Memory Usage:`, {
-        used: Math.round(memory.usedJSHeapSize / 1024 / 1024) + "MB",
-        total: Math.round(memory.totalJSHeapSize / 1024 / 1024) + "MB",
-        limit: Math.round(memory.jsHeapSizeLimit / 1024 / 1024) + "MB",
-      });
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        `${debugPrefix} Charts: ${artifacts.length}/25 (simplified tracking)`,
+      );
     }
-  }, []);
+  }, [artifacts.length, debugPrefix]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -531,11 +562,27 @@ export function useCanvas() {
         return;
       }
 
+      // Simple chart count check to prevent excessive memory usage
+      if (artifacts.length >= 25) {
+        console.warn(
+          `${debugPrefix} Chart limit reached: Maximum 25 charts allowed`,
+        );
+        return;
+      }
+
+      if (artifacts.length >= 20) {
+        console.warn(
+          `${debugPrefix} Chart warning: Approaching limit (${artifacts.length}/25)`,
+        );
+      }
+
       debugLog("Adding artifact", {
         artifactId: artifact.id,
         title: artifact.title,
         type: artifact.type,
       });
+
+      // Track memory usage
       memoryTracker();
 
       setArtifacts((prev) => {
@@ -551,6 +598,14 @@ export function useCanvas() {
             artifactId: artifact.id,
             newTotal: prev.length + 1,
           });
+
+          // Simple memory tracking without complex hooks
+          if (process.env.NODE_ENV === "development") {
+            console.log(
+              `${debugPrefix} Chart added - total: ${prev.length + 1}`,
+            );
+          }
+
           // Add new artifact
           return [...prev, artifact];
         }
@@ -634,6 +689,13 @@ export function useCanvas() {
             artifactId: id,
           });
           return prev;
+        }
+
+        // Simple memory tracking for chart removal
+        if (process.env.NODE_ENV === "development") {
+          console.log(
+            `${debugPrefix} Chart removed - total: ${prev.length - 1}`,
+          );
         }
 
         const filtered = prev.filter((a) => a.id !== id);

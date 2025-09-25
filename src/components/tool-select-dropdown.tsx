@@ -848,9 +848,6 @@ function AppDefaultToolKitSelector() {
       const id = toolkit;
       let icon = Wrench;
       switch (toolkit) {
-        case AppDefaultToolkit.Visualization:
-          icon = ChartColumn;
-          break;
         case AppDefaultToolkit.WebSearch:
           icon = GlobeIcon;
           break;
@@ -859,6 +856,9 @@ function AppDefaultToolKitSelector() {
           break;
         case AppDefaultToolkit.Code:
           icon = CodeIcon;
+          break;
+        case AppDefaultToolkit.Artifacts:
+          icon = ChartColumn;
           break;
       }
       return {

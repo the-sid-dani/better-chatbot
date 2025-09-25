@@ -1,7 +1,8 @@
 import { tool as createTool } from "ai";
 import { z } from "zod";
-import { generateUUID } from "lib/utils";
-import logger from "logger";
+import { generateUUID } from "../../../utils";
+import logger from "../../../logger";
+import { CHART_VALIDATORS } from "../../../validation/chart-data-validator";
 
 /**
  * Calendar Heatmap Tool - Creates Canvas Artifacts
@@ -35,9 +36,7 @@ export const calendarHeatmapArtifactTool = createTool({
           date: z
             .string()
             .describe("Date in YYYY-MM-DD format (e.g., '2024-01-15')"),
-          value: z
-            .number()
-            .describe("Numeric value for this date"),
+          value: z.number().describe("Numeric value for this date"),
         }),
       )
       .describe("Calendar heatmap data with dates and values"),
@@ -59,7 +58,14 @@ export const calendarHeatmapArtifactTool = createTool({
       .describe("Brief description of what the chart shows"),
   }),
 
-  execute: async ({ title, data, startDate, endDate, colorScale = "github", description }) => {
+  execute: async ({
+    title,
+    data,
+    startDate,
+    endDate,
+    colorScale = "github",
+    description,
+  }) => {
     try {
       logger.info(`Creating calendar heatmap artifact: ${title}`);
 
@@ -86,20 +92,25 @@ export const calendarHeatmapArtifactTool = createTool({
 
         // Validate that date is actually valid
         const dateObj = new Date(entry.date);
-        if (isNaN(dateObj.getTime()) || dateObj.toISOString().slice(0, 10) !== entry.date) {
-          throw new Error(
-            `Invalid date "${entry.date}" - date does not exist`,
-          );
+        if (
+          isNaN(dateObj.getTime()) ||
+          dateObj.toISOString().slice(0, 10) !== entry.date
+        ) {
+          throw new Error(`Invalid date "${entry.date}" - date does not exist`);
         }
       }
 
       // Validate start and end dates if provided
       if (startDate && !dateRegex.test(startDate)) {
-        throw new Error(`Invalid startDate format "${startDate}" - must be YYYY-MM-DD format`);
+        throw new Error(
+          `Invalid startDate format "${startDate}" - must be YYYY-MM-DD format`,
+        );
       }
 
       if (endDate && !dateRegex.test(endDate)) {
-        throw new Error(`Invalid endDate format "${endDate}" - must be YYYY-MM-DD format`);
+        throw new Error(
+          `Invalid endDate format "${endDate}" - must be YYYY-MM-DD format`,
+        );
       }
 
       if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
@@ -107,23 +118,36 @@ export const calendarHeatmapArtifactTool = createTool({
       }
 
       // Calculate date range for metadata
-      const dates = data.map(d => new Date(d.date));
-      const actualStartDate = startDate || new Date(Math.min(...dates.map(d => d.getTime()))).toISOString().slice(0, 10);
-      const actualEndDate = endDate || new Date(Math.max(...dates.map(d => d.getTime()))).toISOString().slice(0, 10);
+      const dates = data.map((d) => new Date(d.date));
+      const actualStartDate =
+        startDate ||
+        new Date(Math.min(...dates.map((d) => d.getTime())))
+          .toISOString()
+          .slice(0, 10);
+      const actualEndDate =
+        endDate ||
+        new Date(Math.max(...dates.map((d) => d.getTime())))
+          .toISOString()
+          .slice(0, 10);
 
       // Get data range for color scaling
-      const values = data.map(d => d.value);
+      const values = data.map((d) => d.value);
       const minValue = Math.min(...values);
       const maxValue = Math.max(...values);
 
       // Calculate total days covered
-      const daysCovered = Math.ceil(
-        (new Date(actualEndDate).getTime() - new Date(actualStartDate).getTime()) / (1000 * 60 * 60 * 24)
-      ) + 1;
+      const daysCovered =
+        Math.ceil(
+          (new Date(actualEndDate).getTime() -
+            new Date(actualStartDate).getTime()) /
+            (1000 * 60 * 60 * 24),
+        ) + 1;
 
       // Check for large datasets that might need pagination
       if (daysCovered > 365) {
-        logger.warn(`Calendar heatmap covers ${daysCovered} days (>365) - consider date range limits for performance`);
+        logger.warn(
+          `Calendar heatmap covers ${daysCovered} days (>365) - consider date range limits for performance`,
+        );
       }
 
       // Create the chart artifact content that matches CalendarHeatmap component props
@@ -184,7 +208,9 @@ export const calendarHeatmapArtifactTool = createTool({
 
       // Note: Canvas artifact creation happens in ChatBot component via tool result detection
 
-      logger.info(`Calendar heatmap artifact created successfully: ${artifactId}`);
+      logger.info(
+        `Calendar heatmap artifact created successfully: ${artifactId}`,
+      );
       return result;
     } catch (error) {
       logger.error("Failed to create calendar heatmap artifact:", error);

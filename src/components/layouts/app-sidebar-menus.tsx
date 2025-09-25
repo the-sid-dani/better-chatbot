@@ -34,6 +34,7 @@ export function AppSidebarMenus() {
   const t = useTranslations("");
   const { setOpenMobile } = useSidebar();
   const [expandedArchive, setExpandedArchive] = useState(false);
+  const [_expandedAdmin, _setExpandedAdmin] = useState(false);
   const [addArchiveDialogOpen, setAddArchiveDialogOpen] = useState(false);
 
   const { data: archives, isLoading: isLoadingArchives } = useArchives();

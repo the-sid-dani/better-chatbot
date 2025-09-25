@@ -40,7 +40,7 @@ interface AdminAgentTableRow {
   name: string;
   description?: string;
   icon?: string;
-  visibility: "private" | "admin-shared" | "admin-selective" | "admin-all";
+  visibility: "private" | "admin-all" | "admin-selective" | "admin-all";
   status: "active" | "inactive";
   createdAt: Date;
   permissionCount: number;
@@ -66,7 +66,7 @@ export function AgentPermissionDropdown({
 
   // Local state for optimistic updates
   const [localVisibility, setLocalVisibility] = useState<
-    "private" | "admin-shared" | "admin-selective" | "admin-all"
+    "private" | "admin-all" | "admin-selective" | "admin-all"
   >(agent.visibility);
   const [localSelectedUserIds, setLocalSelectedUserIds] = useState<string[]>(
     agent.permissions.map((p) => p.userId),
@@ -110,7 +110,7 @@ export function AgentPermissionDropdown({
   }, [users, searchQuery]);
 
   const handleVisibilityChange = async (
-    newVisibility: "private" | "admin-shared" | "admin-selective" | "admin-all",
+    newVisibility: "private" | "admin-all" | "admin-selective" | "admin-all",
   ) => {
     if (disabled || isUpdating) return;
 
@@ -213,7 +213,7 @@ export function AgentPermissionDropdown({
         return count === 0
           ? "No Users"
           : `${count} User${count === 1 ? "" : "s"}`;
-      case "admin-shared":
+      case "admin-all":
         return "All Users"; // Legacy support
       default:
         return "Unknown";
@@ -250,7 +250,7 @@ export function AgentPermissionDropdown({
               handleVisibilityChange(
                 value as
                   | "private"
-                  | "admin-shared"
+                  | "admin-all"
                   | "admin-selective"
                   | "admin-all",
               )

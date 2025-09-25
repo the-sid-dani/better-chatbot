@@ -1,7 +1,7 @@
 import { tool as createTool } from "ai";
 import { z } from "zod";
-import { generateUUID } from "lib/utils";
-import logger from "logger";
+import { generateUUID } from "../../../utils";
+import logger from "../../../logger";
 
 /**
  * Geographic Chart Tool - Creates Canvas Artifacts

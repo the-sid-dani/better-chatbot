@@ -77,6 +77,19 @@ export function GaugeChart(props: GaugeChartProps) {
     // For gauge charts, we mainly need to ensure value is properly clamped
     const clampedValue = Math.max(minValue, Math.min(maxValue, value));
 
+    // Validate range to prevent subArc validation errors
+    if (minValue >= maxValue) {
+      console.warn(
+        "GaugeChart: minValue must be less than maxValue. Adjusting to safe defaults.",
+      );
+      return {
+        ...props,
+        value: Math.max(0, Math.min(100, clampedValue)),
+        minValue: 0,
+        maxValue: 100,
+      };
+    }
+
     return {
       ...props,
       value: clampedValue,
@@ -87,10 +100,20 @@ export function GaugeChart(props: GaugeChartProps) {
 
   // Calculate percentage for display
   const percentage = React.useMemo(() => {
-    return Math.round(
-      ((deduplicatedProps.value - minValue) / (maxValue - minValue)) * 100,
-    );
-  }, [deduplicatedProps.value, minValue, maxValue]);
+    const {
+      value: normalizedValue,
+      minValue: normalizedMin,
+      maxValue: normalizedMax,
+    } = deduplicatedProps;
+    const range = normalizedMax - normalizedMin;
+
+    // Prevent division by zero and ensure valid range
+    if (range <= 0) {
+      return 0;
+    }
+
+    return Math.round(((normalizedValue - normalizedMin) / range) * 100);
+  }, [deduplicatedProps]);
 
   // Generate gauge type based on the gaugeType prop
   const resolvedGaugeType = React.useMemo(() => {
@@ -159,6 +182,8 @@ export function GaugeChart(props: GaugeChartProps) {
                   padding: 0.02,
                   gradient: true,
                   colorArray: [resolvedColors[0], resolvedColors[2]], // Blue gradient
+                  // Ensure subArcs are not automatically generated
+                  subArcs: [],
                 }}
                 pointer={{
                   elastic: true,
@@ -180,7 +205,7 @@ export function GaugeChart(props: GaugeChartProps) {
                     },
                   },
                 }}
-                value={percentage / 100}
+                value={Math.max(0, Math.min(1, percentage / 100))} // Ensure value is within 0-1 range
                 minValue={0}
                 maxValue={1}
                 formatTextValue={(value: number) =>

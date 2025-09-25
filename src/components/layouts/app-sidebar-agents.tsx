@@ -41,8 +41,8 @@ export function AppSidebarAgents() {
   }); // Increase limit since we're not artificially limiting display
 
   const agents = useMemo(() => {
-    return [...myAgents, ...bookmarkedAgents];
-  }, [bookmarkedAgents, myAgents]);
+    return [...myAgents, ...bookmarkedAgents, ...sharedAgents];
+  }, [bookmarkedAgents, myAgents, sharedAgents]);
 
   const handleAgentClick = useCallback(
     (id: string) => {

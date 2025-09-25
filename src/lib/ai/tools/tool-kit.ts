@@ -1,7 +1,4 @@
-import { createPieChartTool } from "./visualization/create-pie-chart";
-import { createBarChartTool } from "./visualization/create-bar-chart";
-import { createLineChartTool } from "./visualization/create-line-chart";
-import { createTableTool } from "./visualization/create-table";
+// Legacy visualization tools removed - now using artifact tools only
 import { exaSearchTool, exaContentsTool } from "./web/web-search";
 import { AppDefaultToolkit, DefaultToolName } from ".";
 import { Tool } from "ai";
@@ -21,17 +18,12 @@ import { composedChartArtifactTool } from "./artifacts/composed-chart-tool";
 import { geographicChartArtifactTool } from "./artifacts/geographic-chart-tool";
 import { gaugeChartArtifactTool } from "./artifacts/gauge-chart-tool";
 import { calendarHeatmapArtifactTool } from "./artifacts/calendar-heatmap-tool";
+import { tableArtifactTool } from "./artifacts/table-artifact-tool";
 
 export const APP_DEFAULT_TOOL_KIT: Record<
   AppDefaultToolkit,
   Record<string, Tool>
 > = {
-  [AppDefaultToolkit.Visualization]: {
-    [DefaultToolName.CreatePieChart]: createPieChartTool,
-    [DefaultToolName.CreateBarChart]: createBarChartTool,
-    [DefaultToolName.CreateLineChart]: createLineChartTool,
-    [DefaultToolName.CreateTable]: createTableTool,
-  },
   [AppDefaultToolkit.WebSearch]: {
     [DefaultToolName.WebSearch]: exaSearchTool,
     [DefaultToolName.WebContent]: exaContentsTool,
@@ -47,6 +39,8 @@ export const APP_DEFAULT_TOOL_KIT: Record<
     // Main chart tools - direct imports to avoid circular dependency
     [DefaultToolName.CreateChart]: createChartTool,
     [DefaultToolName.UpdateChart]: updateChartTool,
+    // Table tool - moved from visualization toolkit
+    [DefaultToolName.CreateTable]: tableArtifactTool,
     // Recharts-native chart tools - all 15 specialized tools restored
     [DefaultToolName.CreateAreaChart]: areaChartArtifactTool,
     [DefaultToolName.CreateScatterChart]: scatterChartArtifactTool,

@@ -49,13 +49,22 @@ function FloatingPaths({ position }: { position: number }) {
   );
 }
 
-export function BackgroundPaths() {
+interface BackgroundPathsProps {
+  className?: string;
+  pathCount?: number;
+}
+
+export function BackgroundPaths({
+  className = "relative h-full w-full flex items-center justify-center overflow-hidden",
+  pathCount = 2,
+}: BackgroundPathsProps) {
+  const pathElements = Array.from({ length: pathCount }, (_, i) => (
+    <FloatingPaths key={i} position={i % 2 === 0 ? 1 : -1} />
+  ));
+
   return (
-    <div className="relative h-full w-full flex items-center justify-center overflow-hidden">
-      <div className="absolute inset-0">
-        <FloatingPaths position={1} />
-        <FloatingPaths position={-1} />
-      </div>
+    <div className={className}>
+      <div className="absolute inset-0">{pathElements}</div>
     </div>
   );
 }

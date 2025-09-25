@@ -1,5 +1,5 @@
 import { agentRepository } from "lib/db/repository";
-import { getSession } from "auth/server";
+import { getEnhancedSession } from "@/lib/auth/server";
 import { z } from "zod";
 import { AgentUpdateSchema } from "app-types/agent";
 import { serverCache } from "lib/cache";
@@ -9,7 +9,7 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await getSession();
+  const session = await getEnhancedSession();
 
   if (!session?.user.id) {
     return new Response("Unauthorized", { status: 401 });
@@ -30,7 +30,7 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await getSession();
+  const session = await getEnhancedSession();
 
   if (!session?.user.id) {
     return new Response("Unauthorized", { status: 401 });
@@ -77,7 +77,7 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await getSession();
+  const session = await getEnhancedSession();
 
   if (!session?.user.id) {
     return new Response("Unauthorized", { status: 401 });

@@ -39,16 +39,22 @@ Transform the current single-provider (OpenAI beta) voice implementation into a 
   gemini_workspace_integration(workspaceTools)
   ```
 
-#### Canvas Integration Tools
-- **Chart Creation**: 15 specialized chart tools adapted for voice input
-- **Artifact Management**: Voice-triggered artifact creation and Canvas operations
-- **Tool Functions**:
+#### Canvas Integration Tools (CRITICAL MISSING FEATURE)
+**Current Gap**: `chat-bot-voice.tsx` lacks Canvas integration that exists in `chat-bot.tsx`
+
+**Required Canvas Integration**:
+- **Import Canvas System**: Add `useCanvas` hook and `CanvasPanel` component to voice chat
+- **Layout Transformation**: Replace full-screen Drawer with ResizablePanelGroup split view
+- **Chart Tool Detection**: Monitor for 17 chart tool types (create_chart, create_area_chart, etc.)
+- **Canvas Artifact Creation**: Transform voice tool results into Canvas artifacts
+- **Auto-Canvas Opening**: Voice-triggered Canvas display when chart tools execute
+
+**Tool Functions Needed**:
   ```typescript
-  create_voice_bar_chart(data, title, voiceMetadata)
-  create_voice_line_chart(data, title, voiceMetadata)
-  create_voice_geographic_chart(geoData, geoType, voiceMetadata)
-  open_canvas_workspace()
-  add_voice_artifact(artifactData)
+  // Voice chat needs same Canvas integration as regular chat
+  create_voice_chart(chartType, data, title, voiceContext) // Voice-optimized chart creation
+  auto_open_canvas_on_chart_tools() // Automatic Canvas opening for voice
+  voice_canvas_artifact_creation(toolResult) // Convert voice tool results to Canvas artifacts
   ```
 
 ### Enhanced Web Tools
@@ -89,49 +95,81 @@ DEFAULT_VOICE_PROVIDER=openai
 - **Vercel AI SDK**: Foundation for streaming and tool execution
 - **Web Search Tools**: `src/lib/ai/tools/web/web-search.ts` enhancement
 
-### Database Schema
+### Database Schema (Admin Auth Compatible)
 ```sql
--- Voice session management
+-- Voice session management (respects existing admin auth system)
 ALTER TABLE chat_messages ADD COLUMN voice_provider VARCHAR(50);
 ALTER TABLE chat_messages ADD COLUMN voice_metadata JSONB;
 
--- Voice preferences
+-- Voice preferences (integrates with existing user role system)
 ALTER TABLE users ADD COLUMN preferred_voice_provider VARCHAR(50) DEFAULT 'openai';
 ALTER TABLE users ADD COLUMN voice_settings JSONB;
+
+-- EXISTING ADMIN AUTH SYSTEM (must be preserved):
+-- UserSchema.role: enum ["admin", "user"] - controls admin access
+-- AgentSchema.visibility: enum ["public", "private", "readonly", "admin-shared", "admin-all", "admin-selective"]
+-- AgentUserPermissionSchema: granular agent access control for admin-selective agents
 ```
 
-### System Architecture
+### System Architecture (Agent Role Integration)
 - **Provider Interface**: Abstract `VoiceProvider` class for multi-provider support
+- **Agent System Integration**: Voice chat respects admin agent provisioning and role-based access
 - **Session Management**: Enhanced conversation state with smart context handling
 - **Canvas Integration**: Voice-aware artifact creation and workspace management
-- **Tool Pipeline**: MCP + Canvas + Web tools unified under voice interface
+- **Tool Pipeline**: MCP + Canvas + Web tools unified under voice interface (preserves agent tool restrictions)
+
+**CRITICAL**: Voice chat must integrate with existing agent system:
+- **Agent Selection**: Voice chat already supports `agentId` in `appStore.voiceChat.agentId`
+- **Agent Instructions**: `buildSpeechSystemPrompt()` already integrates agent instructions and roles
+- **Tool Restrictions**: Voice chat respects agent's `allowedMcpServers` and `allowedAppDefaultToolkit`
+- **Admin Agents**: Voice chat can use admin-shared/admin-all/admin-selective agents based on user permissions
+- **Role-Based Access**: Voice system must respect user roles (admin/user) for agent access
 
 ## EXAMPLES:
 
-### Voice-to-Chart Creation Flow
+### Voice-to-Chart Creation Flow (Requires Canvas Integration)
 ```typescript
 // User says: "Create a bar chart showing sales data for Q1"
-// System processes:
+// CURRENT STATE: Voice chat shows tool result in dialog, no Canvas
+// REQUIRED STATE: Voice chat opens Canvas side-by-side like regular chat
+
+// Implementation needed in chat-bot-voice.tsx:
 1. Voice → Transcription (streaming display: "Create a bar chart...")
 2. Intent Recognition → Chart creation tool selected
-3. Data Extraction → Sales data identified/requested
-4. Canvas Integration → Auto-open Canvas workspace
-5. Artifact Creation → Bar chart artifact created with voice metadata
+3. Tool Execution → Chart tool runs with voice metadata
+4. Canvas Integration → Auto-open Canvas workspace (MISSING - needs ResizablePanelGroup)
+5. Artifact Creation → Bar chart artifact created (MISSING - needs useCanvas hook)
 6. Voice Response → "I've created your Q1 sales bar chart in the Canvas"
+7. Layout → Side-by-side voice chat + Canvas panel (MISSING - currently full-screen Drawer)
 ```
 
-### Multi-Provider Selection Example
+### Multi-Provider Selection with Agent Role Integration
 ```typescript
-// Smart provider selection based on requirements
+// Voice provider selection respects agent configuration and user permissions
 const requirements = {
   realTimeStreaming: true,
   toolCalling: true,
   canvasIntegration: true,
-  language: 'en'
+  language: 'en',
+  agentId: 'selected-agent-id', // Admin-provisioned agent
+  userId: 'current-user-id',
+  userRole: 'user' // or 'admin'
 };
 
-// System selects: OpenAI (best tool calling) or Google (best multimodal)
+// System must:
+// 1. Verify user can access the selected agent (admin-shared/admin-all/admin-selective)
+// 2. Load agent's specific tools and restrictions
+// 3. Select provider based on agent's capabilities + requirements
 const provider = await voiceManager.selectBestProvider(requirements);
+
+// Agent integration in voice session:
+const voiceSession = await provider.connect({
+  agentId: requirements.agentId,
+  allowedMcpServers: agent.allowedMcpServers, // Agent-specific tool restrictions
+  allowedAppDefaultToolkit: agent.allowedAppDefaultToolkit,
+  systemPrompt: buildSpeechSystemPrompt(user, userPreferences, agent), // Agent instructions
+  voice: userPreferences.voice || 'alloy'
+});
 ```
 
 ### Voice Web Search Integration
@@ -179,10 +217,23 @@ const provider = await voiceManager.selectBestProvider(requirements);
 3. **xAI Last**: API not yet available, prepare architecture only
 
 #### Canvas Integration Gotchas
-- **Auto-Opening Logic**: Respect user's manual Canvas close preference
+- **CRITICAL**: Voice chat UI (`chat-bot-voice.tsx`) completely lacks Canvas integration
+- **Layout Architecture**: Must transform from full-screen Drawer to ResizablePanelGroup split view
+- **Missing Hook Integration**: Needs `useCanvas` hook with same chart tool detection as `chat-bot.tsx:630-787`
+- **Tool Processing**: Must implement same 17 chart tool detection and artifact creation logic
+- **Auto-Opening Logic**: Respect user's manual Canvas close preference (copy from regular chat)
 - **Artifact Race Conditions**: Use existing debounced processing (150ms)
 - **Chart Responsiveness**: Ensure `height="100%"` for all voice-generated charts
 - **Memory Management**: Leverage existing Canvas cleanup patterns
+
+#### Admin Auth & Agent Role Integration Gotchas
+- **EXISTING INTEGRATION**: Voice system already integrates with agent system via `agentId` parameter
+- **Agent Tool Restrictions**: Voice chat respects agent's `allowedMcpServers` and `allowedAppDefaultToolkit` (src/lib/ai/speech/open-ai/use-voice-chat.openai.ts:162-164)
+- **System Prompt Integration**: `buildSpeechSystemPrompt()` already incorporates agent instructions and roles (src/lib/ai/prompts.ts:149-236)
+- **Admin Agent Access**: Voice system must support admin-shared/admin-all/admin-selective agent visibility levels
+- **Permission Validation**: Voice sessions must validate user access to selected agents via existing `rememberAgentAction()`
+- **Role-Based Tools**: Admin agents may have enhanced tool access that voice system must preserve
+- **Agent Context Preservation**: Voice conversations must maintain agent personality, tools, and instructions throughout session
 
 #### Performance Considerations
 - **Context Window Management**: Use 80% threshold for summarization
@@ -212,5 +263,12 @@ const provider = await voiceManager.selectBestProvider(requirements);
 - **Google Live API**: May require additional authentication flows
 - **Canvas Mobile**: Voice + Canvas experience may need mobile optimization
 - **Browser Compatibility**: WebRTC requirements for voice functionality
+
+#### Admin Auth & Agent System Compatibility
+- **GOOD**: Voice system already respects agent role system and tool restrictions
+- **GOOD**: `buildSpeechSystemPrompt()` integrates agent instructions into voice personality
+- **GOOD**: Tool loading pipeline preserves agent's MCP and app tool permissions
+- **ENHANCEMENT NEEDED**: Canvas integration must respect agent's canvas/visualization tool access
+- **TESTING REQUIRED**: Verify admin-shared agents work correctly in voice mode with proper tool access
 
 This comprehensive plan builds upon your existing sophisticated Canvas system and MCP infrastructure while adding powerful multi-provider voice capabilities that seamlessly integrate with your current architecture.

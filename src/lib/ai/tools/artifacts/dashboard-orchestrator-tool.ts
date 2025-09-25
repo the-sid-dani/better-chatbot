@@ -1,56 +1,76 @@
 import { tool as createTool } from "ai";
 import { z } from "zod";
-import { generateUUID } from "lib/utils";
-import logger from "logger";
+import { generateUUID } from "../../../utils";
+import logger from "../../../logger";
+import { validateBasicChartData } from "../../../validation/chart-data-validator";
 
 // Dashboard orchestration schema - describes the dashboard plan
 const dashboardPlanSchema = z.object({
   title: z.string().describe("Dashboard title"),
   description: z.string().optional().describe("Dashboard description"),
-  charts: z.array(
-    z.object({
-      id: z.string().optional(),
-      type: z.enum(["bar", "line", "pie"]).describe("Chart type to create"),
-      title: z.string().describe("Chart title"),
-      data: z.array(
-        z.object({
-          xAxisLabel: z.string(),
-          series: z.array(
+  charts: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        type: z.enum(["bar", "line", "pie"]).describe("Chart type to create"),
+        title: z.string().describe("Chart title"),
+        data: z
+          .array(
             z.object({
-              seriesName: z.string(),
-              value: z.number()
-            })
+              xAxisLabel: z.string(),
+              series: z.array(
+                z.object({
+                  seriesName: z.string(),
+                  value: z.number(),
+                }),
+              ),
+            }),
           )
-        })
-      ).describe("Chart data"),
-      description: z.string().optional().describe("Chart description"),
-      xAxisLabel: z.string().optional().describe("X-axis label"),
-      yAxisLabel: z.string().optional().describe("Y-axis label"),
-      size: z.enum(["small", "medium", "large", "full"]).default("medium").describe("Chart size")
-    })
-  ).describe("Charts to include in dashboard"),
-  metrics: z.array(
-    z.object({
-      id: z.string().optional(),
-      title: z.string(),
-      value: z.union([z.string(), z.number()]),
-      subtitle: z.string().optional(),
-      trend: z.object({
-        value: z.string(),
-        isPositive: z.boolean().optional(),
-        isNeutral: z.boolean().optional()
-      }).optional(),
-      badge: z.object({
-        text: z.string(),
-        variant: z.enum(["default", "secondary", "destructive", "outline"]).optional()
-      }).optional()
-    })
-  ).optional().describe("Key metrics to display"),
+          .describe("Chart data"),
+        description: z.string().optional().describe("Chart description"),
+        xAxisLabel: z.string().optional().describe("X-axis label"),
+        yAxisLabel: z.string().optional().describe("Y-axis label"),
+        size: z
+          .enum(["small", "medium", "large", "full"])
+          .default("medium")
+          .describe("Chart size"),
+      }),
+    )
+    .describe("Charts to include in dashboard"),
+  metrics: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        title: z.string(),
+        value: z.union([z.string(), z.number()]),
+        subtitle: z.string().optional(),
+        trend: z
+          .object({
+            value: z.string(),
+            isPositive: z.boolean().optional(),
+            isNeutral: z.boolean().optional(),
+          })
+          .optional(),
+        badge: z
+          .object({
+            text: z.string(),
+            variant: z
+              .enum(["default", "secondary", "destructive", "outline"])
+              .optional(),
+          })
+          .optional(),
+      }),
+    )
+    .optional()
+    .describe("Key metrics to display"),
   analysis: z.string().optional().describe("Written analysis of the data"),
-  layout: z.object({
-    metricsLayout: z.enum(["1/1", "2/2", "2/3", "3/3", "4/4"]).default("2/2"),
-    chartsLayout: z.enum(["grid", "stacked", "mixed"]).default("grid")
-  }).optional().describe("Layout configuration")
+  layout: z
+    .object({
+      metricsLayout: z.enum(["1/1", "2/2", "2/3", "3/3", "4/4"]).default("2/2"),
+      chartsLayout: z.enum(["grid", "stacked", "mixed"]).default("grid"),
+    })
+    .optional()
+    .describe("Layout configuration"),
 });
 
 // Progressive dashboard orchestrator tool
@@ -90,7 +110,7 @@ export const dashboardOrchestratorTool = createTool({
         charts,
         metrics = [],
         analysis,
-        layout = { metricsLayout: "2/2", chartsLayout: "grid" }
+        layout = { metricsLayout: "2/2", chartsLayout: "grid" },
       } = dashboardPlan;
 
       logger.info(`Starting dashboard orchestration: ${title}`);
@@ -104,40 +124,50 @@ export const dashboardOrchestratorTool = createTool({
       const dashboardId = generateUUID();
 
       // Stage 1: Planning - Create the dashboard structure with metrics first
-      logger.info("Dashboard orchestration - Stage 1: Planning dashboard structure");
+      logger.info(
+        "Dashboard orchestration - Stage 1: Planning dashboard structure",
+      );
 
       // Add IDs to metrics if not provided
-      const metricsWithIds = metrics.map(metric => ({
+      const metricsWithIds = metrics.map((metric) => ({
         ...metric,
-        id: metric.id || generateUUID()
+        id: metric.id || generateUUID(),
       }));
 
       // Stage 2: Progressive Chart Creation
-      logger.info("Dashboard orchestration - Stage 2: Creating charts progressively");
+      logger.info(
+        "Dashboard orchestration - Stage 2: Creating charts progressively",
+      );
 
       const createdCharts: typeof charts = [];
       const totalCharts = charts.length;
 
       for (let i = 0; i < charts.length; i++) {
         const chart = charts[i];
-        logger.info(`Creating chart ${i + 1}/${totalCharts}: ${chart.title} (${chart.type})`);
+        logger.info(
+          `Creating chart ${i + 1}/${totalCharts}: ${chart.title} (${chart.type})`,
+        );
 
         // Simulate chart creation (in real implementation, this would call individual chart tools)
         // For now, we'll prepare the chart data with proper IDs
         const chartWithId = {
           ...chart,
-          id: chart.id || generateUUID()
+          id: chart.id || generateUUID(),
         };
 
         createdCharts.push(chartWithId);
 
         // Progress feedback
         const progress = Math.round(((i + 1) / totalCharts) * 100);
-        logger.info(`Chart creation progress: ${progress}% (${i + 1}/${totalCharts} complete)`);
+        logger.info(
+          `Chart creation progress: ${progress}% (${i + 1}/${totalCharts} complete)`,
+        );
       }
 
       // Stage 3: Layout Building
-      logger.info("Dashboard orchestration - Stage 3: Building dashboard layout");
+      logger.info(
+        "Dashboard orchestration - Stage 3: Building dashboard layout",
+      );
 
       // Create the dashboard artifact content
       const dashboardContent = {
@@ -150,20 +180,25 @@ export const dashboardOrchestratorTool = createTool({
         metadata: {
           chartCount: createdCharts.length,
           metricCount: metricsWithIds.length,
-          chartTypes: [...new Set(createdCharts.map(c => c.type))],
-          totalDataPoints: createdCharts.reduce((sum, chart) => sum + chart.data.length, 0),
+          chartTypes: Array.from(new Set(createdCharts.map((c) => c.type))),
+          totalDataPoints: createdCharts.reduce(
+            (sum, chart) => sum + chart.data.length,
+            0,
+          ),
           created: new Date().toISOString(),
           orchestrationStages: [
             "Planning",
             "Progressive Chart Creation",
             "Layout Building",
-            "Complete"
-          ]
-        }
+            "Complete",
+          ],
+        },
       };
 
       // Stage 4: Complete
-      logger.info("Dashboard orchestration - Stage 4: Dashboard creation complete");
+      logger.info(
+        "Dashboard orchestration - Stage 4: Dashboard creation complete",
+      );
 
       // Return the dashboard orchestration result
       return {
@@ -173,46 +208,48 @@ export const dashboardOrchestratorTool = createTool({
           kind: "dashboard" as const,
           title,
           content: JSON.stringify(dashboardContent, null, 2),
-          metadata: dashboardContent.metadata
+          metadata: dashboardContent.metadata,
         },
         orchestration: {
           stages: [
             {
               stage: "planning",
               status: "complete",
-              description: "Dashboard structure planned with metrics and layout",
+              description:
+                "Dashboard structure planned with metrics and layout",
               metrics: metricsWithIds.length,
-              chartsPlanned: charts.length
+              chartsPlanned: charts.length,
             },
             {
               stage: "chart_creation",
               status: "complete",
               description: "All charts created progressively",
               chartsCreated: createdCharts.length,
-              chartTypes: [...new Set(createdCharts.map(c => c.type))]
+              chartTypes: Array.from(new Set(createdCharts.map((c) => c.type))),
             },
             {
               stage: "layout_building",
               status: "complete",
               description: "Dashboard layout assembled with responsive grid",
               layout: layout.chartsLayout,
-              metricsLayout: layout.metricsLayout
+              metricsLayout: layout.metricsLayout,
             },
             {
               stage: "complete",
               status: "complete",
-              description: "Dashboard successfully created and available in workspace"
-            }
+              description:
+                "Dashboard successfully created and available in workspace",
+            },
           ],
           totalStages: 4,
           completedStages: 4,
-          progress: 100
+          progress: 100,
         },
         message: `✅ Dashboard "${title}" created successfully with ${createdCharts.length} charts and ${metricsWithIds.length} metrics!
 
 🏗️ Orchestration Summary:
 • Planning: Structured dashboard with ${metricsWithIds.length} key metrics
-• Chart Creation: Built ${createdCharts.length} charts (${[...new Set(createdCharts.map(c => c.type))].join(", ")})
+• Chart Creation: Built ${createdCharts.length} charts (${Array.from(new Set(createdCharts.map((c) => c.type))).join(", ")})
 • Layout: Arranged in ${layout.chartsLayout} layout with ${layout.metricsLayout} metrics grid
 • Complete: Dashboard is now available in the workspace
 
@@ -225,13 +262,15 @@ The dashboard provides comprehensive data analysis with interactive visualizatio
           description,
           totalCharts: createdCharts.length,
           totalMetrics: metricsWithIds.length,
-          chartTypes: [...new Set(createdCharts.map(c => c.type))],
-          totalDataPoints: createdCharts.reduce((sum, chart) => sum + chart.data.length, 0),
+          chartTypes: Array.from(new Set(createdCharts.map((c) => c.type))),
+          totalDataPoints: createdCharts.reduce(
+            (sum, chart) => sum + chart.data.length,
+            0,
+          ),
           layout,
-          analysisIncluded: !!analysis
-        }
+          analysisIncluded: !!analysis,
+        },
       };
-
     } catch (error) {
       logger.error("Dashboard orchestration failed:", error);
       return {
@@ -244,16 +283,16 @@ The dashboard provides comprehensive data analysis with interactive visualizatio
               stage: "planning",
               status: "error",
               description: "Dashboard orchestration encountered an error",
-              error: error instanceof Error ? error.message : "Unknown error"
-            }
+              error: error instanceof Error ? error.message : "Unknown error",
+            },
           ],
           totalStages: 4,
           completedStages: 0,
-          progress: 0
-        }
+          progress: 0,
+        },
       };
     }
-  }
+  },
 });
 
 // Export the orchestrator tool

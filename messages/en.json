@@ -407,9 +407,15 @@
     "private": "Private",
     "readOnly": "Read Only",
     "public": "Public",
+    "adminShared": "Samba Shared",
+    "adminAll": "All Users",
+    "adminSelective": "Selected Users",
     "privateDescription": "Only you can view, edit, and use this agent.",
     "readOnlyDescription": "Others can view and use as a tool, but only you can edit.",
-    "publicDescription": "Anyone can view, edit, and use this agent as a tool."
+    "publicDescription": "Anyone can view, edit, and use this agent as a tool.",
+    "adminSharedDescription": "Available to all Samba employees",
+    "adminAllDescription": "Available to all platform users",
+    "adminSelectiveDescription": "Available to specific selected users"
   },
   "KeyboardShortcuts": {
     "title": "Keyboard Shortcuts",

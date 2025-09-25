@@ -1,7 +1,8 @@
 import { tool as createTool } from "ai";
 import { z } from "zod";
-import { generateUUID } from "lib/utils";
-import logger from "logger";
+import { generateUUID } from "../../../utils";
+import logger from "../../../logger";
+import { validateBasicChartData } from "../../../validation/chart-data-validator";
 
 /**
  * Composed Chart Tool - Creates Canvas Artifacts

@@ -5,7 +5,7 @@ import { buildAgentGenerationPrompt } from "lib/ai/prompts";
 import globalLogger from "logger";
 import { ChatModel } from "app-types/chat";
 
-import { getSession } from "auth/server";
+import { getEnhancedSession } from "@/lib/auth/server";
 import { colorize } from "consola/utils";
 import { AgentGenerateSchema } from "app-types/agent";
 import { z } from "zod";
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 
     logger.info(`chatModel: ${chatModel?.provider}/${chatModel?.model}`);
 
-    const session = await getSession();
+    const session = await getEnhancedSession();
     if (!session) {
       return new Response("Unauthorized", { status: 401 });
     }

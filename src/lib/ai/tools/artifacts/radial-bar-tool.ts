@@ -1,7 +1,7 @@
 import { tool as createTool } from "ai";
 import { z } from "zod";
-import { generateUUID } from "lib/utils";
-import logger from "logger";
+import { generateUUID } from "../../../utils";
+import logger from "../../../logger";
 
 /**
  * Radial Bar Chart Tool - Creates Canvas Artifacts
@@ -32,16 +32,14 @@ export const radialBarChartArtifactTool = createTool({
     data: z
       .array(
         z.object({
-          name: z
-            .string()
-            .describe("Name of the metric or category"),
-          value: z
-            .number()
-            .describe("Current value for this metric"),
+          name: z.string().describe("Name of the metric or category"),
+          value: z.number().describe("Current value for this metric"),
           maxValue: z
             .number()
             .optional()
-            .describe("Maximum possible value for this metric (defaults to highest value in dataset)"),
+            .describe(
+              "Maximum possible value for this metric (defaults to highest value in dataset)",
+            ),
         }),
       )
       .describe("Radial bar chart data with metrics and values"),
@@ -61,7 +59,13 @@ export const radialBarChartArtifactTool = createTool({
       .describe("Outer radius of the radial bars (default: 80)"),
   }),
 
-  execute: async ({ title, data, description, innerRadius = 30, outerRadius = 80 }) => {
+  execute: async ({
+    title,
+    data,
+    description,
+    innerRadius = 30,
+    outerRadius = 80,
+  }) => {
     try {
       logger.info(`Creating radial bar chart artifact: ${title}`);
 
@@ -79,15 +83,11 @@ export const radialBarChartArtifactTool = createTool({
         }
 
         if (item.maxValue !== undefined && typeof item.maxValue !== "number") {
-          throw new Error(
-            "Invalid maxValue - must be numeric if provided",
-          );
+          throw new Error("Invalid maxValue - must be numeric if provided");
         }
 
         if (item.value < 0) {
-          throw new Error(
-            "Radial bar chart values must be non-negative",
-          );
+          throw new Error("Radial bar chart values must be non-negative");
         }
 
         if (item.maxValue !== undefined && item.value > item.maxValue) {
@@ -107,9 +107,9 @@ export const radialBarChartArtifactTool = createTool({
       }
 
       // Calculate default maxValue if not provided for each item
-      const processedData = data.map(item => ({
+      const processedData = data.map((item) => ({
         ...item,
-        maxValue: item.maxValue || Math.max(...data.map(d => d.value)) * 1.2
+        maxValue: item.maxValue || Math.max(...data.map((d) => d.value)) * 1.2,
       }));
 
       // Create the chart artifact content that matches RadialBarChart component props
@@ -165,7 +165,9 @@ export const radialBarChartArtifactTool = createTool({
 
       // Note: Canvas artifact creation happens in ChatBot component via tool result detection
 
-      logger.info(`Radial bar chart artifact created successfully: ${artifactId}`);
+      logger.info(
+        `Radial bar chart artifact created successfully: ${artifactId}`,
+      );
       return result;
     } catch (error) {
       logger.error("Failed to create radial bar chart artifact:", error);

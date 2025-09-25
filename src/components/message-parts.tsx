@@ -636,30 +636,6 @@ const loading = memo(function Loading() {
   );
 });
 
-const PieChart = dynamic(
-  () => import("./tool-invocation/pie-chart").then((mod) => mod.PieChart),
-  {
-    ssr: false,
-    loading,
-  },
-);
-
-const BarChart = dynamic(
-  () => import("./tool-invocation/bar-chart").then((mod) => mod.BarChart),
-  {
-    ssr: false,
-    loading,
-  },
-);
-
-const LineChart = dynamic(
-  () => import("./tool-invocation/line-chart").then((mod) => mod.LineChart),
-  {
-    ssr: false,
-    loading,
-  },
-);
-
 const InteractiveTable = dynamic(
   () =>
     import("./tool-invocation/interactive-table").then(
@@ -868,21 +844,6 @@ export const ToolMessagePart = memo(
 
       if (state === "output-available") {
         switch (toolName) {
-          case DefaultToolName.CreatePieChart:
-            return (
-              <PieChart key={`${toolCallId}-${toolName}`} {...(input as any)} />
-            );
-          case DefaultToolName.CreateBarChart:
-            return (
-              <BarChart key={`${toolCallId}-${toolName}`} {...(input as any)} />
-            );
-          case DefaultToolName.CreateLineChart:
-            return (
-              <LineChart
-                key={`${toolCallId}-${toolName}`}
-                {...(input as any)}
-              />
-            );
           case DefaultToolName.CreateTable:
             return (
               <InteractiveTable

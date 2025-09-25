@@ -16,7 +16,7 @@ interface AdminAgentTableRow {
   icon?: string;
   visibility:
     | "private"
-    | "admin-shared"
+    | "admin-all"
     | "admin-selective"
     | "admin-all"
     | "readonly"

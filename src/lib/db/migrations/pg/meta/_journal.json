@@ -113,6 +113,20 @@
       "when": 1758742550845,
       "tag": "0015_brave_amphibian",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1758766852366,
+      "tag": "0016_demonic_raider",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1758774305547,
+      "tag": "0017_secret_power_man",
+      "breakpoints": true
     }
   ]
 }

@@ -1,161 +1,138 @@
-# Prime Context for Better-Chatbot Project
+# /primer - Context Discovery & Analysis Command
 
-## 🎯 Project Overview First
+**Purpose**: Prime Claude with comprehensive project context for task preparation (bug fixes, features, etc.)
 
-**Better-Chatbot** is a sophisticated AI chatbot platform built on **Vercel AI SDK v5** as the foundational AI framework, with comprehensive Canvas workspace and MCP protocol integration.
+**⚠️ IMPORTANT**: This command performs **analysis only** - no execution, no fixes, no changes.
 
 ## 📋 Context Discovery Process
 
-### 1. **Essential Reading Order**
-```bash
-# Start with project documentation
-tree                          # Project structure overview
-cat CLAUDE.md                 # Comprehensive project guide (CRITICAL)
-cat README.md                 # Project summary and features
+### 1. **Project Structure Discovery**
+**First Priority**: Get project layout understanding
+- Use `tree` command to get comprehensive project structure
+- Identify directory organization and file patterns
+- Locate key configuration and documentation files
 
-# Core architecture files
-cat src/lib/ai/models.ts      # Vercel AI SDK provider setup
-cat src/app/api/chat/route.ts # Main chat API with streaming
-cat instrumentation.ts        # Langfuse observability (CRITICAL)
+### 2. **Project Documentation Analysis**
+**Core Documentation**: Read essential project files
+- `CLAUDE.md` - Main project documentation (critical)
+- `README.md` - Project overview and setup
+- `.claude/` - Commands, agents, templates, memories
+- Check for other `CLAUDE.md` files in subdirectories
+- `package.json` - Dependencies, scripts, and metadata
+
+### 3. **Architecture Understanding**
+**System Overview**: Identify foundational patterns
+- `src/lib/ai/models.ts` - AI provider configurations
+- `src/app/api/chat/route.ts` - Main chat API patterns
+- `instrumentation.ts` - Observability setup
+- Key configuration files discovered in step 1
+
+### 4. **Feature-Specific Analysis**
+**Based on context, examine relevant systems:**
+
+**Canvas System** (if relevant):
+- `src/components/canvas-panel.tsx`
+- `src/lib/ai/tools/artifacts/`
+- `src/components/tool-invocation/`
+
+**MCP Integration** (if relevant):
+- `src/lib/ai/mcp/mcp-manager.ts`
+- `src/app/api/mcp/`
+- `.mcp.json`
+
+**Database Layer** (if relevant):
+- `src/lib/db/pg/schema.pg.ts`
+- `src/lib/db/pg/repositories/`
+- `drizzle.config.ts`
+
+**Authentication** (if relevant):
+- `src/lib/auth/`
+- `src/middleware.ts`
+
+### 5. **Codebase Exploration Strategy**
+**Use all available MCP tools for comprehensive analysis:**
+
+**Serena MCP (Primary code analysis):**
+```bash
+# Project structure analysis
+mcp__serena__list_dir "." true
+mcp__serena__get_symbols_overview "target-file.ts"
+mcp__serena__find_symbol "target-function"
+mcp__serena__search_for_pattern "relevant-pattern"
+mcp__serena__list_memories  # Check existing project knowledge
 ```
 
-### 2. **Canvas System Understanding**
-The project features a sophisticated **Canvas workspace** for data visualization:
+**Other MCP Tools (as available and relevant):**
+- **Archon MCP**: Project management, task tracking, documentation search
+- **Vercel MCP**: Deployment status, project configuration
+- **Neon MCP**: Database schema analysis, query optimization
+- **Exa MCP**: Code examples, documentation research
+- **Browser MCP**: UI testing, visual verification
+- **Context-7 MCP**: Library documentation lookup
 
-**Key Canvas Files to Examine:**
-- `src/components/canvas-panel.tsx` - Multi-grid Canvas workspace
-- `src/lib/ai/tools/artifacts/` - **15 specialized chart tools** (bar, line, pie, area, funnel, radar, scatter, gauge, sankey, treemap, calendar-heatmap, composed, radial-bar, geographic)
-- `src/components/tool-invocation/` - Chart rendering components
-- `src/lib/ai/canvas-naming.ts` - Smart canvas naming system
-- `src/lib/ai/tools/chart-tool.ts` - Main chart creation tool
+**Analysis Approach:**
+- Start with `tree` and Serena for structure understanding
+- Use specialized MCP tools based on project needs
+- Leverage available memories and documentation
+- Don't read entire files unless absolutely necessary
 
-**Canvas Capabilities:**
-- **Progressive Chart Building**: Uses `async function*` with `yield` statements
-- **Multi-Grid Dashboard Layout**: Responsive CSS Grid (2x2+)
-- **Geographic Charts**: World maps, US states/counties with TopoJSON data
-- **Real-time Visualization**: Charts appear as AI streams tool execution
-- **Memory Management**: Debounced processing with race condition protection
+### 6. **Memory & Template Review**
+**Check for existing context:**
+- `.serena/memories/` - Project knowledge
+- `.claude/agents/` - Agent configurations
+- `.claude/commands/` - Available commands
+- `PRPs/` - Requirements and plans
 
-### 3. **MCP (Model Context Protocol) Integration**
-Extensive MCP server ecosystem for external tool integration:
+## 🎯 Analysis Output Format
 
-**Key MCP Files to Examine:**
-- `src/lib/ai/mcp/mcp-manager.ts` - MCP clients manager
-- `src/lib/ai/mcp/db-mcp-config-storage.ts` - Database configuration
-- `.mcp.json` - File-based MCP configuration (if exists)
-- `src/app/api/mcp/` - MCP API endpoints
+After context discovery, provide:
 
-**MCP Capabilities:**
-- **10+ Recommended Servers**: GitHub, Notion, Linear, Neon, Stripe, Canva, etc.
-- **Custom Servers**: Archon (localhost:8051), Weather example
-- **Three Connection Types**: SSE, STDIO, StreamableHTTP
-- **OAuth Integration**: Third-party service authentication
-- **Management Interface**: `/mcp` dashboard with real-time monitoring
-- **Tool Testing**: `/mcp/test/[id]` for individual tool testing
+### **Project Understanding Summary:**
+1. **Architecture Overview**: Core frameworks and patterns
+2. **System Components**: Key modules and their purposes
+3. **Current State**: Git status, recent changes, active branches
+4. **Dependencies**: Critical packages and versions
+5. **Development Patterns**: Code conventions and workflows
 
-### 4. **Critical System Dependencies**
-**AI Framework Foundation:**
-- **Vercel AI SDK v5.0.26** (foundational - ALL AI operations)
-- **Streaming Patterns**: `streamText`, `generateText`, `experimental_telemetry`
-- **Tool Abstraction**: MCP, Workflow, App tools → Vercel AI SDK tools
+### **Task Readiness Assessment:**
+- **Relevant Files Identified**: Specific files related to user's intended work
+- **Potential Impact Areas**: Components that might be affected
+- **Testing Requirements**: What needs validation after changes
+- **Dependencies to Consider**: Related systems or components
 
-**Observability Infrastructure:**
-- **Langfuse SDK v4.1.0** with OpenTelemetry 2.1.0
-- **NodeTracerProvider** with LangfuseSpanProcessor (NOT @vercel/otel)
-- **Health Endpoint**: `/api/health/langfuse` (check before everything)
-- **Automatic Tracing**: All AI operations via `experimental_telemetry`
+### **Contextual Recommendations:**
+- **Best Approach**: Recommended strategy for the intended task
+- **Risk Factors**: Potential issues or considerations
+- **Validation Steps**: Health checks or tests to run
+- **Documentation Needs**: Updates required after implementation
 
-**Core Stack:**
-- **Next.js 15.3.2** with App Router and instrumentation.ts
-- **TypeScript 5.9.2** in strict mode
-- **PostgreSQL** with Drizzle ORM 0.41.0
-- **Better-Auth 1.3.7** for authentication
-- **Biome 1.9.4** for linting and formatting
+## ⚠️ Critical Guidelines
 
-### 5. **IMPORTANT: Use Serena for Codebase Exploration**
-```bash
-# If you get errors using Serena, retry with different tools:
-mcp__serena__list_dir "." true                    # Project structure
-mcp__serena__get_symbols_overview "src/lib/ai/models.ts"  # AI configuration
-mcp__serena__find_symbol "canvasPanel"            # Canvas components
-mcp__serena__search_for_pattern "streamText"      # Vercel AI SDK usage
-mcp__serena__find_symbol "initMCPManager"        # MCP integration
-```
+### **What This Command Does:**
+- ✅ **Analyze** project structure and patterns
+- ✅ **Review** documentation and configuration
+- ✅ **Identify** relevant files and systems
+- ✅ **Assess** current state and readiness
+- ✅ **Recommend** approaches and considerations
 
-### 6. **Critical Validation Before Starting**
-**ALWAYS run these health checks:**
-```bash
-# Observability health (CRITICAL)
-curl -f http://localhost:3000/api/health/langfuse
+### **What This Command Never Does:**
+- ❌ **Execute** any fixes or changes
+- ❌ **Install** dependencies or run builds
+- ❌ **Modify** files or configuration
+- ❌ **Run** validation commands or health checks
+- ❌ **Start** development servers or processes
 
-# System validation
-/validate-system quick
+### **Output Focus:**
+- **Analysis-Only**: Pure information gathering and assessment
+- **Task-Oriented**: Context specific to user's next intended work
+- **Risk-Aware**: Highlight potential complications or dependencies
+- **Actionable**: Clear next steps for when ready to begin work
 
-# If working with Canvas
-/validate-canvas
+## 🚀 Usage Pattern
 
-# If working with MCP
-/validate-mcp
+1. **Run `/primer`** - Get comprehensive project context
+2. **Claude analyzes** - No execution, pure context discovery
+3. **Review output** - Understanding summary and recommendations
+4. **Proceed with task** - Now properly primed for bug fix/feature work
 
-# If working with agents
-/validate-agents
-```
-
-### 7. **Agent System Awareness**
-**CRITICAL Anti-Patterns to Avoid:**
-- **🚨 NEVER**: `allowedMcpServers: mentions?.length ? {} : servers` - BREAKS AGENTS
-- **🚨 NEVER**: Assume mentions mean "no tools needed"
-- **✅ ALWAYS**: Agent mentions are ADDITIVE (specify which tools to use)
-- **✅ ALWAYS**: Test agents after UI changes
-
-## 📊 What to Explain Back
-
-### **Project Structure Analysis:**
-- **Core Architecture**: Vercel AI SDK foundation with streaming patterns
-- **Canvas System**: Multi-grid workspace with 15 chart tools
-- **MCP Integration**: External tool ecosystem with 10+ servers
-- **Observability**: Langfuse + OpenTelemetry comprehensive tracing
-- **Authentication**: Better-Auth with OAuth support
-
-### **Project Purpose & Goals:**
-- **Unified AI Interface**: Multiple LLM providers through Vercel AI SDK
-- **Data Visualization**: Progressive Canvas workspace for charts/dashboards
-- **Extensible Architecture**: MCP protocol for external tool integration
-- **Production Observability**: Complete AI operation tracing and cost monitoring
-- **Developer Experience**: Quality-first with comprehensive testing
-
-### **Key Files & Purposes:**
-- `instrumentation.ts` - **Langfuse observability setup (CRITICAL)**
-- `CLAUDE.md` - **Comprehensive project documentation**
-- `src/lib/ai/models.ts` - **Vercel AI SDK provider configurations**
-- `src/components/canvas-panel.tsx` - **Canvas workspace implementation**
-- `src/lib/ai/mcp/mcp-manager.ts` - **MCP server management**
-- `src/app/api/chat/route.ts` - **Main chat API with streaming**
-
-### **Important Dependencies to Highlight:**
-- **Vercel AI SDK v5** (foundational AI framework)
-- **Langfuse SDK v4** (observability and tracing)
-- **Drizzle ORM** (database layer with PostgreSQL)
-- **Better-Auth** (authentication system)
-- **Recharts** (chart rendering library for Canvas)
-
-### **Configuration Files:**
-- `.env` - API keys, database URL, Langfuse credentials
-- `drizzle.config.ts` - Database configuration
-- `.mcp.json` - MCP server configuration (if file-based)
-- `next.config.ts` - Next.js with instrumentation hook
-- `biome.json` - Code formatting and linting rules
-
-## 🚨 Critical Constraints
-
-**LOCALHOST REQUIREMENT**: This project can ONLY run on localhost:3000 and will NOT work on other ports. This is a fundamental constraint of the authentication and observability systems.
-
-## 🎯 Success Criteria
-
-After running `/primer`, you should understand:
-1. **Vercel AI SDK** as the foundational AI framework
-2. **Canvas system** for progressive data visualization
-3. **MCP integration** for external tool ecosystem
-4. **Langfuse observability** for comprehensive tracing
-5. **Better-chatbot specific architecture** and constraints
-6. **Validation workflows** for maintaining system health
+This command prepares Claude with the knowledge needed for informed task execution while maintaining strict boundaries between analysis and action.

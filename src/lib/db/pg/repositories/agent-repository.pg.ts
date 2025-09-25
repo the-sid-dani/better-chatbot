@@ -1,7 +1,12 @@
 import { Agent, AgentRepository, AgentSummary } from "app-types/agent";
 import { pgDb as db } from "../db.pg";
-import { AgentSchema, BookmarkSchema, UserSchema } from "../schema.pg";
-import { and, desc, eq, ne, or, sql } from "drizzle-orm";
+import {
+  AgentSchema,
+  BookmarkSchema,
+  UserSchema,
+  AgentUserPermissionSchema,
+} from "../schema.pg";
+import { and, desc, eq, ne, or, sql, exists } from "drizzle-orm";
 import { generateUUID } from "lib/utils";
 
 export const pgAgentRepository: AgentRepository = {
@@ -59,6 +64,23 @@ export const pgAgentRepository: AgentRepository = {
             eq(AgentSchema.userId, userId), // Own agent
             eq(AgentSchema.visibility, "public"), // Public agent
             eq(AgentSchema.visibility, "readonly"), // Readonly agent
+            eq(AgentSchema.visibility, "admin-all"), // Admin shared agent
+            eq(AgentSchema.visibility, "admin-all"), // Admin all agent
+            // For admin-selective, check explicit permissions
+            and(
+              eq(AgentSchema.visibility, "admin-selective"),
+              exists(
+                db
+                  .select({ id: AgentUserPermissionSchema.id })
+                  .from(AgentUserPermissionSchema)
+                  .where(
+                    and(
+                      eq(AgentUserPermissionSchema.agentId, AgentSchema.id),
+                      eq(AgentUserPermissionSchema.userId, userId),
+                    ),
+                  ),
+              ),
+            ),
           ),
         ),
       );
@@ -158,7 +180,22 @@ export const pgAgentRepository: AgentRepository = {
             or(
               eq(AgentSchema.visibility, "public"),
               eq(AgentSchema.visibility, "readonly"),
-              eq(AgentSchema.visibility, "admin-shared"),
+              eq(AgentSchema.visibility, "admin-all"),
+              // admin-selective: check if user has explicit permission
+              and(
+                eq(AgentSchema.visibility, "admin-selective"),
+                exists(
+                  db
+                    .select({ id: AgentUserPermissionSchema.id })
+                    .from(AgentUserPermissionSchema)
+                    .where(
+                      and(
+                        eq(AgentUserPermissionSchema.agentId, AgentSchema.id),
+                        eq(AgentUserPermissionSchema.userId, currentUserId),
+                      ),
+                    ),
+                ),
+              ),
             ),
           ),
         );
@@ -169,7 +206,22 @@ export const pgAgentRepository: AgentRepository = {
             or(
               eq(AgentSchema.visibility, "public"),
               eq(AgentSchema.visibility, "readonly"),
-              eq(AgentSchema.visibility, "admin-shared"),
+              eq(AgentSchema.visibility, "admin-all"),
+              // admin-selective: check if user has explicit permission
+              and(
+                eq(AgentSchema.visibility, "admin-selective"),
+                exists(
+                  db
+                    .select({ id: AgentUserPermissionSchema.id })
+                    .from(AgentUserPermissionSchema)
+                    .where(
+                      and(
+                        eq(AgentUserPermissionSchema.agentId, AgentSchema.id),
+                        eq(AgentUserPermissionSchema.userId, currentUserId),
+                      ),
+                    ),
+                ),
+              ),
             ),
             sql`${BookmarkSchema.id} IS NOT NULL`,
           ),
@@ -186,7 +238,23 @@ export const pgAgentRepository: AgentRepository = {
               or(
                 eq(AgentSchema.visibility, "public"),
                 eq(AgentSchema.visibility, "readonly"),
-                eq(AgentSchema.visibility, "admin-shared"),
+                eq(AgentSchema.visibility, "admin-all"),
+                eq(AgentSchema.visibility, "admin-all"),
+                // admin-selective: check if user has explicit permission
+                and(
+                  eq(AgentSchema.visibility, "admin-selective"),
+                  exists(
+                    db
+                      .select({ id: AgentUserPermissionSchema.id })
+                      .from(AgentUserPermissionSchema)
+                      .where(
+                        and(
+                          eq(AgentUserPermissionSchema.agentId, AgentSchema.id),
+                          eq(AgentUserPermissionSchema.userId, currentUserId),
+                        ),
+                      ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -249,8 +317,36 @@ export const pgAgentRepository: AgentRepository = {
     if (!agent) {
       return false;
     }
+
+    // Owner always has access
     if (userId == agent.userId) return true;
-    if (agent.visibility === "public" && !destructive) return true;
+
+    // Handle different visibility types for non-owners
+    if (!destructive) {
+      // Read access for shared visibility types
+      if (
+        agent.visibility === "public" ||
+        agent.visibility === "readonly" ||
+        agent.visibility === "admin-all"
+      ) {
+        return true;
+      }
+
+      // For admin-selective, check explicit permissions
+      if (agent.visibility === "admin-selective") {
+        const [permission] = await db
+          .select({ id: AgentUserPermissionSchema.id })
+          .from(AgentUserPermissionSchema)
+          .where(
+            and(
+              eq(AgentUserPermissionSchema.agentId, agentId),
+              eq(AgentUserPermissionSchema.userId, userId),
+            ),
+          );
+        return !!permission;
+      }
+    }
+
     return false;
   },
 };

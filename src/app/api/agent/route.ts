@@ -1,12 +1,12 @@
 import { agentRepository } from "lib/db/repository";
-import { getSession } from "auth/server";
+import { getEnhancedSession } from "@/lib/auth/server";
 import { z } from "zod";
 import { serverCache } from "lib/cache";
 import { CacheKeys } from "lib/cache/cache-keys";
 import { AgentCreateSchema, AgentQuerySchema } from "app-types/agent";
 
 export async function GET(request: Request) {
-  const session = await getSession();
+  const session = await getEnhancedSession();
 
   if (!session?.user.id) {
     return new Response("Unauthorized", { status: 401 });
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const session = await getSession();
+  const session = await getEnhancedSession();
 
   if (!session?.user.id) {
     return new Response("Unauthorized", { status: 401 });

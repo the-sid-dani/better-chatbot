@@ -4,6 +4,7 @@ import {
   Lock,
   Eye,
   Globe,
+  Crown,
   Bookmark,
   BookmarkCheck,
   Trash2,
@@ -22,12 +23,20 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "ui/tooltip";
 import { WriteIcon } from "ui/write-icon";
 import { useMemo } from "react";
 
-export type Visibility = "private" | "public" | "readonly";
+export type Visibility =
+  | "private"
+  | "public"
+  | "readonly"
+  | "admin-all"
+  | "admin-selective";
 
 const VISIBILITY_ICONS = {
   private: Lock,
   readonly: Eye,
   public: Globe,
+  "admin-all": Crown,
+  "admin-all": Crown,
+  "admin-selective": Crown,
 } as const;
 
 const VISIBILITY_CONFIG = {
@@ -41,6 +50,18 @@ const VISIBILITY_CONFIG = {
       description: "Agent.readOnlyDescription",
     },
     public: { label: "Agent.public", description: "Agent.publicDescription" },
+    "admin-all": {
+      label: "Agent.adminShared",
+      description: "Agent.adminSharedDescription",
+    },
+    "admin-all": {
+      label: "Agent.adminAll",
+      description: "Agent.adminAllDescription",
+    },
+    "admin-selective": {
+      label: "Agent.adminSelective",
+      description: "Agent.adminSelectiveDescription",
+    },
   },
   workflow: {
     private: {

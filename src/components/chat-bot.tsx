@@ -614,6 +614,8 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
           "create_bar_chart_artifact",
           "create_line_chart_artifact",
           "create_pie_chart_artifact",
+          // Table artifact tool
+          "create_table",
         ];
 
         const chartTools = lastMessage.parts.filter(
@@ -621,26 +623,29 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
             isToolUIPart(part) && chartToolNames.includes(getToolName(part)),
         );
 
-        console.log("📊 ChatBot Tool Debug: Found chart tools", {
+        console.log("📊 ChatBot Tool Debug: Found chart/table tools", {
           toolCount: chartTools.length,
-          states: chartTools.map((t) => t.state),
+          tools: chartTools.map((t) => ({
+            name: getToolName(t),
+            hasOutput: isToolUIPart(t),
+          })),
         });
 
-        // Open Canvas immediately when chart tools are detected (unless user closed it)
+        // Open Canvas immediately when chart/table tools are detected (unless user closed it)
         if (chartTools.length > 0 && !isCanvasVisible && !userManuallyClosed) {
           console.log(
-            "🎭 ChatBot Canvas Debug: Auto-opening Canvas for chart tools",
+            "🎭 ChatBot Canvas Debug: Auto-opening Canvas for chart/table tools",
           );
           showCanvas();
         } else if (chartTools.length > 0 && userManuallyClosed) {
           console.log(
-            "🚪 ChatBot Canvas Debug: Chart tools detected but user closed Canvas - respecting user choice",
+            "🚪 ChatBot Canvas Debug: Chart/table tools detected but user closed Canvas - respecting user choice",
           );
         }
 
-        // Process completed charts with duplicate prevention
+        // Process completed charts/tables with duplicate prevention
         const completedCharts = chartTools.filter((part) => {
-          if (!isToolUIPart(part) || part.state !== "output-available") {
+          if (!isToolUIPart(part) || !part.state.startsWith("output")) {
             return false;
           }
 
@@ -685,10 +690,13 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
           return false;
         });
 
-        console.log("✅ ChatBot Tool Debug: Processing completed charts", {
-          completedCount: completedCharts.length,
-          existingArtifacts: canvasArtifacts.length,
-        });
+        console.log(
+          "✅ ChatBot Tool Debug: Processing completed charts/tables",
+          {
+            completedCount: completedCharts.length,
+            existingArtifacts: canvasArtifacts.length,
+          },
+        );
 
         completedCharts.forEach((part) => {
           if (!isToolUIPart(part)) return;
@@ -705,19 +713,26 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
             (a) => a.id === artifactId,
           );
 
+          // Determine if this is a table tool
+          const isTableTool = toolName === "create_table";
+
           if (!existingArtifact) {
-            console.log("✨ ChatBot Tool Debug: Creating new chart artifact", {
-              chartId: artifactId,
-              title:
-                result.title ||
-                result.artifact?.title ||
-                result.structuredContent?.result?.[0]?.artifact?.title,
-              toolName,
-            });
+            console.log(
+              `✨ ChatBot Tool Debug: Creating new ${isTableTool ? "table" : "chart"} artifact`,
+              {
+                chartId: artifactId,
+                title:
+                  result.title ||
+                  result.artifact?.title ||
+                  result.structuredContent?.result?.[0]?.artifact?.title,
+                toolName,
+              },
+            );
 
             let chartData;
             let chartType;
             let title;
+            let artifactType: "chart" | "table" = "chart"; // Default to chart
 
             // Handle new artifact format - check both old and new structured format
             const artifactData =
@@ -725,38 +740,53 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
               result.structuredContent?.result?.[0]?.artifact;
             if (artifactData) {
               const artifactContent = JSON.parse(artifactData.content);
-              // Extract the correct chart type
-              chartType =
-                artifactContent.metadata?.chartType ||
-                artifactContent.type.replace("-chart", "");
-              title = artifactData.title;
 
-              // Create chartData in the format expected by ChartRenderer
-              chartData = {
-                chartType: chartType,
-                title: artifactContent.title,
-                data: artifactContent.data || [],
-                description: artifactContent.description,
-                yAxisLabel: artifactContent.yAxisLabel,
-                xAxisLabel: artifactContent.xAxisLabel,
-                // Add additional properties for special chart types
-                areaType: artifactContent.areaType,
-                showBubbles: artifactContent.showBubbles,
-                geoType: artifactContent.geoType,
-                colorScale: artifactContent.colorScale,
-                value: artifactContent.value,
-                minValue: artifactContent.minValue,
-                maxValue: artifactContent.maxValue,
-                gaugeType: artifactContent.gaugeType,
-                unit: artifactContent.unit,
-                thresholds: artifactContent.thresholds,
-                nodes: artifactContent.nodes,
-                links: artifactContent.links,
-                innerRadius: artifactContent.innerRadius,
-                outerRadius: artifactContent.outerRadius,
-                startDate: artifactContent.startDate,
-                endDate: artifactContent.endDate,
-              };
+              if (isTableTool) {
+                // Handle table artifacts
+                artifactType = "table";
+                chartType = "table";
+                title = artifactData.title;
+                chartData = {
+                  title: artifactContent.title,
+                  description: artifactContent.description,
+                  columns: artifactContent.columns,
+                  data: artifactContent.data,
+                };
+              } else {
+                // Handle chart artifacts
+                // Extract the correct chart type
+                chartType =
+                  artifactContent.metadata?.chartType ||
+                  artifactContent.type.replace("-chart", "");
+                title = artifactData.title;
+
+                // Create chartData in the format expected by ChartRenderer
+                chartData = {
+                  chartType: chartType,
+                  title: artifactContent.title,
+                  data: artifactContent.data || [],
+                  description: artifactContent.description,
+                  yAxisLabel: artifactContent.yAxisLabel,
+                  xAxisLabel: artifactContent.xAxisLabel,
+                  // Add additional properties for special chart types
+                  areaType: artifactContent.areaType,
+                  showBubbles: artifactContent.showBubbles,
+                  geoType: artifactContent.geoType,
+                  colorScale: artifactContent.colorScale,
+                  value: artifactContent.value,
+                  minValue: artifactContent.minValue,
+                  maxValue: artifactContent.maxValue,
+                  gaugeType: artifactContent.gaugeType,
+                  unit: artifactContent.unit,
+                  thresholds: artifactContent.thresholds,
+                  nodes: artifactContent.nodes,
+                  links: artifactContent.links,
+                  innerRadius: artifactContent.innerRadius,
+                  outerRadius: artifactContent.outerRadius,
+                  startDate: artifactContent.startDate,
+                  endDate: artifactContent.endDate,
+                };
+              }
             }
             // Handle original format - also check structured content for legacy support
             else {
@@ -771,9 +801,13 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
 
             const artifact = {
               id: artifactId,
-              type: "chart" as const,
-              title: title || `${chartType} Chart`,
-              canvasName: result.canvasName || "Data Visualization",
+              type: artifactType,
+              title:
+                title ||
+                (isTableTool ? `Table: ${chartType}` : `${chartType} Chart`),
+              canvasName:
+                result.canvasName ||
+                (isTableTool ? "Data Table" : "Data Visualization"),
               data: chartData,
               status: "completed" as const,
               metadata: {
@@ -786,18 +820,15 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
 
             addCanvasArtifact(artifact);
           } else {
-            console.log(
-              "🔄 ChatBot Tool Debug: Chart artifact already exists",
-              {
-                chartId: artifactId,
-                toolName,
-              },
-            );
+            console.log("🔄 ChatBot Tool Debug: Artifact already exists", {
+              chartId: artifactId,
+              toolName,
+            });
           }
         });
       } catch (error) {
         console.error(
-          "🚨 ChatBot Tool Debug: Error processing chart tools:",
+          "🚨 ChatBot Tool Debug: Error processing chart/table tools:",
           error,
         );
       }

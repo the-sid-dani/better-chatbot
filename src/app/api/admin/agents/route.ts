@@ -1,5 +1,5 @@
 import { getEnhancedSession } from "@/lib/auth/server";
-import { agentRepository } from "@/lib/db/pg/repositories/agent-repository.pg";
+import { pgAgentRepository } from "@/lib/db/pg/repositories/agent-repository.pg";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -7,7 +7,18 @@ const AgentCreateSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   icon: z.any().optional(),
-  instructions: z.any().optional(),
+  visibility: z.enum(["admin-all", "admin-selective"]).optional(),
+  instructions: z
+    .object({
+      role: z.string().optional(),
+      systemPrompt: z.string().optional(),
+      mentions: z.array(z.any()).optional(),
+    })
+    .default({
+      role: "",
+      systemPrompt: "",
+      mentions: [],
+    }),
 });
 
 export async function GET() {
@@ -18,10 +29,10 @@ export async function GET() {
       return new Response("Forbidden", { status: 403 });
     }
 
-    const adminAgents = await agentRepository
+    const adminAgents = await pgAgentRepository
       .selectAgents(session.user.id, ["all"])
       .then((agents) =>
-        agents.filter((agent) => agent.visibility === "admin-shared"),
+        agents.filter((agent) => agent.visibility === "admin-all"),
       );
 
     return Response.json(adminAgents);
@@ -42,17 +53,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const agentData = AgentCreateSchema.parse(body);
 
-    // Force admin-shared visibility
-    const agent = await agentRepository.insertAgent({
+    // Use visibility from UI selection, default to admin-all (modern standard)
+    const agent = await pgAgentRepository.insertAgent({
       ...agentData,
       userId: session.user.id,
-      visibility: "admin-shared",
+      visibility: agentData.visibility || "admin-all",
     });
 
     return Response.json(agent);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return new Response(JSON.stringify({ error: error.errors }), {
+      return new Response(JSON.stringify({ error: error.issues }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       });

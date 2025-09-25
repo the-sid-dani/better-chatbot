@@ -571,9 +571,15 @@ pnpm build               # Production build with HTTPS
    - Verify tool execution: `loading` → `processing` → `success` states
    - Test "Open Canvas" button functionality in message tool results
    - Monitor artifact processing with 150ms debounce timing
-9. **Geographic Chart Data:** Ensure TopoJSON files loaded in `/public/geo/`
-   - `world-countries-110m.json`, `us-states-10m.json`, etc.
-   - Check network requests for geographic data loading
+9. **Gauge Chart SubArc Issues:** Fixed validation errors in react-gauge-component
+   - **Root Cause:** Library auto-generated subArcs with values outside expected minValue/maxValue range
+   - **Solution:** Explicitly set `subArcs: []` in gauge configuration to prevent automatic generation
+   - **Fix Location:** `src/components/tool-invocation/gauge-chart.tsx` and `src/lib/ai/tools/artifacts/gauge-chart-tool.ts`
+   - **Validation:** Comprehensive data validation prevents infinite/NaN values and minValue >= maxValue scenarios
+   - **Testing:** Edge case tests in `src/components/tool-invocation/gauge-chart.test.tsx` prevent regression
+10. **Geographic Chart Data:** Ensure TopoJSON files loaded in `/public/geo/`
+    - `world-countries-110m.json`, `us-states-10m.json`, etc.
+    - Check network requests for geographic data loading
 
 ## 🔧 Langfuse + Vercel AI SDK Troubleshooting
 
@@ -787,6 +793,7 @@ fill={`var(--color-${sanitizeCssVariableName(seriesName)})`}
 3. **Responsive Chart Sizing**: Use `height="100%"` not fixed pixel heights
 4. **CSS Variable Colors**: Never hardcode colors, use established design system
 5. **Error Handling**: Implement comprehensive validation and error states
+6. **Chart Library Quirks**: For gauge charts, explicitly set `subArcs: []` to prevent react-gauge-component validation errors
 
 #### Performance Considerations
 1. **Debounced Processing**: 150ms debounce prevents rapid artifact updates
@@ -802,3 +809,4 @@ fill={`var(--color-${sanitizeCssVariableName(seriesName)})`}
 5. **Multi-Chart Dashboards**: Test layout scaling with 5+ charts
 
 This Canvas system represents a significant advancement in AI-powered data visualization, providing users with a seamless, real-time dashboard creation experience that integrates naturally with conversational AI interactions.
+- create any docs whenever i ask claude to create a plan or a task list in the @claude-plan-docs/plans/ folder only

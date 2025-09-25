@@ -11,6 +11,7 @@ import { fetcher } from "lib/utils";
 import { Skeleton } from "ui/skeleton";
 import { BackgroundPaths } from "ui/background-paths";
 import { ShareableCard } from "@/components/shareable-card";
+import { Visibility } from "@/components/shareable-actions";
 import {
   DBEdge,
   DBNode,
@@ -97,7 +98,7 @@ export default function WorkflowPage() {
 
   const updateVisibility = async (
     workflowId: string,
-    visibility: "private" | "public" | "readonly",
+    visibility: Visibility,
   ) => {
     try {
       setIsVisibilityChangeLoading(true);

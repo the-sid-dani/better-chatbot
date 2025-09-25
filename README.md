@@ -1,93 +1,102 @@
 <img width="1184" height="576" alt="thumbnail" loading="lazy" src="https://github.com/user-attachments/assets/d6ba80ff-a62a-4920-b266-85c4a89d6076" />
 
+# Samba Orion
 
 [![MCP Supported](https://img.shields.io/badge/MCP-Supported-00c853)](https://modelcontextprotocol.io/introduction)
 [![Local First](https://img.shields.io/badge/Local-First-blue)](https://localfirstweb.dev/)
-[![Discord](https://img.shields.io/discord/1374047276074537103?label=Discord&logo=discord&color=5865F2)](https://discord.gg/gCRu69Upnp)
+[![Built on Better-Chatbot](https://img.shields.io/badge/Built_on-Better--Chatbot-blue)](https://github.com/cgoinglove/better-chatbot)
 
-[![Deploy with Vercel](https://vercel.com/button)](<https://vercel.com/new/clone?repository-url=https://github.com/cgoinglove/better-chatbot&env=BETTER_AUTH_SECRET&env=OPENAI_API_KEY&env=GOOGLE_GENERATIVE_AI_API_KEY&env=ANTHROPIC_API_KEY&envDescription=BETTER_AUTH_SECRET+is+required+(enter+any+secret+value).+At+least+one+LLM+provider+API+key+(OpenAI,+Claude,+or+Google)+is+required,+but+you+can+add+all+of+them.+See+the+link+below+for+details.&envLink=https://github.com/cgoinglove/better-chatbot/blob/main/.env.example&demo-title=better-chatbot&demo-description=An+Open-Source+Chatbot+Template+Built+With+Next.js+and+the+AI+SDK+by+Vercel.&products=[{"type":"integration","protocol":"storage","productSlug":"neon","integrationSlug":"neon"},{"type":"integration","protocol":"storage","productSlug":"upstash-kv","integrationSlug":"upstash"}]>)
+[![Deploy with Vercel](https://vercel.com/button)](<https://vercel.com/new/clone?repository-url=https://github.com/cgoinglove/better-chatbot&env=BETTER_AUTH_SECRET&env=OPENAI_API_KEY&env=GOOGLE_GENERATIVE_AI_API_KEY&env=ANTHROPIC_API_KEY&envDescription=BETTER_AUTH_SECRET+is+required+(enter+any+secret+value).+At+least+one+LLM+provider+API+key+(OpenAI,+Claude,+or+Google)+is+required,+but+you+can+add+all+of+them.+See+the+link+below+for+details.&envLink=https://github.com/cgoinglove/better-chatbot/blob/main/.env.example&demo-title=samba-orion&demo-description=A+comprehensive+AI+platform+built+with+Next.js+and+the+AI+SDK+by+Vercel.&products=[{"type":"integration","protocol":"storage","productSlug":"neon","integrationSlug":"neon"},{"type":"integration","protocol":"storage","productSlug":"upstash-kv","integrationSlug":"upstash"}]>)
 
-🚀 **[Live Demo](https://better-chatbot-demo.vercel.app/)** | See the experience in action in the [preview](#preview) below!
+🚀 **[Live Demo](https://samba-orion.vercel.app/)** | Experience the future of AI assistance
 
-**Better Chatbot** - A better open-source AI chatbot for individuals and teams, inspired by ChatGPT, Claude, Grok, and Gemini.
+**Samba Orion** is a comprehensive AI platform where teams and individuals can harness the full power of artificial intelligence through advanced conversations, data visualization, workflow automation, and intelligent tooling. Built on cutting-edge technology to rival ChatGPT, Claude, and other leading AI assistants.
 
-• **Multi-AI Support** - Integrates all major LLMs: OpenAI, Anthropic, Google, xAI, Ollama, and more  
-• **Powerful Tools** - MCP protocol, web search, JS/Python code execution, Canvas workspace with 15+ chart types  
-• **Automation** - Custom agents, visual workflows, artifact generation  
-• **Collaboration** - Share agents, workflows, and MCP configurations with your team  
-• **Voice Assistant** - Realtime voice chat with full MCP tool integration  
-• **Intuitive UX** - Instantly invoke any feature with `@mention`  
-• **Quick Start** - Deploy free with Vercel Deploy button  
+## ✨ Key Features
 
-Built with Vercel AI SDK and Next.js, combining the best features of leading AI services into one platform.
+• **🤖 Multi-AI Support** - Unified access to OpenAI, Anthropic, Google, xAI, Ollama, and OpenRouter models
+• **🛠️ Advanced Tooling** - MCP protocol integration, web search, code execution, and comprehensive data visualization
+• **📊 Canvas Workspace** - Multi-grid dashboard system with 16+ chart types and real-time visualization
+• **🎯 Smart Agents** - Create custom AI agents with specific instructions, tool access, and granular permissions
+• **⚡ Visual Workflows** - Build complex automation sequences with drag-and-drop workflow designer
+• **🎙️ Voice Assistant** - Real-time voice chat with full tool integration using OpenAI's Realtime API
+• **👥 Admin Dashboard** - Comprehensive user management, agent permissions, and system administration
+• **🔍 Observability** - Full conversation tracing, cost monitoring, and performance analytics via Langfuse
+• **📱 Intuitive UX** - Context-aware `@mentions`, tool presets, and seamless multi-modal interactions
+
+Built entirely on **Vercel AI SDK v5.0.26** as the foundational AI framework, with Next.js 15, TypeScript, and enterprise-grade observability.
 
 
-### Quick Start 🚀
+## 🚀 Quick Start
+
+> **⚠️ Important**: This application must run on `localhost:3000` and will not work on other ports due to authentication and observability system requirements.
 
 ```bash
 # 1. Clone the repository
-
 git clone https://github.com/cgoinglove/better-chatbot.git
 cd better-chatbot
 
-# 2. (Optional) Install pnpm if you don't have it
-
+# 2. Install pnpm (if you don't have it)
 npm install -g pnpm
 
-# 3. Install dependencies
-
+# 3. Install dependencies and auto-generate .env file
 pnpm i
 
-# 4. (Optional) Start a local PostgreSQL instance
-
+# 4. Start PostgreSQL database (choose one option)
+# Option A: Use Docker (recommended)
 pnpm docker:pg
 
-# If you already have your own PostgreSQL running, you can skip this step.
-# In that case, make sure to update the PostgreSQL URL in your .env file.
+# Option B: Use your own PostgreSQL
+# Update POSTGRES_URL in .env with your database connection string
 
-# 5. Enter required information in the .env file
+# 5. Configure environment variables in .env
+# Required: At least one LLM provider API key
+# - OPENAI_API_KEY (recommended)
+# - ANTHROPIC_API_KEY
+# - GOOGLE_GENERATIVE_AI_API_KEY
+# Required: BETTER_AUTH_SECRET (auto-generated)
+# Optional: EXA_API_KEY for web search capabilities
 
-# The .env file is created automatically. Just fill in the required values.
-# For the fastest setup, provide at least one LLM provider's API key (e.g., OPENAI_API_KEY, CLAUDE_API_KEY, GEMINI_API_KEY, etc.) and the PostgreSQL URL you want to use.
-
-# 6. Start the server
-
+# 6. Start the application
 pnpm build:local && pnpm start
 
-# (Recommended for most cases. Ensures correct cookie settings.)
-# For development mode with hot-reloading and debugging, you can use:
+# Alternative: Development mode with hot-reload
 # pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser to get started.
 
+**First-time setup**: The application will automatically create database tables and you can start chatting immediately.
+
 ## Table of Contents
 
 - [Table of Contents](#table-of-contents)
 - [Preview](#preview)
+  - [📊 Canvas Workspace & Multi-Chart Dashboards](#-canvas-workspace--multi-chart-dashboards)
+  - [👥 Admin Dashboard & User Management](#-admin-dashboard--user-management)
   - [🧩 Browser Automation with Playwright MCP](#-browser-automation-with-playwright-mcp)
   - [🔗 Visual Workflows as Custom Tools](#-visual-workflows-as-custom-tools)
-  - [🤖 Custom Agents](#-custom-agents)
+  - [🤖 Custom Agents with Granular Permissions](#-custom-agents-with-granular-permissions)
   - [🎙️ Realtime Voice Assistant + MCP Tools](#️-realtime-voice-assistant--mcp-tools)
   - [⚡️ Quick Tool Mentions (`@`) \& Presets](#️-quick-tool-mentions---presets)
-  - [🧭 Tool Choice Mode](#-tool-choice-mode)
-  - [🛠️ Default Tools](#️-default-tools)
-    - [🌐 Web Search](#-web-search)
-    - [⚡️ JS,PYTHON Executor](#️-jspython-executor)
-    - [📊 Data Visualization Tools](#-data-visualization-tools)
+  - [🛠️ Advanced Built-in Tools](#️-advanced-built-in-tools)
+    - [🌐 Web Search with Semantic AI](#-web-search-with-semantic-ai)
+    - [⚡️ JavaScript & Python Code Execution](#️-javascript--python-code-execution)
+    - [📊 Comprehensive Data Visualization](#-comprehensive-data-visualization)
+- [Architecture & Technology](#architecture--technology)
 - [Getting Started](#getting-started)
-  - [Quick Start (Docker Compose Version) 🐳](#quick-start-docker-compose-version-)
-  - [Quick Start (Local Version) 🚀](#quick-start-local-version-)
-  - [Environment Variables](#environment-variables)
-- [📘 Guides](#-guides)
+  - [Docker Compose Deployment 🐳](#docker-compose-deployment-)
+  - [Local Development Setup 🚀](#local-development-setup-)
+  - [Environment Configuration](#environment-configuration)
+- [📘 Setup Guides](#-setup-guides)
     - [🔌 MCP Server Setup \& Tool Testing](#-mcp-server-setup--tool-testing)
     - [🐳 Docker Hosting Guide](#-docker-hosting-guide)
     - [▲ Vercel Hosting Guide](#-vercel-hosting-guide)
     - [🎯 System Prompts \& Chat Customization](#-system-prompts--chat-customization)
     - [🔐 OAuth Sign-In Setup](#-oauth-sign-in-setup)
-    - [🕵🏿 Adding openAI like providers](#-adding-openai-like-providers)
+    - [🕵🏿 Adding OpenAI-Compatible Providers](#-adding-openai-compatible-providers)
     - [🧪 E2E Testing Guide](#-e2e-testing-guide)
-- [💡 Tips](#-tips)
+- [💡 Tips \& Tricks](#-tips--tricks)
     - [💬 Temporary Chat Windows](#-temporary-chat-windows)
 - [🗺️ Roadmap](#️-roadmap)
 - [🙌 Contributing](#-contributing)
@@ -97,7 +106,35 @@ Open [http://localhost:3000](http://localhost:3000) in your browser to get start
 
 ## Preview
 
-Get a feel for the UX — here's a quick look at what's possible.
+Get a feel for the comprehensive capabilities — here's what makes Samba Orion unique.
+
+### 📊 Canvas Workspace & Multi-Chart Dashboards
+
+<img width="1912" height="953" alt="canvas-workspace" loading="lazy" src="https://github.com/user-attachments/assets/canvas-visualization-demo" />
+
+**Example:** Real-time data visualization with progressive chart building as AI creates insights.
+
+- **16+ Chart Types**: Bar, line, pie, area, funnel, radar, scatter, treemap, sankey, radial bar, composed charts, geographic maps (world/US), gauge, and calendar heatmaps
+- **Progressive Building**: Charts stream to Canvas workspace as AI processes data and creates visualizations
+- **Smart Dashboard Layout**: Multi-grid system that scales from single charts to complex dashboards
+- **Interactive Canvas**: Resize, reorganize, and manage multiple visualizations in a unified workspace
+- **Geographic Intelligence**: World maps and US state/county visualizations with TopoJSON support
+
+Canvas integrates seamlessly with chat using ResizablePanelGroup for optimal screen real estate management.
+
+### 👥 Admin Dashboard & User Management
+
+<img width="1567" alt="admin-dashboard" loading="lazy" src="https://github.com/user-attachments/assets/admin-management-ui" />
+
+**Example:** Comprehensive administrative control for team deployments and agent management.
+
+- **User Management**: Role-based access control, user analytics, and account administration
+- **Agent Permissions**: Granular control over who can use, edit, or access custom agents
+- **System Analytics**: Track usage patterns, model performance, and cost analytics
+- **Tabbed Interface**: Clean organization of agents, users, and system settings
+- **Permission Levels**: Use vs Edit permissions with selective sharing capabilities
+
+Perfect for organizations deploying AI platforms for team collaboration and productivity.
 
 ### 🧩 Browser Automation with Playwright MCP
 
@@ -137,20 +174,25 @@ Sample prompt:
 
 <br/>
 
-### 🤖 Custom Agents
+### 🤖 Custom Agents with Granular Permissions
 
 <img width="1567" alt="agent-example" loading="lazy" src="https://github.com/user-attachments/assets/d0a325c0-ff1e-4038-b6bf-fcf57659a5c1" />
 
-**Example:** Create specialized AI agents with custom instructions and tool access.
+**Example:** Create specialized AI agents with sophisticated permission controls and tool access management.
 
-- Define custom agents with specific system prompts and available tools
-- Easily invoke agents in chat using `@agent_name` 
-- Build task-specific assistants like a GitHub Manager agent with issue/PR tools and project context
+- **Custom Instructions**: Define specific system prompts, personalities, and behavioral guidelines
+- **Tool Access Control**: Configure which MCP servers, workflows, and built-in tools each agent can use
+- **Granular Permissions**: Set "use" or "edit" permissions for different users and teams
+- **Visibility Levels**: Private, public, readonly, admin-shared, admin-selective, and admin-all access levels
+- **Smart Invocation**: Easily invoke agents in chat using `@agent_name` with context awareness
 
-For instance, create a GitHub Manager agent by:
-- Providing GitHub tools (issue/PR creation, comments, queries)
-- Adding project details to the system prompt
-- Calling it with `@github_manager` to manage your repository
+**Advanced Use Cases:**
+- **GitHub Manager Agent**: With GitHub MCP tools, repository context, and selective team access
+- **Data Analysis Agent**: With Canvas visualization tools, Python execution, and read-only sharing
+- **Customer Support Agent**: With knowledge base access, limited tool permissions, and public availability
+- **Admin Utility Agent**: With system tools, administrative permissions, and admin-only access
+
+The permission system supports complex organizational structures with fine-grained access control.
 
 <br/>
 
@@ -192,43 +234,51 @@ Control how tools are used in each chat with **Tool Choice Mode** — switch any
 
 This lets you flexibly choose between autonomous, guided, or tool-free interaction depending on the situation.
 
-### 🛠️ Default Tools
+### 🛠️ Advanced Built-in Tools
 
-#### 🌐 Web Search
+#### 🌐 Web Search with Semantic AI
 
 <img width="1034" height="940" alt="web-search" src="https://github.com/user-attachments/assets/261037d9-e1a7-44ad-b45e-43780390a94e" />
 
-Built-in web search powered by [Exa AI](https://exa.ai). Search the web with semantic AI and extract content from URLs directly in your chats.
+Intelligent web search powered by [Exa AI](https://exa.ai) with semantic understanding and content extraction.
 
-- **Optional:** Add `EXA_API_KEY` to `.env` to enable web search
-- **Free Tier:** 1,000 requests/month at no cost, no credit card required
-- **Easy Setup:** Get your API key instantly at [dashboard.exa.ai](https://dashboard.exa.ai)
+- **Semantic Search**: AI-powered search that understands context and intent
+- **Content Extraction**: Direct URL content analysis and summarization
+- **Free Tier**: 1,000 requests/month with no credit card required
+- **Setup**: Add `EXA_API_KEY` to `.env` - get your key at [dashboard.exa.ai](https://dashboard.exa.ai)
 
-#### ⚡️ JS,PYTHON Executor
+#### ⚡️ JavaScript & Python Code Execution
 
 <img width="1225" alt="js-executor-preview" src="https://github.com/user-attachments/assets/7deed824-e70b-46d4-a294-de20ed4dc869" loading="lazy"/>
 
-It is a simple JS execution tool.
+Secure, sandboxed code execution environment with syntax highlighting and error handling.
 
-#### 📊 Data Visualization Tools
+- **JavaScript**: Full ES6+ support with npm package imports
+- **Python**: Complete Python 3.x environment with popular data science libraries
+- **Safety**: Sandboxed execution prevents system access
+- **Rich Output**: Supports text, HTML, and data structure visualization
 
-**Interactive Tables**: Create feature-rich data tables with advanced functionality:
+#### 📊 Comprehensive Data Visualization
 
-- **Sorting & Filtering**: Sort by any column, filter data in real-time
-- **Search & Highlighting**: Global search with automatic text highlighting
-- **Export Options**: Export to CSV or Excel format with lazy-loaded libraries
-- **Column Management**: Show/hide columns with visibility controls
-- **Pagination**: Handle large datasets with built-in pagination
-- **Data Type Support**: Proper formatting for strings, numbers, dates, and booleans
+**Interactive Tables**: Enterprise-grade data table component with advanced features:
+- **Sorting & Filtering**: Multi-column sorting, real-time filtering, and search highlighting
+- **Export Capabilities**: CSV and Excel export with lazy-loaded libraries
+- **Column Management**: Show/hide columns, resize, and reorder functionality
+- **Performance**: Efficient pagination and virtualization for large datasets
+- **Type Support**: Smart formatting for strings, numbers, dates, booleans, and custom types
 
-**Canvas Workspace**: Advanced multi-grid dashboard system with 15+ chart types
-- **Real-time Visualization**: Charts stream progressively as AI creates them
-- **Comprehensive Chart Library**: Bar, line, pie, area, funnel, radar, scatter, treemap, sankey, geographic maps, gauge, calendar heatmap
-- **Geographic Maps**: World and US maps with TopoJSON support (states, counties, DMA regions)
-- **Responsive Dashboard**: Multi-chart layouts that scale from single charts to complex dashboards
-- **Interactive Canvas**: ResizablePanelGroup allows seamless workspace management alongside chat
+**Canvas Workspace**: Revolutionary multi-grid dashboard system revolutionizing AI-powered visualization:
+- **16+ Chart Types**:
+  - **Core Charts**: Bar, line, pie, area with responsive scaling
+  - **Advanced**: Funnel, radar, scatter, treemap, sankey, radial bar, composed charts
+  - **Geographic**: World maps, US states/counties with TopoJSON support
+  - **Specialized**: Gauge charts, calendar heatmaps for temporal data
+- **Progressive Building**: Charts stream to Canvas as AI creates insights with loading states
+- **Smart Layout**: CSS Grid system automatically scales from 1x1 to 2x2+ based on chart count
+- **Workspace Integration**: ResizablePanelGroup provides seamless Canvas/chat proportions
+- **Intelligent Naming**: Auto-generated Canvas names based on chart content analysis
 
-> Additionally, many other tools are provided, such as an HTTP client for API requests and more.
+**Additional Tools**: HTTP client for API requests, file processing, workflow automation, and extensive MCP protocol integrations.
 
 <br/>
 
@@ -237,188 +287,239 @@ Try it out and see what else it can do!
 
 <br/>
 
+## Architecture & Technology
+
+**Foundational Framework**: Built entirely on **Vercel AI SDK v5.0.26** as the core AI abstraction layer, providing unified access to all AI providers through consistent streaming patterns.
+
+### Core Technology Stack
+- **AI Framework**: Vercel AI SDK with `streamText`, `generateText`, and native tool integration
+- **Framework**: Next.js 15.3.2 with App Router and React 19.1.1
+- **Database**: PostgreSQL with Drizzle ORM 0.41.0 and 16 comprehensive migrations
+- **Authentication**: Better-Auth 1.3.7 with OAuth support (Google, GitHub, Microsoft)
+- **Observability**: Langfuse SDK v4.1.0 with OpenTelemetry for complete tracing and cost monitoring
+- **UI**: Tailwind CSS 4.1.12, Radix UI primitives, Framer Motion animations
+- **Testing**: Vitest 3.2.4 (unit), Playwright 1.55.0 (E2E) with multi-user scenarios
+
+### Key Integrations
+- **AI Providers**: OpenAI, Anthropic, Google AI, xAI, Ollama, OpenRouter via Vercel AI SDK
+- **MCP Protocol**: Model Context Protocol for dynamic tool loading and external integrations
+- **Canvas System**: 16+ chart types with progressive building and multi-grid dashboard layout
+- **Voice Integration**: OpenAI Realtime API with full MCP tool support
+- **Geographic Data**: TopoJSON support for world and US map visualizations
+
+### Performance & Scalability
+- **Streaming-First**: Real-time responses with `experimental_telemetry` for comprehensive observability
+- **Database Optimization**: Indexed queries, repository patterns, and efficient migrations
+- **Bundle Optimization**: Dynamic imports, code splitting, and tree-shaking
+- **Memory Management**: Proper cleanup, debounced processing, and race condition prevention
+
 ## Getting Started
 
-> This project uses [pnpm](https://pnpm.io/) as the recommended package manager.
+> **Prerequisites**: Node.js 18+ and [pnpm](https://pnpm.io/) package manager
+> **Port Requirement**: Must run on `localhost:3000` - other ports not supported
+
+### Docker Compose Deployment 🐳
+
+The fastest way to get everything running with zero configuration:
 
 ```bash
-# If you don't have pnpm:
-npm install -g pnpm
-```
-
-### Quick Start (Docker Compose Version) 🐳
-
-```bash
-# 1. Install dependencies
+# 1. Clone and install
+git clone https://github.com/cgoinglove/better-chatbot.git
+cd better-chatbot
 pnpm i
 
-# 2. Enter only the LLM PROVIDER API key(s) you want to use in the .env file at the project root.
-# Example: The app works with just OPENAI_API_KEY filled in.
-# (The .env file is automatically created when you run pnpm i.)
+# 2. Configure .env (auto-generated)
+# Add at least one LLM provider API key (OPENAI_API_KEY recommended)
 
-# 3. Build and start all services (including PostgreSQL) with Docker Compose
+# 3. Deploy with Docker Compose (includes PostgreSQL, Redis, and Samba Orion)
 pnpm docker-compose:up
 
+# View logs
+pnpm docker-compose:logs
+
+# Stop services
+pnpm docker-compose:down
 ```
 
-### Quick Start (Local Version) 🚀
+### Local Development Setup 🚀
+
+For development with hot-reload and debugging:
 
 ```bash
+# 1. Install dependencies (auto-generates .env)
 pnpm i
 
-#(Optional) Start a local PostgreSQL instance
-# If you already have your own PostgreSQL running, you can skip this step.
-# In that case, make sure to update the PostgreSQL URL in your .env file.
+# 2. Start PostgreSQL database
 pnpm docker:pg
 
-# Enter required information in the .env file
-# The .env file is created automatically. Just fill in the required values.
-# For the fastest setup, provide at least one LLM provider's API key (e.g., OPENAI_API_KEY, CLAUDE_API_KEY, GEMINI_API_KEY, etc.) and the PostgreSQL URL you want to use.
+# 3. Configure environment variables in .env
+# Required: At least one AI provider API key
+# Required: POSTGRES_URL and BETTER_AUTH_SECRET (auto-set)
 
+# 4. Start development server
 pnpm build:local && pnpm start
 
-# (Recommended for most cases. Ensures correct cookie settings.)
-# For development mode with hot-reloading and debugging, you can use:
-# pnpm dev
+# Alternative: Hot-reload development
+pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to get started.
+### Environment Configuration
 
-<br/>
-
-### Environment Variables
-
-The `pnpm i` command generates a `.env` file. Add your API keys there.
+The `pnpm i` command auto-generates a `.env` file with all necessary variables. Here are the key configurations:
 
 ```dotenv
-# === LLM Provider API Keys ===
-# You only need to enter the keys for the providers you plan to use
-GOOGLE_GENERATIVE_AI_API_KEY=****
-OPENAI_API_KEY=****
-XAI_API_KEY=****
-ANTHROPIC_API_KEY=****
-OPENROUTER_API_KEY=****
+# === REQUIRED SETTINGS ===
+
+# At least one AI provider API key is required
+OPENAI_API_KEY=your_openai_key_here                    # Recommended first choice
+ANTHROPIC_API_KEY=your_anthropic_key_here
+GOOGLE_GENERATIVE_AI_API_KEY=your_google_key_here
+XAI_API_KEY=your_xai_key_here
+OPENROUTER_API_KEY=your_openrouter_key_here
+
+# Database connection (auto-set if using pnpm docker:pg)
+POSTGRES_URL=postgres://postgres:password@localhost:5433/better_chatbot
+
+# Authentication secret (auto-generated)
+BETTER_AUTH_SECRET=your_generated_secret_here
+
+# === OPTIONAL FEATURES ===
+
+# Web search capabilities (highly recommended)
+EXA_API_KEY=your_exa_key_here                         # Free tier: 1,000 requests/month
+
+# Ollama local models
 OLLAMA_BASE_URL=http://localhost:11434/api
 
+# Redis for multi-instance deployments
+REDIS_URL=redis://localhost:6379
 
+# MCP server configuration storage method
+FILE_BASED_MCP_CONFIG=false                           # Use database storage (default)
 
-# Secret for Better Auth (generate with: npx @better-auth/cli@latest secret)
-BETTER_AUTH_SECRET=****
+# Admin controls
+DISABLE_SIGN_UP=0                                     # Set to 1 to disable new registrations
+NOT_ALLOW_ADD_MCP_SERVERS=0                           # Set to 1 to restrict MCP server additions
+DISABLE_EMAIL_SIGN_IN=0                               # Set to 1 to disable email authentication
 
-# (Optional)
-# URL for Better Auth (the URL you access the app from)
-BETTER_AUTH_URL=
+# OAuth providers (optional - enables social login)
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
 
-# === Database ===
-# If you don't have PostgreSQL running locally, start it with: pnpm docker:pg
-POSTGRES_URL=postgres://your_username:your_password@localhost:5432/your_database_name
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
 
-# (Optional)
-# === Tools ===
-# Exa AI for web search and content extraction (optional, but recommended for @web and research features)
-EXA_API_KEY=your_exa_api_key_here
+MICROSOFT_CLIENT_ID=your_microsoft_client_id
+MICROSOFT_CLIENT_SECRET=your_microsoft_client_secret
 
-
-# Whether to use file-based MCP config (default: false)
-FILE_BASED_MCP_CONFIG=false
-
-# (Optional)
-# === OAuth Settings ===
-# Fill in these values only if you want to enable Google/GitHub/Microsoft login
-
-#GitHub
-GITHUB_CLIENT_ID=
-GITHUB_CLIENT_SECRET=
-
-#Google
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-# Set to 1 to force account selection
-GOOGLE_FORCE_ACCOUNT_SELECTION=
-
-
-# Microsoft
-MICROSOFT_CLIENT_ID=
-MICROSOFT_CLIENT_SECRET=
-# Optional Tenant Id
-MICROSOFT_TENANT_ID=
-# Set to 1 to force account selection
-MICROSOFT_FORCE_ACCOUNT_SELECTION=
-
-# Set this to 1 to disable user sign-ups.
-DISABLE_SIGN_UP=
-
-# Set this to 1 to disallow adding MCP servers.
-NOT_ALLOW_ADD_MCP_SERVERS=
+# Advanced settings
+MCP_MAX_TOTAL_TIMEOUT=600000                          # MCP tool timeout in ms (10 minutes)
+BETTER_AUTH_URL=https://localhost:3000                # Set for HTTPS deployments
 ```
+
+**Quick Setup Priority:**
+1. **OPENAI_API_KEY** - Start here for best model compatibility
+2. **EXA_API_KEY** - Essential for web search features
+3. **OAuth Keys** - Add these for team collaboration features
 
 <br/>
 
-## 📘 Guides
+## 📘 Setup Guides
 
-Step-by-step setup guides for running and configuring better-chatbot.
+Comprehensive guides for deploying and configuring Samba Orion in various environments.
 
-#### [🔌 MCP Server Setup & Tool Testing](./docs/tips-guides/mcp-server-setup-and-tool-testing.md)
+### [🔌 MCP Server Setup & Tool Testing](./docs/tips-guides/mcp-server-setup-and-tool-testing.md)
+Complete guide to adding, configuring, and testing MCP servers for external tool integration.
 
-- How to add and configure MCP servers in your environment
+### [🐳 Docker Hosting Guide](./docs/tips-guides/docker.md)
+Self-hosting instructions using Docker Compose with PostgreSQL, Redis, and application containers.
 
-#### [🐳 Docker Hosting Guide](./docs/tips-guides/docker.md)
+### [▲ Vercel Hosting Guide](./docs/tips-guides/vercel.md)
+One-click deployment to Vercel with automatic database provisioning and environment configuration.
 
-- How to self-host the chatbot using Docker, including environment configuration.
+### [🎯 System Prompts & Chat Customization](./docs/tips-guides/system-prompts-and-customization.md)
+Advanced customization including system prompts, user preferences, agent instructions, and MCP tool configurations.
 
-#### [▲ Vercel Hosting Guide](./docs/tips-guides/vercel.md)
+### [🔐 OAuth Sign-In Setup](./docs/tips-guides/oauth.md)
+Configure social authentication with Google, GitHub, and Microsoft OAuth providers.
 
-- Deploy the chatbot to Vercel with simple setup steps for production use.
+### [🕵🏿 Adding OpenAI-Compatible Providers](docs/tips-guides/adding-openAI-like-providers.md)
+Integrate custom AI providers that follow OpenAI API compatibility standards.
 
-#### [🎯 System Prompts & Chat Customization](./docs/tips-guides/system-prompts-and-customization.md)
+### [🧪 E2E Testing Guide](./docs/tips-guides/e2e-testing-guide.md)
+Complete testing framework setup including multi-user scenarios, agent permissions, and CI/CD integration.
 
-- Personalize your chatbot experience with custom system prompts, user preferences, and MCP tool instructions
+## 💡 Tips & Tricks
 
-#### [🔐 OAuth Sign-In Setup](./docs/tips-guides/oauth.md)
-
-- Configure Google, GitHub, and Microsoft OAuth for secure user login support.
-
-#### [🕵🏿 Adding openAI like providers](docs/tips-guides/adding-openAI-like-providers.md)
-
-- Adding openAI like ai providers
-
-#### [🧪 E2E Testing Guide](./docs/tips-guides/e2e-testing-guide.md)
-
-- Comprehensive end-to-end testing with Playwright including multi-user scenarios, agent visibility testing, and CI/CD integration
-  <br/>
-
-## 💡 Tips
-
-#### [💬 Temporary Chat Windows](./docs/tips-guides/temporary_chat.md)
-
-- Open lightweight popup chats for quick side questions or testing — separate from your main thread.
+### [💬 Temporary Chat Windows](./docs/tips-guides/temporary_chat.md)
+Use lightweight popup chats for quick questions and testing without affecting your main conversation threads.
 
 ## 🗺️ Roadmap
 
-Planned features coming soon to better-chatbot:
+**Current Status** (v1.21.0): Production-ready with comprehensive feature set
 
-- [ ] **File Attach & Image Generation**
-- [ ] **Collaborative Document Editing** (like OpenAI Canvas: user & assistant co-editing)
-- [ ] **RAG (Retrieval-Augmented Generation)**
-- [ ] **Web-based Compute** (with [WebContainers](https://webcontainers.io) integration)
+### Recently Completed ✅
+- **Canvas Workspace**: 16+ chart types with multi-grid dashboard layout
+- **Admin Dashboard**: Complete user management and agent permissions system
+- **Granular Agent Permissions**: Use/edit permissions with selective sharing
+- **Geographic Visualizations**: World and US maps with TopoJSON support
+- **Enhanced Observability**: Langfuse SDK v4 integration with cost tracking
+- **Voice Assistant**: OpenAI Realtime API with full MCP tool support
 
-💡 If you have suggestions or need specific features, please create an [issue](https://github.com/cgoinglove/better-chatbot/issues)!
+### Upcoming Features 🚧
+- [ ] **File Upload & Processing** - Document analysis, image generation, and file-based workflows
+- [ ] **Collaborative Document Editing** - Real-time co-editing with AI assistance (Canvas-style)
+- [ ] **RAG (Retrieval-Augmented Generation)** - Knowledge base integration with vector search
+- [ ] **Advanced Workflow Nodes** - Conditional logic, loops, and data transformations
+- [ ] **Multi-language Support** - Extended i18n beyond current English/localization
+- [ ] **Mobile Companion App** - Native iOS/Android app with sync capabilities
+- [ ] **Enterprise SSO** - SAML, OIDC, and Active Directory integration
+- [ ] **Langfuse Plugin System** - Custom observability metrics and dashboards
+
+### Community Requests 📋
+Vote on features or suggest new ones in [GitHub Issues](https://github.com/cgoinglove/better-chatbot/issues)!
 
 ## 🙌 Contributing
 
-We welcome all contributions! Bug reports, feature ideas, code improvements — everything helps us build the best local AI assistant.
+We welcome all contributions! From bug reports to feature improvements, everything helps make Samba Orion even better.
 
-> **⚠️ Please read our [Contributing Guide](./CONTRIBUTING.md) before submitting any Pull Requests or Issues.** This helps us work together more effectively and saves time for everyone.
+> **⚠️ Please read our [Contributing Guide](./CONTRIBUTING.md) before submitting Pull Requests.** This ensures smooth collaboration and saves everyone time.
 
-**For detailed contribution guidelines**, please see our [Contributing Guide](./CONTRIBUTING.md).
+### Development Guidelines
+- **Feature Requests**: Create an issue first for major changes to discuss approach and design
+- **Code Quality**: All PRs must pass TypeScript checks, tests, and formatting (`pnpm check`)
+- **Pull Request Format**: Use conventional commit format (e.g., `feat: add canvas export`, `fix: agent permissions`)
+- **Testing**: Add tests for new features, ensure existing tests pass
 
-**Language Translations:** Help us make the chatbot accessible to more users by adding new language translations. See [language.md](./messages/language.md) for instructions on how to contribute translations.
+### Ways to Contribute
+- **🐛 Bug Fixes**: Identify and fix issues, improve error handling
+- **✨ New Features**: Canvas enhancements, new chart types, MCP integrations
+- **📚 Documentation**: Improve guides, add examples, update screenshots
+- **🌍 Translations**: Help expand language support - see [language.md](./messages/language.md)
+- **🧪 Testing**: Add test coverage, improve E2E scenarios
 
-Let's build it together 🚀
+### Development Stack Knowledge Helpful
+- **Vercel AI SDK**: Streaming patterns, tool integrations
+- **Next.js 15**: App Router, server components, API routes
+- **TypeScript**: Strict typing, complex type definitions
+- **Drizzle ORM**: Database queries, migrations
+- **Radix UI**: Accessibility-first components
 
-## 💬 Join Our Discord
+Let's build the future of AI assistance together! 🚀
+
+## 💬 Community & Support
 
 [![Discord](https://img.shields.io/discord/1374047276074537103?label=Discord&logo=discord&color=5865F2)](https://discord.gg/gCRu69Upnp)
 
-Connect with the community, ask questions, and get support on our official Discord server!
-# Deployment trigger Thu Sep 18 19:14:10 PDT 2025
+Join our Discord community for:
+- **Technical Support**: Get help with setup, deployment, and troubleshooting
+- **Feature Discussions**: Influence roadmap and share ideas
+- **MCP Integrations**: Share custom MCP servers and configurations
+- **Workflow Gallery**: Exchange automation workflows and agent setups
+- **Development Chat**: Contribute to the project and collaborate with maintainers
+
+---
+
+**Samba Orion** - Empowering individuals and teams with production-ready AI conversations, advanced tooling, and comprehensive observability. Built with ❤️ on the foundation of the open-source [better-chatbot](https://github.com/cgoinglove/better-chatbot) project.
+
+**[⭐ Star on GitHub](https://github.com/cgoinglove/better-chatbot)** | **[🚀 Deploy on Vercel](https://vercel.com/new/clone?repository-url=https://github.com/cgoinglove/better-chatbot)** | **[💬 Join Discord](https://discord.gg/gCRu69Upnp)**

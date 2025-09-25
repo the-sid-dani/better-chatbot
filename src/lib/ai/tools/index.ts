@@ -1,5 +1,4 @@
 export enum AppDefaultToolkit {
-  Visualization = "visualization",
   WebSearch = "webSearch",
   Http = "http",
   Code = "code",
@@ -7,9 +6,6 @@ export enum AppDefaultToolkit {
 }
 
 export enum DefaultToolName {
-  CreatePieChart = "createPieChart",
-  CreateBarChart = "createBarChart",
-  CreateLineChart = "createLineChart",
   CreateTable = "createTable",
   WebSearch = "webSearch",
   WebContent = "webContent",

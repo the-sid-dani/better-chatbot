@@ -46,6 +46,11 @@ export function TreemapChart(props: TreemapChartProps) {
   const { title, data, description } = props;
 
   const deduplicateData = React.useMemo(() => {
+    // Handle undefined or empty data
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      return [];
+    }
+
     return data.reduce(
       (acc, item) => {
         const names = acc.map((item) => item.name);
@@ -90,12 +95,12 @@ export function TreemapChart(props: TreemapChartProps) {
 
     if (hasChildren) {
       // Already hierarchical data - add colors to children
-      return deduplicateData.map((item, index) => ({
+      return deduplicateData.map((item, _index) => ({
         name: item.name,
-        children: item.children!.map((child, childIndex) => ({
+        children: item.children!.map((child, _childIndex) => ({
           name: child.name,
           size: child.value,
-          fill: `hsl(var(--chart-${((index + childIndex) % 5) + 1}))`,
+          fill: `var(--color-${sanitizeCssVariableName(child.name)})`,
         })),
       }));
     } else {
@@ -117,19 +122,55 @@ export function TreemapChart(props: TreemapChartProps) {
   const chartConfig = React.useMemo(() => {
     const config: ChartConfig = {};
 
-    // Configure each item
+    // Configure each item and their children
     deduplicateData.forEach((item, index) => {
       // Colors cycle through chart-1 ~ chart-5
       const colorIndex = index % chartColors.length;
 
+      // Configure parent item
       config[sanitizeCssVariableName(item.name)] = {
         label: item.name,
         color: chartColors[colorIndex],
       };
+
+      // Configure children if they exist
+      if (item.children) {
+        item.children.forEach((child, childIndex) => {
+          const childColorIndex = (index + childIndex) % chartColors.length;
+          config[sanitizeCssVariableName(child.name)] = {
+            label: child.name,
+            color: chartColors[childColorIndex],
+          };
+        });
+      }
     });
 
     return config;
   }, [deduplicateData]);
+
+  // Handle empty data case
+  if (!data || data.length === 0) {
+    return (
+      <Card className="bg-card h-full flex flex-col">
+        <CardHeader className="flex flex-col gap-1 relative pb-1 flex-shrink-0">
+          <CardTitle className="flex items-center text-sm">
+            Treemap Chart - {title}
+          </CardTitle>
+          {description && (
+            <CardDescription className="text-xs">{description}</CardDescription>
+          )}
+        </CardHeader>
+        <CardContent className="flex-1 pb-0 pt-2 min-h-0 flex items-center justify-center">
+          <div className="text-center text-muted-foreground">
+            <p>No data available</p>
+            <p className="text-xs mt-1">
+              Provide data to render the treemap chart
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-card h-full flex flex-col">
@@ -159,6 +200,42 @@ export function TreemapChart(props: TreemapChartProps) {
               stroke="hsl(var(--border))"
               animationBegin={0}
               animationDuration={0}
+              content={({ x, y, width, height, name, size }) => {
+                // Only render text if the cell is large enough
+                if (width < 40 || height < 20) return null;
+
+                return (
+                  <g>
+                    <rect
+                      x={x}
+                      y={y}
+                      width={width}
+                      height={height}
+                      fill={`var(--color-${sanitizeCssVariableName(name || "")})`}
+                      stroke="hsl(var(--border))"
+                      strokeWidth={1}
+                    />
+                    <text
+                      x={x + width / 2}
+                      y={y + height / 2 - 4}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      className="fill-foreground text-xs font-medium"
+                    >
+                      {name}
+                    </text>
+                    <text
+                      x={x + width / 2}
+                      y={y + height / 2 + 8}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      className="fill-muted-foreground text-xs"
+                    >
+                      {size?.toLocaleString()}
+                    </text>
+                  </g>
+                );
+              }}
             >
               <Tooltip
                 content={({ active, payload }) => {

@@ -350,18 +350,6 @@ export function ChatMentionInputSuggestion({
       const icon = <DefaultToolIcon name={toolName} />;
       let description = "";
       switch (toolName) {
-        case DefaultToolName.CreatePieChart:
-          label = "pie-chart";
-          description = "Create a pie chart";
-          break;
-        case DefaultToolName.CreateBarChart:
-          label = "bar-chart";
-          description = "Create a bar chart";
-          break;
-        case DefaultToolName.CreateLineChart:
-          label = "line-chart";
-          description = "Create a line chart";
-          break;
         case DefaultToolName.CreateTable:
           label = "table";
           description = "Create a table";

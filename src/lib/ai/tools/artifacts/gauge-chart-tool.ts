@@ -1,7 +1,7 @@
 import { tool as createTool } from "ai";
 import { z } from "zod";
-import { generateUUID } from "lib/utils";
-import logger from "logger";
+import { generateUUID } from "../../../utils";
+import logger from "../../../logger";
 
 /**
  * Gauge Chart Tool - Creates Canvas Artifacts
@@ -87,7 +87,20 @@ export const gaugeChartArtifactTool = createTool({
       }
 
       if (minValue >= maxValue) {
-        throw new Error("minValue must be less than maxValue");
+        logger.warn(
+          `Invalid gauge range: minValue (${minValue}) >= maxValue (${maxValue}). Using safe defaults.`,
+        );
+        minValue = 0;
+        maxValue = 100;
+      }
+
+      // Ensure safe numeric ranges to prevent library validation errors
+      if (
+        !Number.isFinite(minValue) ||
+        !Number.isFinite(maxValue) ||
+        !Number.isFinite(value)
+      ) {
+        throw new Error("All gauge values must be finite numbers");
       }
 
       // Clamp value to min/max bounds as per PRP requirements

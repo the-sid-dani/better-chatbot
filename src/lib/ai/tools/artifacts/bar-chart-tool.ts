@@ -1,7 +1,8 @@
 import { tool as createTool } from "ai";
 import { z } from "zod";
-import { generateUUID } from "lib/utils";
-import logger from "logger";
+import { generateUUID } from "../../../utils";
+import logger from "../../../logger";
+import { CHART_VALIDATORS } from "../../../validation/chart-data-validator";
 
 /**
  * Enhanced Bar Chart Tool - Creates Canvas Artifacts
@@ -61,50 +62,63 @@ export const barChartArtifactTool = createTool({
     try {
       logger.info(`Creating bar chart artifact: ${title}`);
 
-      // Validate chart data
-      if (!data || data.length === 0) {
-        throw new Error("Bar chart data cannot be empty");
+      // Comprehensive security validation with XSS prevention
+      const validationResult = CHART_VALIDATORS.bar({
+        title,
+        data,
+        description,
+        yAxisLabel,
+      });
+
+      if (!validationResult.success) {
+        logger.error(`Bar chart validation failed: ${validationResult.error}`);
+        throw new Error(
+          validationResult.error || "Chart data validation failed",
+        );
       }
 
-      // Validate data structure
-      for (const point of data) {
-        if (!point.xAxisLabel || !point.series || point.series.length === 0) {
-          throw new Error(
-            "Invalid bar chart data structure - each point needs xAxisLabel and series",
-          );
-        }
-
-        for (const series of point.series) {
-          if (!series.seriesName || typeof series.value !== "number") {
-            throw new Error(
-              "Invalid series data - each series needs seriesName and numeric value",
-            );
-          }
-        }
+      // Security audit check
+      if (!validationResult.securityAudit.safe) {
+        logger.error(
+          `Bar chart security audit failed:`,
+          validationResult.securityAudit.issues,
+        );
+        throw new Error("Chart data contains potential security issues");
       }
 
-      // Get unique series names for metadata
+      // Use sanitized and validated data
+      const validatedData = validationResult.data!;
+      const {
+        title: sanitizedTitle,
+        data: sanitizedChartData,
+        description: sanitizedDescription,
+        yAxisLabel: sanitizedYAxisLabel,
+      } = validatedData;
+
+      // Get unique series names for metadata (using sanitized data)
       const seriesNames = Array.from(
-        new Set(data.flatMap((d) => d.series.map((s) => s.seriesName))),
+        new Set(
+          sanitizedChartData.flatMap((d) => d.series.map((s) => s.seriesName)),
+        ),
       );
 
       // Create the chart artifact content that matches BarChart component props
       const chartContent = {
         type: "bar-chart",
-        title,
-        data,
-        description,
-        yAxisLabel,
+        title: sanitizedTitle,
+        data: sanitizedChartData,
+        description: sanitizedDescription,
+        yAxisLabel: sanitizedYAxisLabel,
         // Add metadata for Canvas rendering
         metadata: {
           chartType: "bar" as const,
           xAxisLabel: "Categories",
-          yAxisLabel,
-          description,
+          yAxisLabel: sanitizedYAxisLabel,
+          description: sanitizedDescription,
           theme: "light",
           animated: true,
           seriesCount: seriesNames.length,
-          dataPoints: data.length,
+          dataPoints: sanitizedChartData.length,
           // Optimize sizing for Canvas cards
           sizing: {
             width: "100%",
@@ -124,13 +138,13 @@ export const barChartArtifactTool = createTool({
         artifactId: artifactId,
         artifact: {
           kind: "charts" as const,
-          title: `Bar Chart: ${title}`,
+          title: `Bar Chart: ${sanitizedTitle}`,
           content: JSON.stringify(chartContent, null, 2),
           metadata: chartContent.metadata,
         },
-        message: `Created bar chart "${title}" with ${data.length} data points and ${seriesNames.length} series. The chart is now available in the Canvas workspace with beautiful styling.`,
+        message: `Created bar chart "${sanitizedTitle}" with ${sanitizedChartData.length} data points and ${seriesNames.length} series. The chart is now available in the Canvas workspace with beautiful styling.`,
         chartType: "bar",
-        dataPoints: data.length,
+        dataPoints: sanitizedChartData.length,
         series: seriesNames.join(", "),
         canvasReady: true,
         componentType: "BarChart",

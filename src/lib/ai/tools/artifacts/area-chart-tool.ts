@@ -1,7 +1,8 @@
 import { tool as createTool } from "ai";
 import { z } from "zod";
-import { generateUUID } from "lib/utils";
-import logger from "logger";
+import { generateUUID } from "../../../utils";
+import logger from "../../../logger";
+import { CHART_VALIDATORS } from "../../../validation/chart-data-validator";
 
 /**
  * Area Chart Tool - Creates Canvas Artifacts
@@ -74,42 +75,55 @@ export const areaChartArtifactTool = createTool({
     try {
       logger.info(`Creating area chart artifact: ${title}`);
 
-      // Validate chart data
-      if (!data || data.length === 0) {
-        throw new Error("Area chart data cannot be empty");
+      // Comprehensive security validation with XSS prevention
+      const validationResult = CHART_VALIDATORS.area({
+        title,
+        data,
+        description,
+        yAxisLabel,
+      });
+
+      if (!validationResult.success) {
+        logger.error(`Area chart validation failed: ${validationResult.error}`);
+        throw new Error(
+          validationResult.error || "Chart data validation failed",
+        );
       }
 
-      // Validate data structure
-      for (const point of data) {
-        if (!point.xAxisLabel || !point.series || point.series.length === 0) {
-          throw new Error(
-            "Invalid area chart data structure - each point needs xAxisLabel and series",
-          );
-        }
-
-        for (const series of point.series) {
-          if (!series.seriesName || typeof series.value !== "number") {
-            throw new Error(
-              "Invalid series data - each series needs seriesName and numeric value",
-            );
-          }
-        }
+      // Security audit check
+      if (!validationResult.securityAudit.safe) {
+        logger.error(
+          `Area chart security audit failed:`,
+          validationResult.securityAudit.issues,
+        );
+        throw new Error("Chart data contains potential security issues");
       }
 
-      // Get unique series names for metadata
+      // Use sanitized and validated data
+      const validatedData = validationResult.data!;
+      const {
+        title: sanitizedTitle,
+        data: sanitizedChartData,
+        description: sanitizedDescription,
+        yAxisLabel: sanitizedYAxisLabel,
+      } = validatedData;
+
+      // Get unique series names for metadata (using sanitized data)
       const seriesNames = Array.from(
-        new Set(data.flatMap((d) => d.series.map((s) => s.seriesName))),
+        new Set(
+          sanitizedChartData.flatMap((d) => d.series.map((s) => s.seriesName)),
+        ),
       );
 
       // Create the chart artifact content that matches AreaChart component props
       const chartContent = {
         type: "area-chart",
-        title,
-        data,
+        title: sanitizedTitle,
+        data: sanitizedChartData,
         areaType,
         xAxisLabel,
-        yAxisLabel,
-        description,
+        yAxisLabel: sanitizedYAxisLabel,
+        description: sanitizedDescription,
         // Add metadata for Canvas rendering
         metadata: {
           chartType: "area" as const,

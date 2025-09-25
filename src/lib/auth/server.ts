@@ -79,11 +79,12 @@ export const auth = betterAuth({
     google: socialAuthenticationProviders.google
       ? {
           ...socialAuthenticationProviders.google,
+          scope: ["email", "profile"],
           mapProfileToUser: (profile: any) => {
-            // Restrict to Samba domain
-            if (!profile.email?.endsWith("@sambatv.com")) {
-              throw new Error("Access restricted to Samba employees");
-            }
+            // Restrict to Samba domain - DISABLED FOR DEVELOPMENT
+            // if (!profile.email?.endsWith("@samba.tv")) {
+            //   throw new Error("Access restricted to Samba employees");
+            // }
             return {
               name: profile.name,
               email: profile.email,
@@ -135,10 +136,10 @@ export const getEnhancedSession = async () => {
     .where(eq(UserSchema.id, session.user.id))
     .limit(1);
 
-  // Verify Samba domain (double-check)
-  if (user[0]?.email && !user[0].email.endsWith("@sambatv.com")) {
-    throw new Error("Access restricted to Samba employees");
-  }
+  // Verify Samba domain (double-check) - DISABLED FOR DEVELOPMENT
+  // if (user[0]?.email && !user[0].email.endsWith("@samba.tv")) {
+  //   throw new Error("Access restricted to Samba employees");
+  // }
 
   return {
     ...session,

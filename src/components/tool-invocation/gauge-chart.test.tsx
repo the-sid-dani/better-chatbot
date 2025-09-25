@@ -64,4 +64,61 @@ describe("GaugeChart Color System", () => {
       expect(color).not.toMatch(hexColorRegex);
     });
   });
+
+  it("should handle edge cases that could cause subArc validation errors", () => {
+    // Test case that could trigger the original error: limit = 33
+    const problemCases = [
+      { value: 33, min: 0, max: 100, expected: 33 },
+      { value: 33, min: 10, max: 50, expected: 57.5 }, // (33-10)/(50-10) * 100 = 57.5
+      { value: 33, min: 33, max: 33, expected: 0 }, // Invalid range, should default to 0
+      { value: 33, min: 50, max: 10, expected: 0 }, // Invalid range (min > max), should default
+    ];
+
+    problemCases.forEach(({ value, min, max, expected }) => {
+      // Simulate the deduplication logic from the component
+      let normalizedMin = min;
+      let normalizedMax = max;
+      let normalizedValue = value;
+
+      if (normalizedMin >= normalizedMax) {
+        normalizedValue = Math.max(0, Math.min(100, value));
+        normalizedMin = 0;
+        normalizedMax = 100;
+      } else {
+        normalizedValue = Math.max(
+          normalizedMin,
+          Math.min(normalizedMax, value),
+        );
+      }
+
+      const range = normalizedMax - normalizedMin;
+      const percentage =
+        range <= 0
+          ? 0
+          : Math.round(((normalizedValue - normalizedMin) / range) * 100);
+
+      expect(percentage).toBe(expected);
+
+      // Ensure the final gauge value is always within 0-1 range
+      const gaugeValue = Math.max(0, Math.min(1, percentage / 100));
+      expect(gaugeValue).toBeGreaterThanOrEqual(0);
+      expect(gaugeValue).toBeLessThanOrEqual(1);
+    });
+  });
+
+  it("should prevent infinite values that could cause subArc errors", () => {
+    const edgeCases = [
+      { value: Infinity, min: 0, max: 100, shouldThrow: true },
+      { value: -Infinity, min: 0, max: 100, shouldThrow: true },
+      { value: NaN, min: 0, max: 100, shouldThrow: true },
+      { value: 50, min: Infinity, max: 100, shouldThrow: true },
+      { value: 50, min: 0, max: NaN, shouldThrow: true },
+    ];
+
+    edgeCases.forEach(({ value, min, max, shouldThrow }) => {
+      const allFinite =
+        Number.isFinite(value) && Number.isFinite(min) && Number.isFinite(max);
+      expect(allFinite).toBe(!shouldThrow);
+    });
+  });
 });

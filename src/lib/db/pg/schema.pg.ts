@@ -48,14 +48,7 @@ export const AgentSchema = pgTable("agent", {
     .references(() => UserSchema.id),
   instructions: json("instructions").$type<Agent["instructions"]>(),
   visibility: varchar("visibility", {
-    enum: [
-      "public",
-      "private",
-      "readonly",
-      "admin-shared",
-      "admin-all",
-      "admin-selective",
-    ],
+    enum: ["public", "private", "readonly", "admin-all", "admin-selective"],
   })
     .notNull()
     .default("private"),
@@ -208,14 +201,7 @@ export const WorkflowSchema = pgTable("workflow", {
   description: text("description"),
   isPublished: boolean("is_published").notNull().default(false),
   visibility: varchar("visibility", {
-    enum: [
-      "public",
-      "private",
-      "readonly",
-      "admin-shared",
-      "admin-all",
-      "admin-selective",
-    ],
+    enum: ["public", "private", "readonly", "admin-all", "admin-selective"],
   })
     .notNull()
     .default("private"),

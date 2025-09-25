@@ -25,7 +25,9 @@ import {
   Sun,
   MoonStar,
   ChevronRight,
+  Crown,
 } from "lucide-react";
+import Link from "next/link";
 import { useTheme } from "next-themes";
 import { appStore } from "@/app/store";
 import { BASE_THEMES, COOKIE_KEY_LOCALE, SUPPORTED_LOCALES } from "lib/const";
@@ -122,6 +124,12 @@ export function AppSidebarUser({
             >
               <Settings2 className="size-4 text-foreground" />
               <span>{t("chatPreferences")}</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/admin">
+                <Crown className="size-4 text-foreground" />
+                <span>Admin Dashboard</span>
+              </Link>
             </DropdownMenuItem>
             <SelectTheme />
             <SelectLanguage />
