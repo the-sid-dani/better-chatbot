@@ -27,6 +27,9 @@
     "disableReferencedProjectLoad": true,
     // PERFORMANCE: Prevent infinite type resolution loops
     "maxNodeModuleJsDepth": 0,
+    // CRITICAL: Prevent TypeScript infinite compilation loops
+    "typeRoots": ["./node_modules/@types"],
+    "skipDefaultLibCheck": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "useDefineForClassFields": true,

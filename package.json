@@ -8,9 +8,9 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "dev:https": "next dev --turbopack --experimental-https",
-    "build": "next build",
+    "build": "NODE_ENV=production next build",
     "start": "next start",
-    "build:local": "cross-env NO_HTTPS='1' next build",
+    "build:local": "NODE_ENV=production cross-env NO_HTTPS='1' next build",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",

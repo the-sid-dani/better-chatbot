@@ -47,7 +47,7 @@ const openaiCompatibleProviders = openaiCompatibleModelsSafeParse(
 const {
   providers: openaiCompatibleModels,
   unsupportedModels: openaiCompatibleUnsupportedModels,
-} = createOpenAICompatibleModels(openaiCompatibleProviders);
+} = createOpenAICompatibleModels(openaiCompatibleProviders || []);
 
 const allModels = { ...openaiCompatibleModels, ...staticModels };
 
