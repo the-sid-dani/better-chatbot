@@ -109,27 +109,27 @@ const fipsToPostalCode: { [key: string]: string } = {
 const colorScales = {
   blues: [
     "hsl(var(--muted))", // No data / background
-    "hsl(210, 40%, 85%)", // Very light blue
-    "hsl(210, 50%, 70%)", // Light blue
-    "hsl(210, 60%, 55%)", // Medium blue
-    "hsl(210, 70%, 40%)", // Blue
-    "hsl(210, 80%, 25%)", // Dark blue
+    "hsl(var(--chart-5))", // Very light blue
+    "hsl(var(--chart-4))", // Light blue
+    "hsl(var(--chart-3))", // Medium blue
+    "hsl(var(--chart-2))", // Blue
+    "hsl(var(--chart-1))", // Dark blue
   ],
   reds: [
     "hsl(var(--muted))",
-    "hsl(0, 91%, 95%)",
-    "hsl(0, 91%, 85%)",
-    "hsl(0, 91%, 75%)",
-    "hsl(0, 91%, 60%)",
-    "hsl(0, 91%, 45%)",
+    "hsl(var(--chart-5))",
+    "hsl(var(--chart-4))",
+    "hsl(var(--chart-3))",
+    "hsl(var(--chart-2))",
+    "hsl(var(--chart-1))",
   ],
   greens: [
     "hsl(var(--muted))",
-    "hsl(120, 91%, 95%)",
-    "hsl(120, 91%, 85%)",
-    "hsl(120, 91%, 75%)",
-    "hsl(120, 91%, 60%)",
-    "hsl(120, 91%, 45%)",
+    "hsl(var(--chart-5))",
+    "hsl(var(--chart-4))",
+    "hsl(var(--chart-3))",
+    "hsl(var(--chart-2))",
+    "hsl(var(--chart-1))",
   ],
   viridis: [
     "hsl(var(--muted))",
@@ -161,8 +161,6 @@ export function GeographicChart(props: GeographicChartProps) {
     x: number;
     y: number;
   } | null>(null);
-
-
 
   const deduplicateData = React.useMemo(() => {
     return data.reduce(
@@ -415,25 +413,25 @@ export function GeographicChart(props: GeographicChartProps) {
               const fillColor =
                 value !== undefined
                   ? valueToColor(value)
-                  : "rgba(148, 163, 184, 0.06)"; // Very subtle gray overlay for no data
+                  : "hsl(var(--chart-5))"; // Use lightest chart color for no data
 
               return (
                 <Geography
                   key={geo.rsmKey}
                   geography={geo}
                   fill={fillColor}
-                  stroke="rgba(148, 163, 184, 0.25)"
+                  stroke="hsl(var(--border))"
                   strokeWidth={0.5}
                   style={{
                     default: { outline: "none" },
                     hover: {
                       fill:
                         value !== undefined
-                          ? "hsl(210, 85%, 35%)"
-                          : "rgba(148, 163, 184, 0.12)", // Darker blue on hover or very slightly more visible gray
+                          ? "hsl(var(--chart-1))" // Use primary chart color for hover
+                          : "hsl(var(--chart-4))", // Use slightly darker chart color for hover
                       outline: "none",
                       cursor: value !== undefined ? "pointer" : "default",
-                      stroke: "rgba(148, 163, 184, 0.4)",
+                      stroke: "hsl(var(--border))",
                       strokeWidth: value !== undefined ? 1 : 0.5,
                     },
                     pressed: { outline: "none" },
@@ -455,7 +453,6 @@ export function GeographicChart(props: GeographicChartProps) {
                       y = rect.top + rect.height / 2;
                     }
 
-
                     setTooltip({
                       name: stateName,
                       value: value,
@@ -474,7 +471,6 @@ export function GeographicChart(props: GeographicChartProps) {
                       x = rect.left + rect.width / 2;
                       y = rect.top + rect.height / 2;
                     }
-
 
                     if (tooltip) {
                       setTooltip((prev) =>
