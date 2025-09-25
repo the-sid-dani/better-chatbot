@@ -108,7 +108,7 @@ const fipsToPostalCode: { [key: string]: string } = {
 // Color scales for geographic data visualization using design system
 const colorScales = {
   blues: [
-    "hsl(0, 0%, 85%)", // Fixed light grey for no data (theme-independent)
+    "rgba(255, 255, 255, 0.15)", // No data / background - semi-transparent white overlay
     "hsl(var(--chart-5))", // Very light blue
     "hsl(var(--chart-4))", // Light blue
     "hsl(var(--chart-3))", // Medium blue
@@ -116,7 +116,7 @@ const colorScales = {
     "hsl(var(--chart-1))", // Dark blue
   ],
   reds: [
-    "hsl(0, 0%, 85%)",
+    "rgba(255, 255, 255, 0.15)",
     "hsl(var(--chart-5))",
     "hsl(var(--chart-4))",
     "hsl(var(--chart-3))",
@@ -124,7 +124,7 @@ const colorScales = {
     "hsl(var(--chart-1))",
   ],
   greens: [
-    "hsl(0, 0%, 85%)",
+    "rgba(255, 255, 255, 0.15)",
     "hsl(var(--chart-5))",
     "hsl(var(--chart-4))",
     "hsl(var(--chart-3))",
@@ -132,7 +132,7 @@ const colorScales = {
     "hsl(var(--chart-1))",
   ],
   viridis: [
-    "hsl(0, 0%, 85%)",
+    "rgba(255, 255, 255, 0.15)",
     "hsl(var(--chart-5))",
     "hsl(var(--chart-4))",
     "hsl(var(--chart-3))",
@@ -411,7 +411,9 @@ export function GeographicChart(props: GeographicChartProps) {
               }
 
               const fillColor =
-                value !== undefined ? valueToColor(value) : "hsl(0, 0%, 85%)"; // Fixed light grey for no data (theme-independent)
+                value !== undefined
+                  ? valueToColor(value)
+                  : "rgba(255, 255, 255, 0.15)"; // Semi-transparent white overlay for no data
 
               return (
                 <Geography
@@ -426,7 +428,7 @@ export function GeographicChart(props: GeographicChartProps) {
                       fill:
                         value !== undefined
                           ? "hsl(var(--chart-1))" // Use primary chart color for hover
-                          : "hsl(0, 0%, 75%)", // Fixed darker grey for no-data hover (theme-independent)
+                          : "rgba(255, 255, 255, 0.25)", // Slightly more opaque white for hover on no-data
                       outline: "none",
                       cursor: value !== undefined ? "pointer" : "default",
                       stroke: "hsl(var(--border))",
