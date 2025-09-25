@@ -108,7 +108,7 @@ const fipsToPostalCode: { [key: string]: string } = {
 // Color scales for geographic data visualization using design system
 const colorScales = {
   blues: [
-    "hsl(var(--muted))", // No data / background
+    "hsl(0, 0%, 85%)", // Fixed light grey for no data (theme-independent)
     "hsl(var(--chart-5))", // Very light blue
     "hsl(var(--chart-4))", // Light blue
     "hsl(var(--chart-3))", // Medium blue
@@ -116,7 +116,7 @@ const colorScales = {
     "hsl(var(--chart-1))", // Dark blue
   ],
   reds: [
-    "hsl(var(--muted))",
+    "hsl(0, 0%, 85%)",
     "hsl(var(--chart-5))",
     "hsl(var(--chart-4))",
     "hsl(var(--chart-3))",
@@ -124,7 +124,7 @@ const colorScales = {
     "hsl(var(--chart-1))",
   ],
   greens: [
-    "hsl(var(--muted))",
+    "hsl(0, 0%, 85%)",
     "hsl(var(--chart-5))",
     "hsl(var(--chart-4))",
     "hsl(var(--chart-3))",
@@ -132,7 +132,7 @@ const colorScales = {
     "hsl(var(--chart-1))",
   ],
   viridis: [
-    "hsl(var(--muted))",
+    "hsl(0, 0%, 85%)",
     "hsl(var(--chart-5))",
     "hsl(var(--chart-4))",
     "hsl(var(--chart-3))",
@@ -411,9 +411,7 @@ export function GeographicChart(props: GeographicChartProps) {
               }
 
               const fillColor =
-                value !== undefined
-                  ? valueToColor(value)
-                  : "hsl(var(--chart-5))"; // Use lightest chart color for no data
+                value !== undefined ? valueToColor(value) : "hsl(0, 0%, 85%)"; // Fixed light grey for no data (theme-independent)
 
               return (
                 <Geography
@@ -428,7 +426,7 @@ export function GeographicChart(props: GeographicChartProps) {
                       fill:
                         value !== undefined
                           ? "hsl(var(--chart-1))" // Use primary chart color for hover
-                          : "hsl(var(--chart-4))", // Use slightly darker chart color for hover
+                          : "hsl(0, 0%, 75%)", // Fixed darker grey for no-data hover (theme-independent)
                       outline: "none",
                       cursor: value !== undefined ? "pointer" : "default",
                       stroke: "hsl(var(--border))",
