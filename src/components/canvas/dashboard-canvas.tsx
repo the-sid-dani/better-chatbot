@@ -86,7 +86,11 @@ function DashboardChartRenderer({ chart }: { chart: DashboardChart }) {
           <div className="h-full w-full">
             <BarChart
               title={chart.title}
-              data={chart.data as ChartDataPoint[]}
+              data={
+                Array.isArray(chart.data)
+                  ? (chart.data as ChartDataPoint[])
+                  : []
+              }
               description={chart.description}
               yAxisLabel={chart.yAxisLabel}
             />
@@ -97,23 +101,52 @@ function DashboardChartRenderer({ chart }: { chart: DashboardChart }) {
           <div className="h-full w-full">
             <LineChart
               title={chart.title}
-              data={chart.data as ChartDataPoint[]}
+              data={
+                Array.isArray(chart.data)
+                  ? (chart.data as ChartDataPoint[])
+                  : []
+              }
               description={chart.description}
               yAxisLabel={chart.yAxisLabel}
             />
           </div>
         );
       case "pie":
-        // Transform data for pie chart if needed
-        const pieData: Array<{ label: string; value: number }> =
-          Array.isArray(chart.data) &&
-          chart.data.length > 0 &&
-          "label" in chart.data[0]
-            ? (chart.data as Array<{ label: string; value: number }>)
-            : chart.data.map((point) => ({
-                label: point.xAxisLabel,
-                value: point.series[0]?.value || 0,
-              }));
+        // TYPE GUARD: Type-safe data transformation for pie charts
+        const pieData: Array<{ label: string; value: number }> = (() => {
+          // Type guard function for pie chart data format
+          function isPieChartData(
+            data: any[],
+          ): data is Array<{ label: string; value: number }> {
+            return data.every(
+              (item) =>
+                typeof item === "object" &&
+                item !== null &&
+                "label" in item &&
+                "value" in item &&
+                typeof item.label === "string" &&
+                typeof item.value === "number",
+            );
+          }
+
+          // Check if data is already in pie chart format
+          if (Array.isArray(chart.data) && chart.data.length > 0) {
+            if (isPieChartData(chart.data)) {
+              return chart.data;
+            }
+          }
+
+          // TRANSFORM: Convert ChartDataPoint to pie format with runtime verification
+          if (Array.isArray(chart.data)) {
+            return (chart.data as ChartDataPoint[]).map((point) => ({
+              label: point.xAxisLabel,
+              value: point.series[0]?.value || 0,
+            }));
+          }
+
+          // Fallback for empty or invalid data
+          return [];
+        })();
         return (
           <div className="h-full w-full">
             <PieChart
@@ -128,7 +161,11 @@ function DashboardChartRenderer({ chart }: { chart: DashboardChart }) {
           <div className="h-full w-full">
             <BarChart
               title={chart.title}
-              data={chart.data as ChartDataPoint[]}
+              data={
+                Array.isArray(chart.data)
+                  ? (chart.data as ChartDataPoint[])
+                  : []
+              }
               description={chart.description}
               yAxisLabel={chart.yAxisLabel}
             />

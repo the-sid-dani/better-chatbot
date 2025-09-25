@@ -26,32 +26,7 @@ import Link from "next/link";
 import { AgentPermissionDropdown } from "./agent-permission-dropdown";
 import { AgentStatusDropdown } from "./agent-status-dropdown";
 import { AgentStatus } from "@/types/agent";
-
-// Agent data interface for table
-interface AdminAgentTableRow {
-  id: string;
-  name: string;
-  description?: string;
-  icon?: string;
-  visibility:
-    | "private"
-    | "admin-all"
-    | "admin-selective"
-    | "admin-all"
-    | "readonly"
-    | "public";
-  status: AgentStatus;
-  createdAt: Date;
-  permissionCount: number;
-  permissions: Array<{
-    id: string;
-    userId: string;
-    userName?: string;
-    userEmail?: string;
-    userImage?: string;
-    permissionLevel: "use" | "edit";
-  }>;
-}
+import { AdminAgentTableRow } from "@/types/admin";
 
 // Column configuration
 interface Column {
@@ -75,6 +50,7 @@ type SortDirection = "asc" | "desc" | null;
 
 interface AdminAgentsTableProps {
   agents: AdminAgentTableRow[];
+  currentUserId?: string;
   onPermissionsUpdate?: (
     agentId: string,
     userIds: string[],
@@ -85,6 +61,7 @@ interface AdminAgentsTableProps {
 
 export function AdminAgentsTable({
   agents,
+  currentUserId: _currentUserId,
   onPermissionsUpdate,
   onStatusUpdate,
 }: AdminAgentsTableProps) {

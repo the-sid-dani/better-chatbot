@@ -1,6 +1,7 @@
 "use client";
 
 import { AdminUsersTable } from "./admin-users-table";
+import { AdminUsersTableProps } from "@/types/admin";
 
 interface Props {
   users: Array<{

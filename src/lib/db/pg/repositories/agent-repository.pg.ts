@@ -21,6 +21,7 @@ export const pgAgentRepository: AgentRepository = {
         userId: agent.userId,
         instructions: agent.instructions,
         visibility: agent.visibility || "private",
+        status: "active", // Default status for new agents
         createdAt: new Date(),
         updatedAt: new Date(),
       })
@@ -31,6 +32,7 @@ export const pgAgentRepository: AgentRepository = {
       description: result.description ?? undefined,
       icon: result.icon ?? undefined,
       instructions: result.instructions ?? {},
+      status: result.status ?? "active", // Default status
     };
   },
 
@@ -44,6 +46,7 @@ export const pgAgentRepository: AgentRepository = {
         userId: AgentSchema.userId,
         instructions: AgentSchema.instructions,
         visibility: AgentSchema.visibility,
+        status: AgentSchema.status,
         createdAt: AgentSchema.createdAt,
         updatedAt: AgentSchema.updatedAt,
         isBookmarked: sql<boolean>`${BookmarkSchema.id} IS NOT NULL`,
@@ -92,6 +95,7 @@ export const pgAgentRepository: AgentRepository = {
       description: result.description ?? undefined,
       icon: result.icon ?? undefined,
       instructions: result.instructions ?? {},
+      status: result.status ?? "active", // Default status
       isBookmarked: result.isBookmarked ?? false,
     };
   },
@@ -106,6 +110,7 @@ export const pgAgentRepository: AgentRepository = {
         userId: AgentSchema.userId,
         instructions: AgentSchema.instructions,
         visibility: AgentSchema.visibility,
+        status: AgentSchema.status,
         createdAt: AgentSchema.createdAt,
         updatedAt: AgentSchema.updatedAt,
         userName: UserSchema.name,
@@ -272,6 +277,7 @@ export const pgAgentRepository: AgentRepository = {
         userId: AgentSchema.userId,
         // Exclude instructions from list queries for performance
         visibility: AgentSchema.visibility,
+        status: AgentSchema.status,
         createdAt: AgentSchema.createdAt,
         updatedAt: AgentSchema.updatedAt,
         userName: UserSchema.name,
@@ -301,6 +307,7 @@ export const pgAgentRepository: AgentRepository = {
       ...result,
       description: result.description ?? undefined,
       icon: result.icon ?? undefined,
+      status: result.status ?? "active", // Default status
       userName: result.userName ?? undefined,
       userAvatar: result.userAvatar ?? undefined,
     }));

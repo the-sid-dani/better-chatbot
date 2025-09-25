@@ -12,8 +12,21 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
+    // PERFORMANCE: Incremental compilation optimizations
     "incremental": true,
+    "tsBuildInfoFile": "./.tsbuildinfo",
     "assumeChangesOnlyAffectDirectDependencies": true,
+    // PERFORMANCE: Reduce memory pressure and compilation time
+    "preserveWatchOutput": true,
+    "composite": false,
+    "declaration": false,
+    // PERFORMANCE: Disable expensive checks for faster compilation
+    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": false,
+    // PERFORMANCE: Additional optimizations for large codebases
+    "disableReferencedProjectLoad": true,
+    // PERFORMANCE: Prevent infinite type resolution loops
+    "maxNodeModuleJsDepth": 0,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "useDefineForClassFields": true,

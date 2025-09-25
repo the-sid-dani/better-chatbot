@@ -18,34 +18,7 @@ import {
 } from "ui/dropdown-menu";
 import { Search, Users, Crown, Check, X, ChevronDown } from "lucide-react";
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  image?: string;
-  role: "admin" | "user";
-}
-
-interface AgentPermission {
-  id: string;
-  userId: string;
-  userName?: string;
-  userEmail?: string;
-  userImage?: string;
-  permissionLevel: "use" | "edit";
-}
-
-interface AdminAgentTableRow {
-  id: string;
-  name: string;
-  description?: string;
-  icon?: string;
-  visibility: "private" | "admin-all" | "admin-selective" | "admin-all";
-  status: "active" | "inactive";
-  createdAt: Date;
-  permissionCount: number;
-  permissions: AgentPermission[];
-}
+import { AdminAgentTableRow, User, AgentPermission } from "@/types/admin";
 
 interface AgentPermissionDropdownProps {
   agent: AdminAgentTableRow;

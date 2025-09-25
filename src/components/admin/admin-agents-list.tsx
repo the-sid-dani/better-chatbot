@@ -1,10 +1,10 @@
 "use client";
 
-import { AgentEntity } from "@/lib/db/pg/schema.pg";
+import { AdminAgentTableRow } from "@/types/admin";
 import { AdminAgentsTable } from "./admin-agents-table";
 
 interface Props {
-  agents: AgentEntity[];
+  agents: AdminAgentTableRow[];
   userId: string;
 }
 

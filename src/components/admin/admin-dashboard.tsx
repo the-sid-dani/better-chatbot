@@ -7,42 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "ui/tabs";
 import { AdminAgentsTable } from "./admin-agents-table";
 import { AdminUsersTable } from "./admin-users-table";
 import { AgentStatus } from "@/types/agent";
-
-// Agent data interface for admin dashboard
-interface AdminAgentTableRow {
-  id: string;
-  name: string;
-  description?: string;
-  icon?: string;
-  visibility:
-    | "private"
-    | "admin-all"
-    | "admin-selective"
-    | "admin-all"
-    | "readonly"
-    | "public";
-  status: AgentStatus;
-  createdAt: Date;
-  permissionCount: number;
-  permissions: Array<{
-    id: string;
-    userId: string;
-    userName?: string;
-    userEmail?: string;
-    userImage?: string;
-    permissionLevel: "use" | "edit";
-  }>;
-}
-
-// User data interface for admin dashboard
-interface AdminUserTableRow {
-  id: string;
-  name: string;
-  email: string;
-  image?: string;
-  role: "admin" | "user";
-  createdAt: Date;
-}
+import { AdminAgentTableRow, AdminUserTableRow } from "@/types/admin";
 
 interface AdminDashboardProps {
   adminAgents: AdminAgentTableRow[];

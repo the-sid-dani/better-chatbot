@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useState, useMemo } from "react";
+import { AdminUsersTableProps, AdminUserTableRow } from "@/types/admin";
 import { ArrowDownUp, Eye, Crown, Settings } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "ui/card";
@@ -27,16 +28,6 @@ import {
 } from "ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "ui/avatar";
 import { Button } from "ui/button";
-
-// User data interface for table
-interface AdminUserTableRow {
-  id: string;
-  name: string;
-  email: string;
-  image?: string;
-  role: "admin" | "user";
-  createdAt: Date;
-}
 
 // Column configuration
 interface Column {

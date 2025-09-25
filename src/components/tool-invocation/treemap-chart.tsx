@@ -220,7 +220,12 @@ export function TreemapChart(props: TreemapChartProps) {
                       y={y + height / 2 - 4}
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      className="fill-foreground text-xs font-medium"
+                      fill="white"
+                      className="text-xs font-bold"
+                      style={{
+                        textShadow: "0 1px 2px rgba(0,0,0,0.5)",
+                        fontSize: "12px",
+                      }}
                     >
                       {name}
                     </text>
@@ -229,7 +234,12 @@ export function TreemapChart(props: TreemapChartProps) {
                       y={y + height / 2 + 8}
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      className="fill-muted-foreground text-xs"
+                      fill="rgba(255,255,255,0.9)"
+                      className="text-xs"
+                      style={{
+                        textShadow: "0 1px 2px rgba(0,0,0,0.5)",
+                        fontSize: "11px",
+                      }}
                     >
                       {size?.toLocaleString()}
                     </text>

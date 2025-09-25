@@ -15,7 +15,6 @@ import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 
 import { generateUniqueKey } from "lib/utils";
 import { JsonViewPopup } from "../json-view-popup";
-import { sanitizeCssVariableName } from "./shared.tool-invocation";
 
 // Dynamic import for react-simple-maps to avoid SSR issues
 const ComposableMap = dynamic(
@@ -106,14 +105,41 @@ const fipsToPostalCode: { [key: string]: string } = {
   "56": "WY",
 };
 
-// Color variables for geographic data visualization using ChartConfig system like other charts
-const chartColors = [
-  "var(--chart-1)", // Darkest blue
-  "var(--chart-2)", // Dark blue
-  "var(--chart-3)", // Medium blue
-  "var(--chart-4)", // Light blue
-  "var(--chart-5)", // Lightest blue
-];
+// Color scales for geographic data visualization using design system
+const colorScales = {
+  blues: [
+    "rgba(255, 255, 255, 0.15)", // No data / background - semi-transparent white overlay
+    "hsl(var(--chart-5))", // Very light blue
+    "hsl(var(--chart-4))", // Light blue
+    "hsl(var(--chart-3))", // Medium blue
+    "hsl(var(--chart-2))", // Blue
+    "hsl(var(--chart-1))", // Dark blue
+  ],
+  reds: [
+    "rgba(255, 255, 255, 0.15)",
+    "hsl(var(--chart-5))",
+    "hsl(var(--chart-4))",
+    "hsl(var(--chart-3))",
+    "hsl(var(--chart-2))",
+    "hsl(var(--chart-1))",
+  ],
+  greens: [
+    "rgba(255, 255, 255, 0.15)",
+    "hsl(var(--chart-5))",
+    "hsl(var(--chart-4))",
+    "hsl(var(--chart-3))",
+    "hsl(var(--chart-2))",
+    "hsl(var(--chart-1))",
+  ],
+  viridis: [
+    "rgba(255, 255, 255, 0.15)",
+    "hsl(var(--chart-5))",
+    "hsl(var(--chart-4))",
+    "hsl(var(--chart-3))",
+    "hsl(var(--chart-2))",
+    "hsl(var(--chart-1))",
+  ],
+};
 
 // GeoJSON URLs for different geography types - now using local files
 const geoDataUrls = {
@@ -124,7 +150,7 @@ const geoDataUrls = {
 };
 
 export function GeographicChart(props: GeographicChartProps) {
-  const { title, data, geoType, description } = props;
+  const { title, data, geoType, colorScale = "blues", description } = props;
 
   const [geoData, setGeoData] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
@@ -153,14 +179,24 @@ export function GeographicChart(props: GeographicChartProps) {
     );
   }, [data]);
 
-  // Value ranges for proper blue gradient mapping
-  const valueRanges = React.useMemo(() => {
+  // Create value-to-color mapping
+  const valueToColor = React.useMemo(() => {
     const values = deduplicateData.map((d) => d.value);
-    return {
-      minValue: Math.min(...values),
-      maxValue: Math.max(...values),
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+    const colors = colorScales[colorScale];
+
+    return (value: number) => {
+      if (minValue === maxValue) return colors[1];
+      const normalized = (value - minValue) / (maxValue - minValue);
+      const index =
+        Math.min(
+          Math.floor(normalized * (colors.length - 1)),
+          colors.length - 2,
+        ) + 1;
+      return colors[index];
     };
-  }, [deduplicateData]);
+  }, [deduplicateData, colorScale]);
 
   // Create region code to value mapping with flexible code matching
   const regionValues = React.useMemo(() => {
@@ -251,34 +287,19 @@ export function GeographicChart(props: GeographicChartProps) {
     fetchGeoData();
   }, [geoType]);
 
-  // Generate chart configuration following bar chart pattern with gradient mapping
+  // Generate chart configuration
   const chartConfig = React.useMemo(() => {
     const config: ChartConfig = {};
-    const { minValue, maxValue } = valueRanges;
 
-    // Configure regions with values, mapping them to the blue gradient based on value
-    deduplicateData.forEach((item) => {
-      // Map value to color index (0 = darkest blue, 4 = lightest blue)
-      let colorIndex;
-      if (minValue === maxValue) {
-        colorIndex = 2; // Use middle blue for single value
-      } else {
-        const normalized = (item.value - minValue) / (maxValue - minValue);
-        colorIndex = Math.min(
-          Math.floor(normalized * chartColors.length),
-          chartColors.length - 1,
-        );
-        colorIndex = chartColors.length - 1 - colorIndex; // Reverse: high values = dark blue (index 0)
-      }
-
-      config[sanitizeCssVariableName(item.regionCode)] = {
+    deduplicateData.forEach((item, _index) => {
+      config[item.regionCode] = {
         label: item.regionName,
-        color: chartColors[colorIndex],
+        color: valueToColor(item.value),
       };
     });
 
     return config;
-  }, [deduplicateData, valueRanges]);
+  }, [deduplicateData, valueToColor]);
 
   const renderMap = () => {
     if (loading) {
@@ -389,42 +410,27 @@ export function GeographicChart(props: GeographicChartProps) {
                   value = regionValues[regionCode];
               }
 
-              // Debug and use direct color mapping for now
-              let fillColor;
-              if (value !== undefined) {
-                // Calculate color directly using value-based gradient
-                const { minValue, maxValue } = valueRanges;
-                let colorIndex;
-                if (minValue === maxValue) {
-                  colorIndex = 2; // Use middle blue for single value
-                } else {
-                  const normalized = (value - minValue) / (maxValue - minValue);
-                  colorIndex = Math.min(
-                    Math.floor(normalized * chartColors.length),
-                    chartColors.length - 1,
-                  );
-                  colorIndex = chartColors.length - 1 - colorIndex; // Reverse: high values = dark blue
-                }
-                fillColor = chartColors[colorIndex];
-              } else {
-                fillColor = "rgba(255, 255, 255, 0.5)"; // Much lighter grey for no data
-              }
+              const fillColor =
+                value !== undefined ? valueToColor(value) : "rgba(255, 255, 255, 0.15)"; // Semi-transparent white overlay for no data
 
               return (
                 <Geography
                   key={geo.rsmKey}
                   geography={geo}
                   fill={fillColor}
-                  stroke="rgba(255, 255, 255, 0.4)"
-                  strokeWidth={1}
+                  stroke="hsl(var(--border))"
+                  strokeWidth={0.5}
                   style={{
                     default: { outline: "none" },
                     hover: {
-                      fill: fillColor, // Keep same color, no hover effect
+                      fill:
+                        value !== undefined
+                          ? "hsl(var(--chart-1))" // Use primary chart color for hover
+                          : "hsl(0, 0%, 75%)", // Fixed darker grey for no-data hover (theme-independent)
                       outline: "none",
                       cursor: value !== undefined ? "pointer" : "default",
-                      stroke: "rgba(255, 255, 255, 0.6)",
-                      strokeWidth: value !== undefined ? 1.5 : 1,
+                      stroke: "hsl(var(--border))",
+                      strokeWidth: value !== undefined ? 1 : 0.5,
                     },
                     pressed: { outline: "none" },
                   }}
