@@ -643,6 +643,108 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
           );
         }
 
+        // Process loading charts/tables - create loading artifacts when tools start
+        const loadingCharts = chartTools.filter((part) => {
+          if (!isToolUIPart(part)) return false;
+
+          // Detect tools that are starting (input state) but not yet completed
+          const isStarting =
+            part.state.startsWith("input") ||
+            part.state === "loading" ||
+            (!part.state.startsWith("output") && part.state !== "error");
+
+          if (isStarting) {
+            const toolName = getToolName(part);
+            const toolKey = `${lastMessage.id}-${toolName}-${part.toolCallId}`;
+
+            // Check if we've already created loading artifact for this tool
+            if (processedToolsRef.current.has(toolKey)) {
+              return false;
+            }
+
+            // Mark as processed for loading
+            processedToolsRef.current.add(toolKey);
+            return true;
+          }
+
+          return false;
+        });
+
+        console.log("🔄 ChatBot Tool Debug: Processing loading charts/tables", {
+          loadingCount: loadingCharts.length,
+          loadingTools: loadingCharts.map((part) => ({
+            name: getToolName(part),
+            state: isToolUIPart(part) ? part.state : "unknown",
+          })),
+        });
+
+        // Create loading artifacts for chart tools that are starting
+        loadingCharts.forEach((part) => {
+          if (!isToolUIPart(part)) return;
+
+          const toolName = getToolName(part);
+          const args = part.args as any; // Tool call arguments contain chart parameters
+
+          // Extract chart name and type from tool arguments
+          const chartTitle =
+            args?.title ||
+            args?.name ||
+            `${toolName.replace("create_", "").replace("_", " ")}`;
+          const chartType = toolName.includes("bar")
+            ? "bar"
+            : toolName.includes("line")
+              ? "line"
+              : toolName.includes("pie")
+                ? "pie"
+                : toolName.includes("area")
+                  ? "area"
+                  : toolName.includes("scatter")
+                    ? "scatter"
+                    : toolName.includes("radar")
+                      ? "radar"
+                      : toolName.includes("funnel")
+                        ? "funnel"
+                        : toolName.includes("treemap")
+                          ? "treemap"
+                          : toolName.includes("sankey")
+                            ? "sankey"
+                            : toolName.includes("radial")
+                              ? "radial-bar"
+                              : toolName.includes("composed")
+                                ? "composed"
+                                : toolName.includes("geographic")
+                                  ? "geographic"
+                                  : toolName.includes("gauge")
+                                    ? "gauge"
+                                    : toolName.includes("calendar") ||
+                                        toolName.includes("heatmap")
+                                      ? "calendar-heatmap"
+                                      : toolName.includes("table")
+                                        ? "table"
+                                        : "bar";
+
+          const loadingArtifactId = part.toolCallId || generateUUID();
+
+          console.log("⏳ ChatBot Tool Debug: Creating loading artifact", {
+            toolName,
+            chartType,
+            chartTitle,
+            artifactId: loadingArtifactId,
+          });
+
+          // Create loading artifact
+          addLoadingArtifact({
+            id: loadingArtifactId,
+            type: toolName.includes("table") ? "table" : "chart",
+            title: chartTitle,
+            canvasName: args?.canvasName || "Data Visualization",
+            metadata: {
+              chartType,
+              dataPoints: 0,
+            },
+          });
+        });
+
         // Process completed charts/tables with duplicate prevention
         const completedCharts = chartTools.filter((part) => {
           if (!isToolUIPart(part) || !part.state.startsWith("output")) {
@@ -709,8 +811,10 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
             result.artifactId ||
             result.structuredContent?.result?.[0]?.artifactId ||
             generateUUID();
+
+          // Find existing artifact - check both direct ID match and loading artifacts for this tool call
           const existingArtifact = canvasArtifacts.find(
-            (a) => a.id === artifactId,
+            (a) => a.id === artifactId || a.id === part.toolCallId,
           );
 
           // Determine if this is a table tool
@@ -820,9 +924,94 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
 
             addCanvasArtifact(artifact);
           } else {
-            console.log("🔄 ChatBot Tool Debug: Artifact already exists", {
-              chartId: artifactId,
-              toolName,
+            // Update existing loading artifact with completed data
+            console.log(
+              "🔄 ChatBot Tool Debug: Updating existing loading artifact",
+              {
+                existingId: existingArtifact.id,
+                newId: artifactId,
+                toolName,
+                status: existingArtifact.status,
+              },
+            );
+
+            // Extract chart data for updating (same logic as creation)
+            let chartData;
+            let chartType;
+            let title;
+            let _artifactType: "chart" | "table" = "chart";
+
+            const artifactData =
+              result.artifact ||
+              result.structuredContent?.result?.[0]?.artifact;
+            if (artifactData) {
+              const artifactContent = JSON.parse(artifactData.content);
+
+              if (isTableTool) {
+                _artifactType = "table";
+                chartType = "table";
+                title = artifactData.title;
+                chartData = {
+                  title: artifactContent.title,
+                  description: artifactContent.description,
+                  columns: artifactContent.columns,
+                  data: artifactContent.data,
+                };
+              } else {
+                chartType =
+                  artifactContent.metadata?.chartType ||
+                  artifactContent.type.replace("-chart", "");
+                title = artifactData.title;
+
+                chartData = {
+                  chartType: chartType,
+                  title: artifactContent.title,
+                  data: artifactContent.data || [],
+                  description: artifactContent.description,
+                  yAxisLabel: artifactContent.yAxisLabel,
+                  xAxisLabel: artifactContent.xAxisLabel,
+                  areaType: artifactContent.areaType,
+                  showBubbles: artifactContent.showBubbles,
+                  geoType: artifactContent.geoType,
+                  colorScale: artifactContent.colorScale,
+                  value: artifactContent.value,
+                  minValue: artifactContent.minValue,
+                  maxValue: artifactContent.maxValue,
+                  gaugeType: artifactContent.gaugeType,
+                  unit: artifactContent.unit,
+                  thresholds: artifactContent.thresholds,
+                  nodes: artifactContent.nodes,
+                  links: artifactContent.links,
+                  innerRadius: artifactContent.innerRadius,
+                  outerRadius: artifactContent.outerRadius,
+                  startDate: artifactContent.startDate,
+                  endDate: artifactContent.endDate,
+                };
+              }
+            } else {
+              const structuredResult = result.structuredContent?.result?.[0];
+              chartData = result.chartData || structuredResult?.chartData;
+              chartType = result.chartType || structuredResult?.chartType;
+              title =
+                result.title ||
+                structuredResult?.title ||
+                structuredResult?.message;
+            }
+
+            // Update the loading artifact with completed data
+            updateCanvasArtifact(existingArtifact.id, {
+              data: chartData,
+              status: "completed",
+              title: title || existingArtifact.title,
+              canvasName: result.canvasName || existingArtifact.canvasName,
+              metadata: {
+                ...existingArtifact.metadata,
+                chartType:
+                  chartType || existingArtifact.metadata?.chartType || "bar",
+                dataPoints: result.dataPoints || chartData?.data?.length || 0,
+                toolName,
+                lastUpdated: new Date().toISOString(),
+              },
             });
           }
         });

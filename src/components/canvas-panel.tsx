@@ -4,7 +4,16 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import * as React from "react";
 import { Button } from "ui/button";
 import { Badge } from "ui/badge";
-import { X, Minimize2, BarChart3 } from "lucide-react";
+import { Card } from "ui/card";
+import {
+  X,
+  Minimize2,
+  BarChart3,
+  LineChart as LineChartIcon,
+  PieChart as PieChartIcon,
+  AreaChart as AreaChartIcon,
+  Clock,
+} from "lucide-react";
 import { cn } from "lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { BarChart } from "./tool-invocation/bar-chart";
@@ -49,25 +58,69 @@ interface CanvasPanelProps {
   isIntegrated?: boolean;
 }
 
-// Loading placeholder component
+// Enhanced Loading placeholder component
 function LoadingPlaceholder({ artifact }: { artifact: CanvasArtifact }) {
+  const [elapsedTime, setElapsedTime] = useState(0);
+
+  useEffect(() => {
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      setElapsedTime(Date.now() - startTime);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatElapsedTime = (ms: number) => {
+    const seconds = Math.floor(ms / 1000);
+    return `${seconds}s`;
+  };
+
+  const getChartIcon = () => {
+    const chartType = artifact.metadata?.chartType;
+    switch (chartType) {
+      case "bar":
+        return <BarChart3 className="h-5 w-5 text-primary" />;
+      case "line":
+        return <LineChartIcon className="h-5 w-5 text-primary" />;
+      case "pie":
+        return <PieChartIcon className="h-5 w-5 text-primary" />;
+      case "area":
+        return <AreaChartIcon className="h-5 w-5 text-primary" />;
+      default:
+        return <BarChart3 className="h-5 w-5 text-primary" />;
+    }
+  };
+
   return (
-    <div className="h-full flex items-center justify-center">
-      <div className="text-center space-y-3">
-        <div className="animate-spin">
-          <BarChart3 className="w-8 h-8 mx-auto text-muted-foreground" />
+    <Card className="h-full flex items-center justify-center p-6">
+      <div className="flex items-center space-x-4">
+        {/* Circular Loading Animation */}
+        <div className="relative">
+          <div className="w-8 h-8 rounded-full border-3 border-muted animate-pulse" />
+          <div className="absolute inset-0 w-8 h-8 rounded-full border-3 border-primary border-t-transparent animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            {getChartIcon()}
+          </div>
         </div>
-        <div className="space-y-1">
-          <p className="text-sm font-medium">Creating {artifact.type}...</p>
-          <p className="text-xs text-muted-foreground">{artifact.title}</p>
-        </div>
-        <div className="flex space-x-1 justify-center">
-          <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-          <div className="w-2 h-2 bg-primary rounded-full animate-pulse delay-75"></div>
-          <div className="w-2 h-2 bg-primary rounded-full animate-pulse delay-150"></div>
+
+        {/* Chart Information */}
+        <div className="flex-1 min-w-0">
+          <h3 className="font-medium text-foreground truncate">
+            Creating {artifact.title}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {artifact.metadata?.chartType
+              ? `Generating ${artifact.metadata.chartType} chart...`
+              : `Generating ${artifact.type}...`}
+          </p>
+          <div className="flex items-center space-x-2 text-xs text-muted-foreground mt-1">
+            <Clock className="h-3 w-3" />
+            <span>{formatElapsedTime(elapsedTime)}</span>
+          </div>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
