@@ -19,6 +19,9 @@ import { geographicChartArtifactTool } from "./artifacts/geographic-chart-tool";
 import { gaugeChartArtifactTool } from "./artifacts/gauge-chart-tool";
 import { calendarHeatmapArtifactTool } from "./artifacts/calendar-heatmap-tool";
 import { tableArtifactTool } from "./artifacts/table-artifact-tool";
+import { barChartArtifactTool } from "./artifacts/bar-chart-tool";
+import { lineChartArtifactTool } from "./artifacts/line-chart-tool";
+import { pieChartArtifactTool } from "./artifacts/pie-chart-tool";
 
 export const APP_DEFAULT_TOOL_KIT: Record<
   AppDefaultToolkit,
@@ -39,6 +42,10 @@ export const APP_DEFAULT_TOOL_KIT: Record<
     // Main chart tools - direct imports to avoid circular dependency
     [DefaultToolName.CreateChart]: createChartTool,
     [DefaultToolName.UpdateChart]: updateChartTool,
+    // Core chart tools - fixed streaming artifacts
+    [DefaultToolName.CreateBarChart]: barChartArtifactTool,
+    [DefaultToolName.CreateLineChart]: lineChartArtifactTool,
+    [DefaultToolName.CreatePieChart]: pieChartArtifactTool,
     // Table tool - moved from visualization toolkit
     [DefaultToolName.CreateTable]: tableArtifactTool,
     // Recharts-native chart tools - all 15 specialized tools restored

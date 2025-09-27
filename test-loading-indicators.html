@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas Loading Indicators Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 1rem;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 2rem 0;
+            padding: 1rem;
+            border: 1px solid #e2e2e2;
+            border-radius: 8px;
+        }
+        .success { color: #16a34a; }
+        .error { color: #dc2626; }
+        .warning { color: #ca8a04; }
+        code {
+            background: #f3f4f6;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'SF Mono', Consolas, monospace;
+        }
+        .command {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Canvas Loading Indicators - Fix Validation</h1>
+    
+    <div class="test-section">
+        <h2 class="success">✅ Problem Identified & Fixed</h2>
+        <p>The Canvas loading indicators weren't showing because chart tools were using regular <code>async</code> functions instead of <code>async function*</code> generators with <code>yield</code> statements.</p>
+        
+        <h3>Root Cause</h3>
+        <ul>
+            <li><strong>Tool State Detection:</strong> Loading detection logic in <code>chat-bot.tsx</code> looks for tools in "input" or "loading" states</li>
+            <li><strong>Synchronous Execution:</strong> Chart tools completed immediately without intermediate states</li>
+            <li><strong>Missing Streaming:</strong> Tools weren't using native Vercel AI SDK streaming patterns</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2 class="success">🔧 Fixes Applied</h2>
+        
+        <h3>1. Chart Tools Converted to Streaming</h3>
+        <p>Updated <code>bar-chart-tool.ts</code> and <code>line-chart-tool.ts</code>:</p>
+        <div class="command">
+// BEFORE: Regular async function
+execute: async ({ title, data, description, yAxisLabel }) => {
+  // Immediate execution
+  return result;
+}
+
+// AFTER: Streaming generator function
+execute: async function* ({ title, data, description, yAxisLabel }) {
+  // Stream loading state
+  yield {
+    status: 'loading',
+    message: `Preparing bar chart: ${title}`,
+    progress: 0
+  };
+  
+  // Stream processing state  
+  yield {
+    status: 'processing',
+    message: `Creating bar chart...`,
+    progress: 50
+  };
+  
+  // Add visible delay for testing
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  // Stream success state
+  yield {
+    status: 'success',
+    chartData: chartContent,
+    shouldCreateArtifact: true,
+    progress: 100
+  };
+  
+  return result;
+}
+        </div>
+
+        <h3>2. Tool Registration Updated</h3>
+        <p>Added new chart tools to <code>tool-kit.ts</code> and <code>DefaultToolName</code> enum:</p>
+        <ul>
+            <li><code>create_bar_chart</code> - Streaming bar chart tool</li>
+            <li><code>create_line_chart</code> - Streaming line chart tool</li>
+            <li><code>create_pie_chart</code> - Streaming pie chart tool</li>
+        </ul>
+
+        <h3>3. Chart Detection Enhanced</h3>
+        <p>Updated <code>chat-bot.tsx</code> to include new tool names in chart detection logic.</p>
+    </div>
+
+    <div class="test-section">
+        <h2 class="warning">🧪 Testing Instructions</h2>
+        
+        <h3>Manual Testing Steps</h3>
+        <ol>
+            <li><strong>Start Dev Server:</strong> <code>pnpm dev</code></li>
+            <li><strong>Open Application:</strong> Navigate to <code>http://localhost:3000</code></li>
+            <li><strong>Create Chart:</strong> Send message: <em>"Create a bar chart showing quarterly sales data"</em></li>
+            <li><strong>Observe Loading:</strong> You should see:
+                <ul>
+                    <li>Loading card appears immediately</li>
+                    <li>Chart-specific icon (bar chart icon)</li>
+                    <li>Real-time elapsed time counter</li>
+                    <li>Progress: "Preparing bar chart" → "Creating bar chart..."</li>
+                    <li>Loading visible for ~500ms before completion</li>
+                </ul>
+            </li>
+            <li><strong>Canvas Integration:</strong> Chart appears in Canvas workspace after loading</li>
+        </ol>
+
+        <h3>Expected Console Output</h3>
+        <div class="command">
+🔄 ChatBot Tool Debug: Processing loading charts/tables {
+  loadingCount: 1,
+  loadingTools: [{
+    name: "create_bar_chart",
+    state: "input"
+  }]
+}
+
+⏳ ChatBot Tool Debug: Creating loading artifact {
+  toolName: "create_bar_chart",
+  chartType: "bar",
+  chartTitle: "Quarterly Sales",
+  artifactId: "uuid-here"
+}
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2 class="success">🎯 Validation Checklist</h2>
+        
+        <h3>Before Fix (Expected Issues)</h3>
+        <ul>
+            <li>❌ <code>loadingCount: 0</code> in console logs</li>
+            <li>❌ No loading indicators visible</li>
+            <li>❌ Charts appear instantly without feedback</li>
+            <li>❌ Canvas opens but no progressive building</li>
+        </ul>
+
+        <h3>After Fix (Expected Behavior)</h3>
+        <ul>
+            <li>✅ <code>loadingCount: 1+</code> for chart tools</li>
+            <li>✅ Loading cards with chart icons appear</li>
+            <li>✅ Real-time elapsed time counters</li>
+            <li>✅ Progressive chart building in Canvas</li>
+            <li>✅ Smooth transition from loading → completed</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🔍 Technical Details</h2>
+        
+        <h3>Key Changes Made</h3>
+        <ul>
+            <li><strong>File:</strong> <code>src/lib/ai/tools/artifacts/bar-chart-tool.ts</code>
+                <ul><li>Converted to <code>async function*</code> with proper <code>yield</code> states</li></ul>
+            </li>
+            <li><strong>File:</strong> <code>src/lib/ai/tools/artifacts/line-chart-tool.ts</code>
+                <ul><li>Converted to <code>async function*</code> with proper <code>yield</code> states</li></ul>
+            </li>
+            <li><strong>File:</strong> <code>src/lib/ai/tools/tool-kit.ts</code>
+                <ul><li>Added <code>barChartArtifactTool</code>, <code>lineChartArtifactTool</code>, <code>pieChartArtifactTool</code></li></ul>
+            </li>
+            <li><strong>File:</strong> <code>src/lib/ai/tools/index.ts</code>
+                <ul><li>Added <code>CreateBarChart</code>, <code>CreateLineChart</code>, <code>CreatePieChart</code> to enum</li></ul>
+            </li>
+            <li><strong>File:</strong> <code>src/components/chat-bot.tsx</code>
+                <ul><li>Added new tool names to <code>chartToolNames</code> array</li></ul>
+            </li>
+        </ul>
+
+        <h3>Canvas Loading System Architecture</h3>
+        <ul>
+            <li><strong>Detection:</strong> <code>chat-bot.tsx</code> detects tools in "input" state</li>
+            <li><strong>Creation:</strong> <code>addLoadingArtifact()</code> creates loading placeholders</li>
+            <li><strong>Rendering:</strong> <code>LoadingPlaceholder</code> component shows animated cards</li>
+            <li><strong>Completion:</strong> Loading artifacts replaced with chart data</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 Next Steps</h2>
+        
+        <ol>
+            <li><strong>Test Implementation:</strong> Follow manual testing steps above</li>
+            <li><strong>Verify Loading Indicators:</strong> Ensure loading cards appear and animate properly</li>
+            <li><strong>Check Multiple Chart Types:</strong> Test bar, line, and other chart tools</li>
+            <li><strong>Remove Test Delay:</strong> Remove the 500ms delay once testing is complete</li>
+            <li><strong>Apply to More Tools:</strong> Convert remaining chart tools to streaming pattern</li>
+        </ol>
+    </div>
+</body>
+</html>

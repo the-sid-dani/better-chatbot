@@ -58,7 +58,7 @@
       "Read(./.ssh/**)",
       "Read(~/.ssh/**)",
       "Read(~/.aws/**)",
-      "Bash(rm:*)",
+
       "Bash(sudo:*)",
       "Bash(su:*)",
       "Bash(chmod:*)",

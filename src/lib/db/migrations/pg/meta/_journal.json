@@ -127,6 +127,13 @@
       "when": 1758774305547,
       "tag": "0017_secret_power_man",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1758933199340,
+      "tag": "0018_outgoing_warhawk",
+      "breakpoints": true
     }
   ]
 }

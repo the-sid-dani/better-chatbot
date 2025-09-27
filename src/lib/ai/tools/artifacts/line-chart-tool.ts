@@ -61,9 +61,16 @@ export const lineChartArtifactTool = createTool({
       .describe("Label for the y-axis (values axis)"),
   }),
 
-  execute: async ({ title, data, description, yAxisLabel }) => {
+  execute: async function* ({ title, data, description, yAxisLabel }) {
     try {
       logger.info(`Creating line chart artifact: ${title}`);
+
+      // Stream loading state
+      yield {
+        status: "loading",
+        message: `Preparing line chart: ${title}`,
+        progress: 0,
+      };
 
       // Validate chart data
       if (!data || data.length === 0) {
@@ -91,6 +98,16 @@ export const lineChartArtifactTool = createTool({
       const seriesNames = Array.from(
         new Set(data.flatMap((d) => d.series.map((s) => s.seriesName))),
       );
+
+      // Stream processing state
+      yield {
+        status: "processing",
+        message: `Creating line chart...`,
+        progress: 50,
+      };
+
+      // Add a small delay to make loading visible for testing
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Create the chart artifact content that matches LineChart component props
       const chartContent = {
@@ -146,6 +163,15 @@ export const lineChartArtifactTool = createTool({
         series: seriesNames,
         canvasReady: true,
         componentType: "LineChart",
+      };
+
+      // Stream success state
+      yield {
+        status: "success",
+        chartData: chartContent,
+        shouldCreateArtifact: true, // Flag for Canvas processing
+        artifactId: artifactId,
+        progress: 100,
       };
 
       // Return in expected response format with content and structuredContent

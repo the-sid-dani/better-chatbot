@@ -56,6 +56,8 @@ interface CanvasPanelProps {
   onArtifactSelect?: (id: string) => void;
   canvasName?: string;
   isIntegrated?: boolean;
+  isLoadingCharts?: boolean;
+  chartToolNames?: string[];
 }
 
 // Enhanced Loading placeholder component
@@ -121,6 +123,83 @@ function LoadingPlaceholder({ artifact }: { artifact: CanvasArtifact }) {
         </div>
       </div>
     </Card>
+  );
+}
+
+// Simple loading state component for when Canvas opens for chart tools
+function LoadingChartsState({ chartToolNames }: { chartToolNames: string[] }) {
+  const [dots, setDots] = useState(".");
+
+  // Animate the loading dots
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDots((prev) => (prev.length >= 3 ? "." : prev + "."));
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Convert tool names to user-friendly chart types
+  const getChartTypeDisplay = (toolName: string) => {
+    if (toolName.includes("bar")) return "Bar Chart";
+    if (toolName.includes("line")) return "Line Chart";
+    if (toolName.includes("pie")) return "Pie Chart";
+    if (toolName.includes("area")) return "Area Chart";
+    if (toolName.includes("scatter")) return "Scatter Plot";
+    if (toolName.includes("radar")) return "Radar Chart";
+    if (toolName.includes("funnel")) return "Funnel Chart";
+    if (toolName.includes("treemap")) return "Treemap";
+    if (toolName.includes("sankey")) return "Sankey Diagram";
+    if (toolName.includes("radial")) return "Radial Bar Chart";
+    if (toolName.includes("composed")) return "Composed Chart";
+    if (toolName.includes("geographic")) return "Geographic Map";
+    if (toolName.includes("gauge")) return "Gauge Chart";
+    if (toolName.includes("calendar") || toolName.includes("heatmap"))
+      return "Calendar Heatmap";
+    if (toolName.includes("table")) return "Data Table";
+    return "Chart";
+  };
+
+  const uniqueChartTypes = [
+    ...new Set(chartToolNames.map(getChartTypeDisplay)),
+  ];
+
+  return (
+    <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+      <div className="bg-card/30 border border-border/20 rounded-2xl p-8 max-w-md">
+        {/* Large Loading Animation */}
+        <div className="relative mb-6">
+          <div className="w-16 h-16 mx-auto">
+            <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+          </div>
+          <BarChart3 className="w-8 h-8 text-primary absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+        </div>
+
+        {/* Loading Message */}
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold text-foreground">
+            Charts are loading{dots}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Creating your data visualizations
+          </p>
+
+          {/* Show chart types being created */}
+          {uniqueChartTypes.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <p className="text-xs text-muted-foreground">Generating:</p>
+              <div className="flex flex-wrap gap-1 justify-center">
+                {uniqueChartTypes.map((chartType, index) => (
+                  <Badge key={index} variant="secondary" className="text-xs">
+                    {chartType}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -373,6 +452,8 @@ export function CanvasPanel({
   onArtifactSelect: _onArtifactSelect,
   canvasName = "Canvas",
   isIntegrated = false,
+  isLoadingCharts = false,
+  chartToolNames = [],
 }: CanvasPanelProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const renderCountRef = useRef(0);
@@ -452,6 +533,8 @@ export function CanvasPanel({
             <div className="p-4 text-center text-muted-foreground">
               <p className="text-sm">Canvas minimized</p>
             </div>
+          ) : isLoadingCharts ? (
+            <LoadingChartsState chartToolNames={chartToolNames || []} />
           ) : artifacts.length > 0 ? (
             <div
               className="p-4 pb-8"

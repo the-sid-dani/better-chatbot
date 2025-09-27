@@ -136,7 +136,6 @@
     "@biomejs/biome": "1.9.4",
     "@playwright/test": "^1.55.0",
     "@tailwindcss/postcss": "^4.1.12",
-    "@types/dompurify": "^3.2.0",
     "@types/json-schema": "^7.0.15",
     "@types/node": "^20.19.11",
     "@types/pg": "^8.15.5",

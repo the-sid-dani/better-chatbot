@@ -57,9 +57,16 @@ export const barChartArtifactTool = createTool({
       .describe("Label for the y-axis (values axis)"),
   }),
 
-  execute: async ({ title, data, description, yAxisLabel }) => {
+  execute: async function* ({ title, data, description, yAxisLabel }) {
     try {
       logger.info(`Creating bar chart artifact: ${title}`);
+
+      // Stream loading state
+      yield {
+        status: "loading",
+        message: `Preparing bar chart: ${title}`,
+        progress: 0,
+      };
 
       // Comprehensive security validation with XSS prevention
       const validationResult = CHART_VALIDATORS.bar({
@@ -84,6 +91,16 @@ export const barChartArtifactTool = createTool({
         );
         throw new Error("Chart data contains potential security issues");
       }
+
+      // Stream processing state
+      yield {
+        status: "processing",
+        message: `Creating bar chart...`,
+        progress: 50,
+      };
+
+      // Add a small delay to make loading visible for testing
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Use sanitized and validated data
       const validatedData = validationResult.data!;
@@ -147,6 +164,15 @@ export const barChartArtifactTool = createTool({
         series: seriesNames.join(", "),
         canvasReady: true,
         componentType: "BarChart",
+      };
+
+      // Stream success state
+      yield {
+        status: "success",
+        chartData: chartContent,
+        shouldCreateArtifact: true, // Flag for Canvas processing
+        artifactId: artifactId,
+        progress: 100,
       };
 
       // Return in expected response format with content and structuredContent

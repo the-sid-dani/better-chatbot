@@ -14,6 +14,10 @@ export enum DefaultToolName {
   PythonExecution = "python-execution",
   CreateChart = "create_chart",
   UpdateChart = "update_chart",
+  // Core chart tools
+  CreateBarChart = "create_bar_chart",
+  CreateLineChart = "create_line_chart",
+  CreatePieChart = "create_pie_chart",
   // Recharts-native chart tools
   CreateAreaChart = "create_area_chart",
   CreateScatterChart = "create_scatter_chart",

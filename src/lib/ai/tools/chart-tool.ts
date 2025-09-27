@@ -84,6 +84,9 @@ export const createChartTool = createTool({
         progress: 0,
       };
 
+      // Add minimum delay to ensure loading indicators are visible (UX best practice: min 600ms)
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
       // Validate data structure
       for (const point of data) {
         if (!point.xAxisLabel || !point.series || point.series.length === 0) {
@@ -104,6 +107,9 @@ export const createChartTool = createTool({
         chartType,
         progress: 50,
       };
+
+      // Add delay for processing state visibility
+      await new Promise((resolve) => setTimeout(resolve, 600));
 
       // Create chart data structure
       const chartData = {
