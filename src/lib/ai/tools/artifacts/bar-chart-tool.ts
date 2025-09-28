@@ -2,6 +2,7 @@ import { tool as createTool } from "ai";
 import { z } from "zod";
 import { generateUUID } from "../../../utils";
 import logger from "../../../logger";
+import { CHART_VALIDATORS } from "../../../validation/chart-data-validator";
 
 /**
  * Enhanced Bar Chart Tool - Creates Canvas Artifacts

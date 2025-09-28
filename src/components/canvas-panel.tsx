@@ -839,15 +839,6 @@ export function useCanvas() {
           remainingCount: filtered.length,
         });
 
-        if (filtered.length === 0) {
-          debugLog("Last artifact removed - hiding canvas");
-          // Use setTimeout to prevent race conditions
-          setTimeout(() => {
-            if (isMountedRef.current) {
-              setIsVisible(false);
-            }
-          }, 100);
-        }
         return filtered;
       });
     },

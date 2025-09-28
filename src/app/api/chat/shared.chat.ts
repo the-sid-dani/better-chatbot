@@ -400,7 +400,10 @@ export const loadMcpTools = (opt?: {
   safe(() => mcpClientsManager.tools())
     .map((tools) => {
       // First apply allowed servers filter (security/permission layer)
-      const serverFilteredTools = filterMCPToolsByAllowedMCPServers(tools, opt?.allowedMcpServers);
+      const serverFilteredTools = filterMCPToolsByAllowedMCPServers(
+        tools,
+        opt?.allowedMcpServers,
+      );
 
       // If no mentions, return all server-filtered tools
       if (!opt?.mentions?.length) {
@@ -432,19 +435,44 @@ export const loadWorkFlowTools = (opt: {
 export const loadAppDefaultTools = (opt?: {
   mentions?: ChatMention[];
   allowedAppDefaultToolkit?: string[];
-}) =>
-  safe(APP_DEFAULT_TOOL_KIT)
+}) => {
+  console.log("🔍 loadAppDefaultTools called with:", {
+    mentionsLength: opt?.mentions?.length,
+    allowedAppDefaultToolkit: opt?.allowedAppDefaultToolkit,
+  });
+
+  // Add resilient import check before using APP_DEFAULT_TOOL_KIT
+  try {
+    if (!APP_DEFAULT_TOOL_KIT) {
+      console.error("🚨 APP_DEFAULT_TOOL_KIT is undefined!");
+      return {};
+    }
+    if (!APP_DEFAULT_TOOL_KIT.artifacts) {
+      console.error("🚨 APP_DEFAULT_TOOL_KIT.artifacts is missing!");
+      console.log("Available toolkits:", Object.keys(APP_DEFAULT_TOOL_KIT));
+    }
+  } catch (error) {
+    console.error("🚨 Critical error accessing APP_DEFAULT_TOOL_KIT:", error);
+    return {};
+  }
+
+  return safe(APP_DEFAULT_TOOL_KIT)
     .map((tools) => {
+      console.log("🔍 APP_DEFAULT_TOOL_KIT loaded:", {
+        toolkitKeys: Object.keys(tools),
+        artifactsToolCount: Object.keys(tools.artifacts || {}).length,
+        webSearchToolCount: Object.keys(tools.webSearch || {}).length,
+        totalToolkits: Object.keys(tools).length,
+      });
+      // CRITICAL FIX: Agent mentions are ADDITIVE, not restrictive
+      // Agents should ALWAYS have access to all allowed tools
+      // Mentions specify which tools to use, not which tools to disable
       if (opt?.mentions?.length) {
-        const defaultToolMentions = opt.mentions.filter(
-          (m) => m.type == "defaultTool",
+        console.log(
+          "🔍 Agent mentions detected but keeping ALL tools (mentions are additive)",
         );
-        return Array.from(Object.values(tools)).reduce((acc, t) => {
-          const allowed = objectFlow(t).filter((_, k) => {
-            return defaultToolMentions.some((m) => m.name == k);
-          });
-          return { ...acc, ...allowed };
-        }, {});
+        // Don't filter - let agents have access to all tools
+        // The mentions guide tool usage, they don't restrict availability
       }
       const allowedAppDefaultToolkit =
         opt?.allowedAppDefaultToolkit ?? Object.values(AppDefaultToolkit);
@@ -459,10 +487,15 @@ export const loadAppDefaultTools = (opt?: {
       );
     })
     .ifFail((e) => {
-      console.error(e);
+      console.error("🚨 APP_DEFAULT_TOOL_KIT Loading Failed:", e);
+      console.error("🚨 This causes agents to lose chart tools!");
       throw e;
     })
-    .orElse({} as Record<string, Tool>);
+    .orElse(() => {
+      console.warn("⚠️ APP_DEFAULT_TOOL_KIT failed - returning empty tools");
+      return {} as Record<string, Tool>;
+    });
+};
 
 export const convertToSavePart = <T extends UIMessagePart<any, any>>(
   part: T,
