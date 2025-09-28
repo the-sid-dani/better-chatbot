@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
 
     const bindingTools = [...openAITools, ...DEFAULT_VOICE_TOOLS];
 
-    const r = await fetch("https://api.openai.com/v1/realtime/sessions", {
+    const r = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
@@ -107,17 +107,52 @@ export async function POST(request: NextRequest) {
       },
 
       body: JSON.stringify({
-        model: "gpt-4o-realtime-preview",
-        voice: voice || "alloy",
-        input_audio_transcription: {
-          model: "whisper-1",
+        session: {
+          type: "realtime",
+          model: "gpt-realtime",
+          audio: {
+            output: {
+              voice: voice || "marin",
+            },
+          },
         },
-        instructions: systemPrompt,
-        tools: bindingTools,
       }),
     });
 
-    return new Response(r.body, {
+    const sessionData = await r.json();
+
+    // Include session configuration for client-side session.update event
+    const responseData = {
+      ...sessionData,
+      sessionConfig: {
+        instructions: systemPrompt,
+        tools: bindingTools,
+        input_audio_transcription: {
+          model: "whisper-1",
+        },
+        audio: {
+          input: {
+            format: {
+              type: "audio/pcm",
+              rate: 24000,
+            },
+            turn_detection: {
+              type: "semantic_vad",
+            },
+          },
+          output: {
+            format: {
+              type: "audio/pcm",
+              rate: 24000,
+            },
+            voice: voice || "marin",
+          },
+        },
+        output_modalities: ["audio"],
+      },
+    };
+
+    return new Response(JSON.stringify(responseData), {
       status: 200,
       headers: {
         "Content-Type": "application/json",

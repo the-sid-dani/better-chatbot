@@ -1,5 +1,5 @@
 export const OPENAI_REALTIME_URL =
-  "https://api.openai.com/v1/realtime/sessions";
+  "https://api.openai.com/v1/realtime/client_secrets";
 
 export type OpenAIRealtimeSession = {
   id: string;
@@ -10,9 +10,6 @@ export type OpenAIRealtimeSession = {
   voice: string;
   input_audio_format: string;
   output_audio_format: string;
-  input_audio_transcription: {
-    model: string;
-  };
   tools: any[];
   tool_choice: string;
   temperature: number;
@@ -20,6 +17,12 @@ export type OpenAIRealtimeSession = {
   client_secret: {
     value: string;
     expires_at: number;
+  };
+  sessionConfig?: {
+    instructions: string;
+    tools: any[];
+    audio: any;
+    output_modalities: string[];
   };
   [key: string]: any;
 };
@@ -51,16 +54,18 @@ export type OpenAIRealtimeServerEvent =
         | "input_audio_buffer.speech_started"
         | "input_audio_buffer.speech_stopped"
         | "input_audio_buffer.committed"
-        | "output_audio_buffer.stopped";
+        | "output_audio_buffer.stopped"
+        | "session.created"
+        | "session.updated";
       event_id: string;
       item_id: string;
     }
   | {
-      type: "conversation.item.input_audio_transcription.completed";
+      type: "conversation.item.added" | "conversation.item.done";
       event_id: string;
+      previous_item_id?: string;
       item_id: string;
-      content_index: number;
-      transcript?: string;
+      item?: any;
     }
   | {
       type: "conversation.item.input_audio_transcription.delta";
@@ -70,7 +75,14 @@ export type OpenAIRealtimeServerEvent =
       delta: string;
     }
   | {
-      type: "response.audio_transcript.delta";
+      type: "conversation.item.input_audio_transcription.completed";
+      event_id: string;
+      item_id: string;
+      content_index: number;
+      transcript?: string;
+    }
+  | {
+      type: "response.output_audio_transcript.delta";
       event_id: string;
       response_id: string;
       item_id: string;
@@ -79,7 +91,7 @@ export type OpenAIRealtimeServerEvent =
       delta: string;
     }
   | {
-      type: "response.audio_transcript.done";
+      type: "response.output_audio_transcript.done";
       event_id: string;
       response_id: string;
       item_id: string;

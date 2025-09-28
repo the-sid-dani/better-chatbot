@@ -21,18 +21,21 @@ import { callMcpToolByServerNameAction } from "@/app/api/mcp/actions";
 
 export const OPENAI_VOICE = {
   Alloy: "alloy",
+  Ash: "ash",
   Ballad: "ballad",
+  Cedar: "cedar",
+  Coral: "coral",
+  Echo: "echo",
+  Marin: "marin",
   Sage: "sage",
   Shimmer: "shimmer",
   Verse: "verse",
-  Echo: "echo",
-  Coral: "coral",
-  Ash: "ash",
 };
 
 interface UseOpenAIVoiceChatProps {
   model?: string;
   voice?: string;
+  agentId?: string;
 }
 
 type Content =
@@ -84,10 +87,13 @@ const createUIMessage = (m: {
 export function useOpenAIVoiceChat(
   props?: UseOpenAIVoiceChatProps,
 ): VoiceChatSession {
-  const { model = "gpt-4o-realtime-preview", voice = OPENAI_VOICE.Ash } =
-    props || {};
+  const {
+    model = "gpt-realtime",
+    voice = OPENAI_VOICE.Marin,
+    agentId: propsAgentId,
+  } = props || {};
 
-  const [agentId, allowedAppDefaultToolkit, allowedMcpServers] = appStore(
+  const [storeAgentId, allowedAppDefaultToolkit, allowedMcpServers] = appStore(
     useShallow((state) => [
       state.voiceChat.agentId,
       state.allowedAppDefaultToolkit,
@@ -106,6 +112,8 @@ export function useOpenAIVoiceChat(
   const dataChannel = useRef<RTCDataChannel | null>(null);
   const audioElement = useRef<HTMLAudioElement | null>(null);
   const audioStream = useRef<MediaStream | null>(null);
+  const sessionUpdateRetryTimeout = useRef<NodeJS.Timeout | null>(null);
+  const sessionUpdatedReceived = useRef(false);
 
   const { setTheme } = useTheme();
   const tracks = useRef<RTCRtpSender[]>([]);
@@ -161,7 +169,7 @@ export function useOpenAIVoiceChat(
             voice,
             allowedAppDefaultToolkit,
             allowedMcpServers,
-            agentId,
+            agentId: propsAgentId || storeAgentId,
           }),
         },
       );
@@ -174,7 +182,13 @@ export function useOpenAIVoiceChat(
       }
 
       return session;
-    }, [model, voice, allowedAppDefaultToolkit, allowedMcpServers, agentId]);
+    }, [
+      model,
+      voice,
+      allowedAppDefaultToolkit,
+      allowedMcpServers,
+      propsAgentId || storeAgentId,
+    ]);
 
   const updateUIMessage = useCallback(
     (
@@ -261,8 +275,30 @@ export function useOpenAIVoiceChat(
 
   const handleServerEvent = useCallback(
     (event: OpenAIRealtimeServerEvent) => {
+      // COMPREHENSIVE DEBUG LOGGING - Log ALL events to understand flow
+      console.log("📡 OpenAI Event Received:", {
+        type: event.type,
+        timestamp: new Date().toISOString(),
+        event: event,
+      });
+
+      // Special attention to speech and transcription events
+      if (
+        event.type.includes("speech") ||
+        event.type.includes("transcription") ||
+        event.type.includes("audio")
+      ) {
+        console.log("🔍 CRITICAL EVENT:", event.type, {
+          item_id: (event as any).item_id,
+          transcript: (event as any).transcript,
+          delta: (event as any).delta,
+          fullEvent: event,
+        });
+      }
+
       switch (event.type) {
         case "input_audio_buffer.speech_started": {
+          console.log("🎙️ CREATING USER MESSAGE with ID:", event.item_id);
           const message = createUIMessage({
             role: "user",
             id: event.item_id,
@@ -271,8 +307,16 @@ export function useOpenAIVoiceChat(
               text: "",
             },
           });
+          console.log("📝 Created user message:", message);
           setIsUserSpeaking(true);
-          setMessages((prev) => [...prev, message]);
+          setMessages((prev) => {
+            const newMessages = [...prev, message];
+            console.log(
+              "📋 Messages array updated, total messages:",
+              newMessages.length,
+            );
+            return newMessages;
+          });
           break;
         }
         case "input_audio_buffer.committed": {
@@ -287,22 +331,51 @@ export function useOpenAIVoiceChat(
           });
           break;
         }
+        case "conversation.item.input_audio_transcription.delta": {
+          console.log("🎤 USER TRANSCRIPTION DELTA - Updating message:", {
+            item_id: event.item_id,
+            delta: (event as any).delta,
+            event: event,
+          });
+          updateUIMessage(event.item_id, (prev) => {
+            console.log("📝 Updating user message:", prev);
+            const textPart = prev.parts.find((p) => p.type === "text");
+            if (!textPart) {
+              console.log("❌ No text part found in user message");
+              return prev;
+            }
+            const newText =
+              (textPart.text || "") + ((event as any).delta || "");
+            console.log("✏️ Updated text:", newText);
+            textPart.text = newText;
+            return prev;
+          });
+          break;
+        }
         case "conversation.item.input_audio_transcription.completed": {
+          console.log("🎤 USER TRANSCRIPTION COMPLETED - Final update:", {
+            item_id: event.item_id,
+            transcript: (event as any).transcript,
+            event: event,
+          });
           updateUIMessage(event.item_id, {
             parts: [
               {
                 type: "text",
-                text: event.transcript || "...speaking",
+                text: (event as any).transcript || "...speaking",
               },
             ],
             completed: true,
           });
           break;
         }
-        case "response.audio_transcript.delta": {
+        case "response.output_audio_transcript.delta": {
           setIsAssistantSpeaking(true);
           setMessages((prev) => {
-            const message = prev.findLast((m) => m.id == event.item_id)!;
+            const message = prev
+              .slice()
+              .reverse()
+              .find((m) => m.id == event.item_id)!;
             if (message) {
               return prev.map((m) =>
                 m.id == event.item_id
@@ -334,7 +407,7 @@ export function useOpenAIVoiceChat(
           });
           break;
         }
-        case "response.audio_transcript.done": {
+        case "response.output_audio_transcript.done": {
           updateUIMessage(event.item_id, (prev) => {
             const textPart = prev.parts.find((p) => p.type == "text");
             if (!textPart) return prev;
@@ -376,6 +449,27 @@ export function useOpenAIVoiceChat(
           setIsAssistantSpeaking(false);
           break;
         }
+        default: {
+          // Catch any transcription events we might be missing
+          if (
+            event.type.includes("transcription") ||
+            event.type.includes("input_audio")
+          ) {
+            console.log("🚨 UNHANDLED TRANSCRIPTION EVENT:", event.type, event);
+          }
+          break;
+        }
+        case "session.updated": {
+          console.log("✅ Session configuration update confirmed by OpenAI");
+          sessionUpdatedReceived.current = true;
+
+          // Clear any pending retry timeout
+          if (sessionUpdateRetryTimeout.current) {
+            clearTimeout(sessionUpdateRetryTimeout.current);
+            sessionUpdateRetryTimeout.current = null;
+          }
+          break;
+        }
       }
     },
     [clientFunctionCall, updateUIMessage],
@@ -389,7 +483,12 @@ export function useOpenAIVoiceChat(
     try {
       const session = await createSession();
       console.log({ session });
-      const sessionToken = session.client_secret.value;
+
+      // Handle both old and new response formats
+      const sessionToken = session.client_secret?.value || session.value;
+      if (!sessionToken) {
+        throw new Error("No session token received from OpenAI API");
+      }
       const pc = new RTCPeerConnection();
       if (!audioElement.current) {
         audioElement.current = document.createElement("audio");
@@ -425,11 +524,110 @@ export function useOpenAIVoiceChat(
         }
       });
       dc.addEventListener("open", () => {
+        console.log("🚀 WebRTC Data Channel OPENED - Connection established!");
+        // Reset session update tracking
+        sessionUpdatedReceived.current = false;
+
+        // Send session configuration in sequential updates to avoid overwhelming OpenAI
+        if (session.sessionConfig) {
+          console.log("📤 Starting split configuration updates:", {
+            hasInstructions: !!session.sessionConfig.instructions,
+            instructionsLength: session.sessionConfig.instructions?.length,
+            toolCount: session.sessionConfig.tools?.length,
+            voice: session.sessionConfig.audio?.output?.voice,
+            instructionsPreview:
+              session.sessionConfig.instructions?.substring(0, 200) + "...",
+          });
+
+          // Step 1: Send instructions update (agent system prompt)
+          const instructionsUpdate = {
+            type: "session.update",
+            session: {
+              type: "realtime",
+              model: "gpt-realtime",
+              instructions: session.sessionConfig.instructions,
+              output_modalities: session.sessionConfig.output_modalities,
+            },
+          };
+
+          console.log("📤 Step 1: Sending instructions update");
+          dc.send(JSON.stringify(instructionsUpdate));
+
+          // Step 2: Send tools update (100ms delay)
+          setTimeout(() => {
+            const toolsUpdate = {
+              type: "session.update",
+              session: {
+                type: "realtime",
+                model: "gpt-realtime",
+                tools: session.sessionConfig.tools,
+              },
+            };
+
+            console.log("📤 Step 2: Sending tools update");
+            dc.send(JSON.stringify(toolsUpdate));
+
+            // Step 3: Send audio settings update (100ms delay)
+            setTimeout(() => {
+              const audioUpdate = {
+                type: "session.update",
+                session: {
+                  type: "realtime",
+                  model: "gpt-realtime",
+                  audio: session.sessionConfig.audio,
+                },
+              };
+
+              console.log("📤 Step 3: Sending audio settings update");
+              dc.send(JSON.stringify(audioUpdate));
+
+              console.log("✅ All configuration updates sent successfully");
+            }, 100);
+          }, 100);
+
+          // Set up retry logic if session.updated is not received within 3 seconds
+          // (increased timeout due to sequential updates)
+          sessionUpdateRetryTimeout.current = setTimeout(() => {
+            if (!sessionUpdatedReceived.current) {
+              console.warn(
+                "⚠️ session.updated not received within 3 seconds, retrying with full configuration...",
+              );
+              console.log("🔄 Retrying with single session.update as fallback");
+
+              const fallbackUpdate = {
+                type: "session.update",
+                session: {
+                  type: "realtime",
+                  model: "gpt-realtime",
+                  ...session.sessionConfig,
+                },
+              };
+              dc.send(JSON.stringify(fallbackUpdate));
+
+              // Set up a final timeout for logging if still not received
+              setTimeout(() => {
+                if (!sessionUpdatedReceived.current) {
+                  console.error(
+                    "❌ session.updated still not received after retry - agent system prompt may not be active",
+                  );
+                }
+              }, 2000);
+            }
+          }, 3000);
+        }
+
         setIsActive(true);
         setIsListening(true);
         setIsLoading(false);
       });
       dc.addEventListener("close", () => {
+        // Clean up session update timeout on close
+        if (sessionUpdateRetryTimeout.current) {
+          clearTimeout(sessionUpdateRetryTimeout.current);
+          sessionUpdateRetryTimeout.current = null;
+        }
+        sessionUpdatedReceived.current = false;
+
         setIsActive(false);
         setIsListening(false);
         setIsLoading(false);
@@ -440,22 +638,49 @@ export function useOpenAIVoiceChat(
         setIsActive(false);
         setIsListening(false);
       });
+      console.log("🔗 Creating WebRTC offer...");
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      const sdpResponse = await fetch(`https://api.openai.com/v1/realtime`, {
-        method: "POST",
-        body: offer.sdp,
-        headers: {
-          Authorization: `Bearer ${sessionToken}`,
-          "Content-Type": "application/sdp",
+
+      console.log(
+        "📡 Attempting WebRTC connection to OpenAI with token:",
+        sessionToken.substring(0, 20) + "...",
+      );
+      const sdpResponse = await fetch(
+        `https://api.openai.com/v1/realtime/calls`,
+        {
+          method: "POST",
+          body: offer.sdp,
+          headers: {
+            Authorization: `Bearer ${sessionToken}`,
+            "Content-Type": "application/sdp",
+          },
         },
-      });
+      );
+      console.log("📋 SDP Response status:", sdpResponse.status);
+      const sdpText = await sdpResponse.text();
+      console.log("📋 SDP Response received, length:", sdpText.length);
+
       const answer: RTCSessionDescriptionInit = {
         type: "answer",
-        sdp: await sdpResponse.text(),
+        sdp: sdpText,
       };
+
+      console.log("🔗 Setting remote description...");
       await pc.setRemoteDescription(answer);
       peerConnection.current = pc;
+      console.log("✅ WebRTC Peer Connection established successfully!");
+
+      // Add timeout fallback - if data channel doesn't open within 5 seconds, exit loading
+      setTimeout(() => {
+        if (isLoading) {
+          console.warn(
+            "⚠️ Data channel didn't open within 5 seconds, exiting loading state",
+          );
+          setIsLoading(false);
+          setError(new Error("WebRTC data channel connection timeout"));
+        }
+      }, 5000);
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)));
       setIsActive(false);
@@ -466,6 +691,13 @@ export function useOpenAIVoiceChat(
 
   const stop = useCallback(async () => {
     try {
+      // Clean up session update timeout
+      if (sessionUpdateRetryTimeout.current) {
+        clearTimeout(sessionUpdateRetryTimeout.current);
+        sessionUpdateRetryTimeout.current = null;
+      }
+      sessionUpdatedReceived.current = false;
+
       if (dataChannel.current) {
         dataChannel.current.close();
         dataChannel.current = null;
