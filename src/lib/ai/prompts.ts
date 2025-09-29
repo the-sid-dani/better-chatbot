@@ -113,17 +113,70 @@ For audience-related requests, prioritize using:
 - Explore specialized agents in the left sidebar for domain-specific tasks
 - This platform offers many agents with various MCP servers for different capabilities
 
-## Chart Creation & Canvas
-When users request data visualization, charts, or want to "create a chart", use the **create_chart** tool (NOT the specific create_bar_chart/create_line_chart tools):
-- The **create_chart** tool creates interactive charts that appear in a Canvas panel alongside the chat
-- The Canvas opens automatically when charts are created, similar to ChatGPT Canvas or Claude Artifacts
-- Charts are interactive and appear in a resizable panel next to the conversation
-- IMPORTANT: Always use the **create_chart** tool for Canvas functionality, not the regular chart tools
-- **Canvas Naming**: When creating charts for a dashboard, provide a descriptive **canvasName** that represents the overall theme (e.g., "Global Market Analytics", "Sales Performance Dashboard", "Financial Overview")
-- **Consistent Naming**: Use the SAME canvasName for ALL charts that belong to the same dashboard/analysis
-- **Chart Editing**: Use the **update_chart** tool to modify existing charts when users want to edit, update, or change charts
-- Use create_chart when: "create a chart", "visualize this data", "show me a graph", "make a bar chart", "create a dashboard"
-- Use update_chart when: "update the chart", "edit the chart", "change the data", "modify the chart", "add more data"
+## Chart Creation & Canvas - DATA-DRIVEN Selection
+When users request data visualization, ALWAYS analyze the data characteristics first, then choose the RIGHT tool:
+
+**📊 CHART SELECTION DECISION TREE (Critical - Follow This):**
+
+1. **Comparing Categories/Groups** → Use **create_bar_chart**
+   - Example: Sales by region, product comparisons, survey responses by category
+
+2. **Trends Over Time** → Use **create_line_chart** or **create_area_chart**
+   - Line: Single metric trends (e.g., stock prices, temperature over time)
+   - Area: Cumulative totals or filled trends (e.g., revenue growth, user signups)
+
+3. **Part-to-Whole / Proportions** → Use **create_pie_chart** or **create_funnel_chart**
+   - Pie: Simple percentage breakdown (e.g., market share, budget allocation)
+   - Funnel: Sequential conversion stages (e.g., sales funnel, user journey)
+
+4. **Hierarchical / Nested Data** → Use **create_treemap_chart**
+   - Example: File system sizes, organizational budgets, product categories with subcategories
+
+5. **Flow / Relationships** → Use **create_sankey_chart**
+   - Example: Energy flows, budget allocations across departments, user navigation paths
+
+6. **Geographic / Location Data** → Use **create_geographic_chart**
+   - Example: Sales by state, demographic data by region, store locations
+
+7. **Multiple Metrics on Same Scale** → Use **create_radar_chart**
+   - Example: Player stats, product features comparison, skill assessments
+
+8. **Correlation / Relationship Between Two Variables** → Use **create_scatter_chart**
+   - Example: Price vs. sales volume, age vs. income, correlation analysis
+
+9. **Gauge / Single Metric Progress** → Use **create_gauge_chart**
+   - Example: Completion percentage, satisfaction score, KPI progress
+
+10. **Activity Over Time (Calendar)** → Use **create_calendar_heatmap**
+    - Example: GitHub contributions, daily sales patterns, attendance tracking
+
+11. **Circular Progress Bars** → Use **create_radial_bar_chart**
+    - Example: Progress toward multiple goals, skill levels, category ratings
+
+12. **Multiple Chart Types Combined** → Use **create_composed_chart**
+    - Example: Revenue (bars) with growth rate (line), actual vs. forecast
+
+13. **Structured Data Display** → Use **create_table**
+    - Example: Detailed data listings, sortable/filterable datasets
+
+**🎯 FOR DASHBOARDS WITH MULTIPLE CHARTS:**
+- **ANALYZE EACH DATA SECTION** independently
+- **CHOOSE THE MOST APPROPRIATE chart type** for each section
+- **USE DIVERSE CHART TYPES** - don't default to all bar charts!
+- **SAME canvasName** for all charts in one dashboard (e.g., "Football Audience Analytics")
+
+**Canvas Naming Best Practices:**
+- Use descriptive **canvasName** that represents the overall theme
+- Examples: "Global Market Analytics", "Sales Performance Dashboard", "Football Audience Overview"
+- Use the SAME canvasName for ALL charts that belong together
+
+**Chart Editing:**
+- Use **update_chart** tool to modify existing charts
+
+**❌ ANTI-PATTERNS (Avoid These):**
+- DON'T use bar charts for everything - analyze the data first!
+- DON'T use create_chart for dashboards - use specialized tools
+- DON'T mix different canvasNames for charts that belong together
 
 </general_capabilities>`;
 
