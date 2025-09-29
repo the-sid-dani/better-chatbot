@@ -1,21 +1,17 @@
 "use client";
 
-import { motion } from "framer-motion";
+import Image from "next/image";
 
 export const Think = () => {
   return (
-    <motion.div
-      className="h-2 w-2 rounded-full bg-primary"
-      animate={{
-        scale: [1, 1.5, 1],
-        opacity: [0.6, 1, 0.6],
-      }}
-      transition={{
-        duration: 1.5,
-        repeat: Infinity,
-        ease: "easeInOut",
-        delay: 0,
-      }}
-    />
+    <div className="h-6 w-6 flex items-center justify-center">
+      <Image
+        src="/samba-resources/logos/samba-logo-2024.png"
+        alt="Samba Logo"
+        width={24}
+        height={24}
+        className="object-contain"
+      />
+    </div>
   );
 };

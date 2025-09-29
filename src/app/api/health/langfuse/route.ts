@@ -21,7 +21,7 @@ export async function GET() {
       const response = await fetch(`${baseUrl}/api/public/health`, {
         method: "GET",
         headers: {
-          "User-Agent": "better-chatbot-health-check",
+          "User-Agent": "samba-orion-health-check",
         },
         signal: AbortSignal.timeout(5000), // 5 second timeout
       });

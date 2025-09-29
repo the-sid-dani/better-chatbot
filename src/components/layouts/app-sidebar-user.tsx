@@ -144,7 +144,7 @@ export function AppSidebarUser({
             <DropdownMenuItem
               onClick={() => {
                 window.open(
-                  "https://github.com/cgoinglove/better-chatbot/issues/new",
+                  "https://github.com/samba-tv/samba-orion/issues/new",
                   "_blank",
                 );
               }}

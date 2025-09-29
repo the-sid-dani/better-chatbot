@@ -74,14 +74,16 @@ export function AppSidebar({
                 }}
               >
                 <div className="flex items-center gap-2">
-                  <Image
-                    src="/samba-resources/logos/samba-logo-2024.png"
-                    alt="Samba Orion Logo"
-                    width={28}
-                    height={28}
-                    className="flex-shrink-0 rounded-sm"
-                  />
-                  <h4 className="font-bold">samba-orion</h4>
+                  <div className="h-6 w-6 flex items-center justify-center">
+                    <Image
+                      src="/samba-resources/logos/samba-logo-2024.png"
+                      alt="Samba Orion Logo"
+                      width={24}
+                      height={24}
+                      className="object-contain"
+                    />
+                  </div>
+                  <h4 className="font-bold">Samba Orion</h4>
                 </div>
                 <div
                   className="ml-auto block sm:hidden"
