@@ -139,6 +139,7 @@ export const barChartArtifactTool = createTool({
         data: sanitizedChartData,
         description: sanitizedDescription,
         yAxisLabel: sanitizedYAxisLabel,
+        chartType: "bar", // Top-level chartType for canvas-panel.tsx routing
         // Add metadata for Canvas rendering
         metadata: {
           chartType: "bar" as const,
@@ -162,58 +163,33 @@ export const barChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Create the structured result data
-      const resultData = {
-        success: true,
-        artifactId: artifactId,
-        artifact: {
-          kind: "charts" as const,
-          title: `Bar Chart: ${sanitizedTitle}`,
-          content: JSON.stringify(chartContent, null, 2),
-          metadata: chartContent.metadata,
-        },
-        message: `Created bar chart "${sanitizedTitle}" with ${sanitizedChartData.length} data points and ${seriesNames.length} series. The chart is now available in the Canvas workspace with beautiful styling.`,
-        chartType: "bar",
-        dataPoints: sanitizedChartData.length,
-        series: seriesNames.join(", "),
-        canvasReady: true,
-        componentType: "BarChart",
-      };
-
-      // Stream success state
+      // Stream success state with direct chartData format (matches create_chart pattern)
       yield {
-        status: "success",
+        status: "success" as const,
+        message: `Created bar chart "${sanitizedTitle}" with ${sanitizedChartData.length} data points and ${seriesNames.length} series`,
+        chartId: artifactId,
+        title: sanitizedTitle,
+        chartType: "bar",
+        canvasName: "Data Visualization",
         chartData: chartContent,
+        dataPoints: sanitizedChartData.length,
         shouldCreateArtifact: true, // Flag for Canvas processing
-        artifactId: artifactId,
         progress: 100,
       };
 
-      // Return in expected response format with content and structuredContent
+      // Return simple success message for chat
       logger.info(
         `✅ [${DefaultToolName.CreateBarChart}] Tool execution completed successfully:`,
         {
           toolName: DefaultToolName.CreateBarChart,
           artifactId,
-          title,
-          canvasReady: true,
-          shouldCreateArtifact: true,
+          title: sanitizedTitle,
+          chartType: "bar",
+          dataPoints: sanitizedChartData.length,
         },
       );
-      logger.info(`Bar chart artifact created successfully: ${artifactId}`);
-      return {
-        content: [
-          { type: "text", text: resultData.message },
-          {
-            type: "text",
-            text: `Chart Created in Canvas\n\nType: ${resultData.chartType}\n\nChart created successfully. Use the "Open Canvas" button above to view the interactive visualization.`,
-          },
-        ],
-        structuredContent: {
-          result: [resultData],
-        },
-        isError: false,
-      };
+
+      return `Created bar chart "${sanitizedTitle}" with ${sanitizedChartData.length} data points and ${seriesNames.length} series. The chart is now available in the Canvas workspace.`;
     } catch (error) {
       logger.error(
         `❌ [${DefaultToolName.CreateBarChart}] Tool execution failed:`,

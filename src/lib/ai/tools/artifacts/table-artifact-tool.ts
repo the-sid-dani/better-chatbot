@@ -66,7 +66,7 @@ export const tableArtifactTool = createTool({
       ),
   }),
 
-  execute: async ({ title, description, columns, data }) => {
+  execute: async function* ({ title, description, columns, data }) {
     try {
       logger.info(`Creating table artifact: ${title}`);
 
@@ -107,6 +107,7 @@ export const tableArtifactTool = createTool({
         description,
         columns,
         data,
+        chartType: "table", // Top-level chartType for canvas-panel.tsx routing
         // Add metadata for Canvas rendering
         metadata: {
           componentType: "table" as const,
@@ -137,40 +138,22 @@ export const tableArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Create the structured result data
-      const resultData = {
-        success: true,
-        artifactId,
-        artifact: {
-          kind: "tables" as const,
-          title: `Table: ${title}`,
-          content: JSON.stringify(tableContent, null, 2),
-          metadata: tableContent.metadata,
-        },
-        message: `Created interactive table "${title}" with ${columns.length} columns and ${data.length} rows. The table includes search, sort, filter, pagination, and export capabilities. It is now available in the Canvas workspace.`,
-        componentType: "table",
-        columnCount: columns.length,
-        rowCount: data.length,
-        features: ["search", "sort", "filter", "pagination", "export"],
-        canvasReady: true,
-        tableType: "InteractiveTable",
+      // Stream success state with direct chartData format (matches create_chart pattern)
+      yield {
+        status: "success" as const,
+        message: `Created table "${title}"`,
+        chartId: artifactId,
+        title,
+        chartType: "table",
+        canvasName: "Data Visualization",
+        chartData: tableContent,
+        shouldCreateArtifact: true, // Flag for Canvas processing
+        progress: 100,
       };
 
-      // Return in expected response format with content and structuredContent
+      // Return simple success message for chat
       logger.info(`Table artifact created successfully: ${artifactId}`);
-      return {
-        content: [
-          { type: "text", text: resultData.message },
-          {
-            type: "text",
-            text: `Table Created in Canvas\n\nColumns: ${resultData.columnCount}\nRows: ${resultData.rowCount}\n\nTable created successfully with advanced features. Use the "Open Canvas" button above to view the interactive table.`,
-          },
-        ],
-        structuredContent: {
-          result: [resultData],
-        },
-        isError: false,
-      };
+      return `Created table "${title}". The table is now available in the Canvas workspace.`;
     } catch (error) {
       logger.error("Failed to create table artifact:", error);
       const errorMessage =

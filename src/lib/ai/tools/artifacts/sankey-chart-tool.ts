@@ -55,7 +55,7 @@ export const sankeyChartArtifactTool = createTool({
       .describe("Brief description of what the chart shows"),
   }),
 
-  execute: async ({ title, nodes, links, description }) => {
+  execute: async function* ({ title, nodes, links, description }) {
     try {
       logger.info(`Creating sankey chart artifact: ${title}`);
 
@@ -148,6 +148,7 @@ export const sankeyChartArtifactTool = createTool({
         nodes,
         links,
         description,
+        chartType: "sankey", // Top-level chartType for canvas-panel.tsx routing
         // Add metadata for Canvas rendering
         metadata: {
           chartType: "sankey" as const,
@@ -171,41 +172,22 @@ export const sankeyChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Create the structured result data
-      const resultData = {
-        success: true,
-        artifactId,
-        artifact: {
-          kind: "charts" as const,
-          title: `Sankey Chart: ${title}`,
-          content: JSON.stringify(chartContent, null, 2),
-          metadata: chartContent.metadata,
-        },
-        message: `Created sankey chart "${title}" with ${nodes.length} nodes and ${links.length} flows showing data flow visualization. The chart is now available in the Canvas workspace with beautiful styling.`,
+      // Stream success state with direct chartData format (matches create_chart pattern)
+      yield {
+        status: "success" as const,
+        message: `Created sankey chart "${title}"`,
+        chartId: artifactId,
+        title,
         chartType: "sankey",
-        nodeCount: nodes.length,
-        linkCount: links.length,
-        totalFlow: chartContent.metadata.totalFlow,
-        // Additional metadata for Canvas integration
-        canvasReady: true,
-        componentType: "SankeyChart",
+        canvasName: "Data Visualization",
+        chartData: chartContent,
+        shouldCreateArtifact: true, // Flag for Canvas processing
+        progress: 100,
       };
 
-      // Return in expected response format with content and structuredContent
+      // Return simple success message for chat
       logger.info(`Sankey chart artifact created successfully: ${artifactId}`);
-      return {
-        content: [
-          { type: "text", text: resultData.message },
-          {
-            type: "text",
-            text: `Chart Created in Canvas\n\nType: ${resultData.chartType}\n\nChart created successfully. Use the "Open Canvas" button above to view the interactive visualization.`,
-          },
-        ],
-        structuredContent: {
-          result: [resultData],
-        },
-        isError: false,
-      };
+      return `Created sankey chart "${title}". The chart is now available in the Canvas workspace.`;
     } catch (error) {
       logger.error("Failed to create sankey chart artifact:", error);
       const errorMessage =

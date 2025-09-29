@@ -123,6 +123,7 @@ export const radialBarChartArtifactTool = createTool({
         description,
         innerRadius,
         outerRadius,
+        chartType: "radial-bar", // Top-level chartType for canvas-panel.tsx routing
         // Add metadata for Canvas rendering
         metadata: {
           chartType: "radial-bar" as const,

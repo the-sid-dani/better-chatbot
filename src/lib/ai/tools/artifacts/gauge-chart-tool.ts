@@ -71,7 +71,7 @@ export const gaugeChartArtifactTool = createTool({
       .describe("Brief description of what the gauge shows"),
   }),
 
-  execute: async ({
+  execute: async function* ({
     title,
     value,
     minValue = 0,
@@ -80,7 +80,7 @@ export const gaugeChartArtifactTool = createTool({
     unit,
     thresholds,
     description,
-  }) => {
+  }) {
     try {
       logger.info(`Creating gauge chart artifact: ${title}`);
 
@@ -149,6 +149,7 @@ export const gaugeChartArtifactTool = createTool({
         unit,
         thresholds,
         description,
+        chartType: "gauge", // Top-level chartType for canvas-panel.tsx routing
         // Add metadata for Canvas rendering
         metadata: {
           chartType: "gauge" as const,
@@ -175,43 +176,22 @@ export const gaugeChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Create the structured result data
-      const resultData = {
-        success: true,
-        artifactId,
-        artifact: {
-          kind: "charts" as const,
-          title: `Gauge Chart: ${title}`,
-          content: JSON.stringify(chartContent, null, 2),
-          metadata: chartContent.metadata,
-        },
-        message: `Created gauge chart "${title}" showing ${clampedValue}${unit || ""} (${chartContent.metadata.percentage}%). The chart is now available in the Canvas workspace with beautiful styling.`,
+      // Stream success state with direct chartData format (matches create_chart pattern)
+      yield {
+        status: "success" as const,
+        message: `Created gauge chart "${title}"`,
+        chartId: artifactId,
+        title,
         chartType: "gauge",
-        gaugeType,
-        value: clampedValue,
-        minValue,
-        maxValue,
-        unit: unit || "",
-        percentage: chartContent.metadata.percentage,
-        canvasReady: true,
-        componentType: "GaugeChart",
+        canvasName: "Data Visualization",
+        chartData: chartContent,
+        shouldCreateArtifact: true, // Flag for Canvas processing
+        progress: 100,
       };
 
-      // Return in expected response format with content and structuredContent
+      // Return simple success message for chat
       logger.info(`Gauge chart artifact created successfully: ${artifactId}`);
-      return {
-        content: [
-          { type: "text", text: resultData.message },
-          {
-            type: "text",
-            text: `Chart Created in Canvas\n\nType: ${resultData.chartType}\n\nChart created successfully. Use the "Open Canvas" button above to view the interactive visualization.`,
-          },
-        ],
-        structuredContent: {
-          result: [resultData],
-        },
-        isError: false,
-      };
+      return `Created gauge chart "${title}". The chart is now available in the Canvas workspace.`;
     } catch (error) {
       logger.error("Failed to create gauge chart artifact:", error);
       const errorMessage =

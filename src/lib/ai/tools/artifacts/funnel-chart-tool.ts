@@ -59,7 +59,7 @@ export const funnelChartArtifactTool = createTool({
       .describe("Unit of measurement (e.g., 'leads', 'customers', '$')"),
   }),
 
-  execute: async ({ title, data, description, unit }) => {
+  execute: async function* ({ title, data, description, unit }) {
     try {
       logger.info(`Creating funnel chart artifact: ${title}`);
 
@@ -93,6 +93,7 @@ export const funnelChartArtifactTool = createTool({
         data: sortedData,
         description,
         unit,
+        chartType: "funnel", // Top-level chartType for canvas-panel.tsx routing
         // Add metadata for Canvas rendering
         metadata: {
           chartType: "funnel" as const,
@@ -115,41 +116,22 @@ export const funnelChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Create the structured result data
-      const resultData = {
-        success: true,
-        artifactId,
-        artifact: {
-          kind: "charts" as const,
-          title: `Funnel Chart: ${title}`,
-          content: JSON.stringify(chartContent, null, 2),
-          metadata: chartContent.metadata,
-        },
-        message: `Created funnel chart "${title}" with ${data.length} stages showing conversion flow. The chart is now available in the Canvas workspace with beautiful styling.`,
+      // Stream success state with direct chartData format (matches create_chart pattern)
+      yield {
+        status: "success" as const,
+        message: `Created funnel chart "${title}"`,
+        chartId: artifactId,
+        title,
         chartType: "funnel",
-        stages: data.length,
-        unit: unit || "items",
-        totalValue: chartContent.metadata.totalValue,
-        // Additional metadata for Canvas integration
-        canvasReady: true,
-        componentType: "FunnelChart",
+        canvasName: "Data Visualization",
+        chartData: chartContent,
+        shouldCreateArtifact: true, // Flag for Canvas processing
+        progress: 100,
       };
 
-      // Return in expected response format with content and structuredContent
+      // Return simple success message for chat
       logger.info(`Funnel chart artifact created successfully: ${artifactId}`);
-      return {
-        content: [
-          { type: "text", text: resultData.message },
-          {
-            type: "text",
-            text: `Chart Created in Canvas\n\nType: ${resultData.chartType}\n\nChart created successfully. Use the "Open Canvas" button above to view the interactive visualization.`,
-          },
-        ],
-        structuredContent: {
-          result: [resultData],
-        },
-        isError: false,
-      };
+      return `Created funnel chart "${title}". The chart is now available in the Canvas workspace.`;
     } catch (error) {
       logger.error("Failed to create funnel chart artifact:", error);
       const errorMessage =

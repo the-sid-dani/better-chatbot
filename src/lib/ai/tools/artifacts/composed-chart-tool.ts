@@ -63,7 +63,13 @@ export const composedChartArtifactTool = createTool({
       .describe("Brief description of what the chart shows"),
   }),
 
-  execute: async ({ title, data, xAxisLabel, yAxisLabel, description }) => {
+  execute: async function* ({
+    title,
+    data,
+    xAxisLabel,
+    yAxisLabel,
+    description,
+  }) {
     try {
       logger.info(`Creating composed chart artifact: ${title}`);
 
@@ -124,6 +130,7 @@ export const composedChartArtifactTool = createTool({
         xAxisLabel,
         yAxisLabel,
         description,
+        chartType: "composed", // Top-level chartType for canvas-panel.tsx routing
         // Add metadata for Canvas rendering
         metadata: {
           chartType: "composed" as const,
@@ -149,43 +156,24 @@ export const composedChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Create the structured result data
-      const resultData = {
-        success: true,
-        artifactId,
-        artifact: {
-          kind: "charts" as const,
-          title: `Composed Chart: ${title}`,
-          content: JSON.stringify(chartContent, null, 2),
-          metadata: chartContent.metadata,
-        },
-        message: `Created composed chart "${title}" with ${data.length} data points combining ${chartTypes.length} chart types. The chart is now available in the Canvas workspace with beautiful styling.`,
+      // Stream success state with direct chartData format (matches create_chart pattern)
+      yield {
+        status: "success" as const,
+        message: `Created composed chart "${title}"`,
+        chartId: artifactId,
+        title,
         chartType: "composed",
-        dataPoints: data.length,
-        series: seriesNames,
-        chartTypes: chartTypes.join(", "),
-        // Additional metadata for Canvas integration
-        canvasReady: true,
-        componentType: "ComposedChart",
+        canvasName: "Data Visualization",
+        chartData: chartContent,
+        shouldCreateArtifact: true, // Flag for Canvas processing
+        progress: 100,
       };
 
-      // Return in expected response format with content and structuredContent
+      // Return simple success message for chat
       logger.info(
         `Composed chart artifact created successfully: ${artifactId}`,
       );
-      return {
-        content: [
-          { type: "text", text: resultData.message },
-          {
-            type: "text",
-            text: `Chart Created in Canvas\n\nType: ${resultData.chartType}\n\nChart created successfully. Use the "Open Canvas" button above to view the interactive visualization.`,
-          },
-        ],
-        structuredContent: {
-          result: [resultData],
-        },
-        isError: false,
-      };
+      return `Created composed chart "${title}". The chart is now available in the Canvas workspace.`;
     } catch (error) {
       logger.error("Failed to create composed chart artifact:", error);
       const errorMessage =

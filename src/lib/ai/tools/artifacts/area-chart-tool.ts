@@ -67,14 +67,14 @@ export const areaChartArtifactTool = createTool({
       .describe("Brief description of what the chart shows"),
   }),
 
-  execute: async ({
+  execute: async function* ({
     title,
     data,
     areaType = "standard",
     xAxisLabel,
     yAxisLabel,
     description,
-  }) => {
+  }) {
     try {
       logger.info(`Creating area chart artifact: ${title}`);
 
@@ -127,6 +127,7 @@ export const areaChartArtifactTool = createTool({
         xAxisLabel,
         yAxisLabel: sanitizedYAxisLabel,
         description: sanitizedDescription,
+        chartType: "area", // Top-level chartType for canvas-panel.tsx routing
         // Add metadata for Canvas rendering
         metadata: {
           chartType: "area" as const,
@@ -151,39 +152,22 @@ export const areaChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Create the structured result data
-      const resultData = {
-        success: true,
-        artifactId,
-        artifact: {
-          kind: "charts" as const,
-          title: `Area Chart: ${title}`,
-          content: JSON.stringify(chartContent, null, 2),
-          metadata: chartContent.metadata,
-        },
-        message: `Created area chart "${title}" with ${data.length} data points and ${seriesNames.length} trend areas. The chart is now available in the Canvas workspace with smooth curves and beautiful styling.`,
+      // Stream success state with direct chartData format (matches create_chart pattern)
+      yield {
+        status: "success" as const,
+        message: `Created area chart "${title}"`,
+        chartId: artifactId,
+        title,
         chartType: "area",
-        dataPoints: data.length,
-        series: seriesNames,
-        canvasReady: true,
-        componentType: "AreaChart",
+        canvasName: "Data Visualization",
+        chartData: chartContent,
+        shouldCreateArtifact: true, // Flag for Canvas processing
+        progress: 100,
       };
 
-      // Return in expected response format with content and structuredContent
+      // Return simple success message for chat
       logger.info(`Area chart artifact created successfully: ${artifactId}`);
-      return {
-        content: [
-          { type: "text", text: resultData.message },
-          {
-            type: "text",
-            text: `Chart Created in Canvas\n\nType: ${resultData.chartType}\n\nChart created successfully. Use the "Open Canvas" button above to view the interactive visualization.`,
-          },
-        ],
-        structuredContent: {
-          result: [resultData],
-        },
-        isError: false,
-      };
+      return `Created area chart "${title}". The chart is now available in the Canvas workspace.`;
     } catch (error) {
       logger.error("Failed to create area chart artifact:", error);
       const errorMessage =

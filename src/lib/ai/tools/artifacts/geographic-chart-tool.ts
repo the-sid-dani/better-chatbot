@@ -58,13 +58,13 @@ export const geographicChartArtifactTool = createTool({
       .describe("Brief description of what the chart shows"),
   }),
 
-  execute: async ({
+  execute: async function* ({
     title,
     data,
     geoType,
     colorScale = "blues",
     description,
-  }) => {
+  }) {
     try {
       logger.info(`Creating geographic chart artifact: ${title}`);
 
@@ -115,6 +115,7 @@ export const geographicChartArtifactTool = createTool({
         geoType,
         colorScale,
         description,
+        chartType: "geographic", // Top-level chartType for canvas-panel.tsx routing
         // Add metadata for Canvas rendering
         metadata: {
           chartType: "geographic" as const,
@@ -139,43 +140,24 @@ export const geographicChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Create the structured result data
-      const resultData = {
-        success: true,
-        artifactId,
-        artifact: {
-          kind: "charts" as const,
-          title: `Geographic Chart: ${title}`,
-          content: JSON.stringify(chartContent, null, 2),
-          metadata: chartContent.metadata,
-        },
-        message: `Created geographic chart "${title}" showing ${data.length} regions with ${geoType} visualization. The chart is now available in the Canvas workspace with beautiful styling.`,
+      // Stream success state with direct chartData format (matches create_chart pattern)
+      yield {
+        status: "success" as const,
+        message: `Created geographic chart "${title}"`,
+        chartId: artifactId,
+        title,
         chartType: "geographic",
-        geoType,
-        regionCount: data.length,
-        colorScale,
-        // Additional metadata for Canvas integration
-        canvasReady: true,
-        componentType: "GeographicChart",
+        canvasName: "Data Visualization",
+        chartData: chartContent,
+        shouldCreateArtifact: true, // Flag for Canvas processing
+        progress: 100,
       };
 
-      // Return in expected response format with content and structuredContent
+      // Return simple success message for chat
       logger.info(
         `Geographic chart artifact created successfully: ${artifactId}`,
       );
-      return {
-        content: [
-          { type: "text", text: resultData.message },
-          {
-            type: "text",
-            text: `Chart Created in Canvas\n\nType: ${resultData.chartType}\n\nChart created successfully. Use the "Open Canvas" button above to view the interactive visualization.`,
-          },
-        ],
-        structuredContent: {
-          result: [resultData],
-        },
-        isError: false,
-      };
+      return `Created geographic chart "${title}". The chart is now available in the Canvas workspace.`;
     } catch (error) {
       logger.error("Failed to create geographic chart artifact:", error);
       const errorMessage =

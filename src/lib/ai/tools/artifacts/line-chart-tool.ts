@@ -129,6 +129,7 @@ export const lineChartArtifactTool = createTool({
         data,
         description,
         yAxisLabel,
+        chartType: "line", // Top-level chartType for canvas-panel.tsx routing
         // Add metadata for Canvas rendering
         metadata: {
           chartType: "line" as const,
@@ -160,58 +161,33 @@ export const lineChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Create the structured result data
-      const resultData = {
-        success: true,
-        artifactId,
-        artifact: {
-          kind: "charts" as const,
-          title: `Line Chart: ${title}`,
-          content: JSON.stringify(chartContent, null, 2),
-          metadata: chartContent.metadata,
-        },
-        message: `Created line chart "${title}" with ${data.length} data points and ${seriesNames.length} trend lines. The chart is now available in the Canvas workspace with smooth curves and beautiful styling.`,
-        chartType: "line",
-        dataPoints: data.length,
-        series: seriesNames,
-        canvasReady: true,
-        componentType: "LineChart",
-      };
-
-      // Stream success state
+      // Stream success state with direct chartData format (matches create_chart pattern)
       yield {
-        status: "success",
+        status: "success" as const,
+        message: `Created line chart "${title}" with ${data.length} data points and ${seriesNames.length} trend lines`,
+        chartId: artifactId,
+        title,
+        chartType: "line",
+        canvasName: "Data Visualization",
         chartData: chartContent,
+        dataPoints: data.length,
         shouldCreateArtifact: true, // Flag for Canvas processing
-        artifactId: artifactId,
         progress: 100,
       };
 
-      // Return in expected response format with content and structuredContent
+      // Return simple success message for chat
       logger.info(
         `✅ [${DefaultToolName.CreateLineChart}] Tool execution completed successfully:`,
         {
           toolName: DefaultToolName.CreateLineChart,
           artifactId,
           title,
-          canvasReady: true,
-          shouldCreateArtifact: true,
+          chartType: "line",
+          dataPoints: data.length,
         },
       );
-      logger.info(`Line chart artifact created successfully: ${artifactId}`);
-      return {
-        content: [
-          { type: "text", text: resultData.message },
-          {
-            type: "text",
-            text: `Chart Created in Canvas\n\nType: ${resultData.chartType}\n\nChart created successfully. Use the "Open Canvas" button above to view the interactive visualization.`,
-          },
-        ],
-        structuredContent: {
-          result: [resultData],
-        },
-        isError: false,
-      };
+
+      return `Created line chart "${title}" with ${data.length} data points and ${seriesNames.length} trend lines. The chart is now available in the Canvas workspace.`;
     } catch (error) {
       logger.error(
         `❌ [${DefaultToolName.CreateLineChart}] Tool execution failed:`,

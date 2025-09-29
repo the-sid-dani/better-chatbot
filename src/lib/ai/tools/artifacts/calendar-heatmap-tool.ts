@@ -162,6 +162,7 @@ export const calendarHeatmapArtifactTool = createTool({
         endDate: actualEndDate,
         colorScale,
         description,
+        chartType: "calendar-heatmap", // Top-level chartType for canvas-panel.tsx routing
         // Add metadata for Canvas rendering
         metadata: {
           chartType: "calendar-heatmap" as const,

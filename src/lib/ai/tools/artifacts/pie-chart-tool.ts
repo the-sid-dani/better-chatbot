@@ -33,6 +33,12 @@ export const pieChartArtifactTool = createTool({
 
   inputSchema: z.object({
     title: z.string().describe("Title for the pie chart"),
+    canvasName: z
+      .string()
+      .optional()
+      .describe(
+        "Name for the canvas/dashboard this chart belongs to (e.g., 'Market Analytics', 'Budget Dashboard')",
+      ),
     data: z
       .array(
         z.object({
@@ -51,9 +57,16 @@ export const pieChartArtifactTool = createTool({
       .describe("Unit for the values (e.g., 'users', 'dollars', 'percent')"),
   }),
 
-  execute: async ({ title, data, description, unit }) => {
+  execute: async function* ({ title, data, description, unit, canvasName }) {
     try {
       logger.info(`Creating pie chart artifact: ${title}`);
+
+      // Stream loading state
+      yield {
+        status: "loading" as const,
+        message: `Preparing pie chart: ${title}`,
+        progress: 0,
+      };
 
       // Validate chart data
       if (!data || data.length === 0) {
@@ -79,7 +92,7 @@ export const pieChartArtifactTool = createTool({
       }
 
       // Get slice labels for metadata
-      const sliceLabels = data.map((slice) => slice.label);
+      const _sliceLabels = data.map((slice) => slice.label);
 
       // Create the chart artifact content that matches PieChart component props
       const chartContent = {
@@ -88,6 +101,7 @@ export const pieChartArtifactTool = createTool({
         data,
         description,
         unit,
+        chartType: "pie", // Top-level chartType for canvas-panel.tsx routing
         // Add metadata for Canvas rendering
         metadata: {
           chartType: "pie" as const,
@@ -120,41 +134,33 @@ export const pieChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Create the structured result data
-      const resultData = {
-        success: true,
-        artifactId,
-        artifact: {
-          kind: "charts" as const,
-          title: `Pie Chart: ${title}`,
-          content: JSON.stringify(chartContent, null, 2),
-          metadata: chartContent.metadata,
-        },
-        message: `Created pie chart "${title}" with ${data.length} slices${unit ? ` measured in ${unit}` : ""}. Total value: ${total.toLocaleString()}${unit ? ` ${unit}` : ""}. The chart is now available in the Canvas workspace with center total display and beautiful styling.`,
-        chartType: "pie",
-        sliceCount: data.length,
-        total,
-        slices: sliceLabels,
-        unit,
-        canvasReady: true,
-        componentType: "PieChart",
+      // Stream processing state
+      yield {
+        status: "processing" as const,
+        message: `Creating pie chart...`,
+        progress: 50,
       };
 
-      // Return in expected response format with content and structuredContent
-      logger.info(`Pie chart artifact created successfully: ${artifactId}`);
-      return {
-        content: [
-          { type: "text", text: resultData.message },
-          {
-            type: "text",
-            text: `Chart Created in Canvas\n\nType: ${resultData.chartType}\n\nChart created successfully. Use the "Open Canvas" button above to view the interactive visualization.`,
-          },
-        ],
-        structuredContent: {
-          result: [resultData],
-        },
-        isError: false,
+      // Add small delay for UX
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Stream success state with direct chartData format (matches create_chart pattern)
+      yield {
+        status: "success" as const,
+        message: `Created pie chart "${title}" with ${data.length} slices. Total: ${total.toLocaleString()}${unit ? ` ${unit}` : ""}`,
+        chartId: artifactId,
+        title,
+        chartType: "pie",
+        canvasName: canvasName || "Data Visualization",
+        chartData: chartContent,
+        dataPoints: data.length,
+        shouldCreateArtifact: true, // Flag for Canvas processing
+        progress: 100,
       };
+
+      // Return simple success message for chat
+      logger.info(`Pie chart artifact created successfully: ${artifactId}`);
+      return `Created pie chart "${title}" with ${data.length} slices${unit ? ` measured in ${unit}` : ""}. Total value: ${total.toLocaleString()}${unit ? ` ${unit}` : ""}. The chart is now available in the Canvas workspace.`;
     } catch (error) {
       logger.error("Failed to create pie chart artifact:", error);
       const errorMessage =
