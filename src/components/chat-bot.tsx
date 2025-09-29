@@ -939,6 +939,7 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     userManuallyClosed,
     showCanvas,
     addCanvasArtifact,
+    updateCanvasArtifact,
     canvasArtifacts,
   ]);
 
