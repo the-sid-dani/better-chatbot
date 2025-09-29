@@ -3,6 +3,7 @@ import { z } from "zod";
 import { generateUUID } from "../../../utils";
 import logger from "../../../logger";
 import { CHART_VALIDATORS } from "../../../validation/chart-data-validator";
+import { DefaultToolName } from "../index";
 
 /**
  * Enhanced Bar Chart Tool - Creates Canvas Artifacts
@@ -12,6 +13,8 @@ import { CHART_VALIDATORS } from "../../../validation/chart-data-validator";
  * BarChart component, optimized for Canvas display with proper sizing.
  */
 export const barChartArtifactTool = createTool({
+  // Explicit tool name for debugging and registry validation
+  name: DefaultToolName.CreateBarChart,
   description: `Create a beautiful bar chart artifact that opens in the Canvas workspace.
 
   This tool creates individual bar charts with the same beautiful aesthetics as the existing
@@ -60,6 +63,16 @@ export const barChartArtifactTool = createTool({
 
   execute: async function* ({ title, data, description, yAxisLabel }) {
     try {
+      logger.info(
+        `🔧 [${DefaultToolName.CreateBarChart}] Tool execution started:`,
+        {
+          toolName: DefaultToolName.CreateBarChart,
+          title,
+          dataPointsCount: data?.length || 0,
+          hasDescription: !!description,
+          hasYAxisLabel: !!yAxisLabel,
+        },
+      );
       logger.info(`Creating bar chart artifact: ${title}`);
 
       // Stream loading state
@@ -177,6 +190,16 @@ export const barChartArtifactTool = createTool({
       };
 
       // Return in expected response format with content and structuredContent
+      logger.info(
+        `✅ [${DefaultToolName.CreateBarChart}] Tool execution completed successfully:`,
+        {
+          toolName: DefaultToolName.CreateBarChart,
+          artifactId,
+          title,
+          canvasReady: true,
+          shouldCreateArtifact: true,
+        },
+      );
       logger.info(`Bar chart artifact created successfully: ${artifactId}`);
       return {
         content: [
@@ -192,6 +215,14 @@ export const barChartArtifactTool = createTool({
         isError: false,
       };
     } catch (error) {
+      logger.error(
+        `❌ [${DefaultToolName.CreateBarChart}] Tool execution failed:`,
+        {
+          toolName: DefaultToolName.CreateBarChart,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      );
       logger.error("Failed to create bar chart artifact:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { generateUUID } from "../../../utils";
 import logger from "../../../logger";
 import { CHART_VALIDATORS } from "../../../validation/chart-data-validator";
+import { DefaultToolName } from "../index";
 
 /**
  * Enhanced Pie Chart Tool - Creates Canvas Artifacts
@@ -12,6 +13,8 @@ import { CHART_VALIDATORS } from "../../../validation/chart-data-validator";
  * PieChart component, optimized for Canvas display with proper sizing.
  */
 export const pieChartArtifactTool = createTool({
+  // Explicit tool name for debugging and registry validation
+  name: DefaultToolName.CreatePieChart,
   description: `Create a beautiful pie chart artifact that opens in the Canvas workspace.
 
   This tool creates individual pie charts with the same beautiful aesthetics as the existing

@@ -19,7 +19,7 @@ import { LangfuseExporter } from "langfuse-vercel";
 
 export function register() {
   registerOTel({
-    serviceName: "better-chatbot",
+    serviceName: "samba-orion",
     traceExporter: new LangfuseExporter({
       debug: process.env.NODE_ENV === "development",
       publicKey: process.env.LANGFUSE_PUBLIC_KEY,

@@ -11,12 +11,16 @@ Check for common agent-breaking patterns that have been fixed before:
 # Search for dangerous tool disabling patterns
 grep -r "allowedMcpServers.*mentions.*length.*?" src/app/api/chat/
 grep -r "mentions?.length ? {} : servers" src/app/api/chat/
+grep -r "allowedAppDefaultToolkit.*mentions.*length.*?" src/app/api/chat/
+grep -r "mentions?.length ? \[\] : " src/app/api/chat/
 ```
 
 **🚨 CRITICAL FAILURES TO DETECT:**
 - `allowedMcpServers: mentions?.length ? {} : servers` - BREAKS AGENTS
+- `allowedAppDefaultToolkit: mentions?.length ? [] : toolkit` - BREAKS AGENTS
 - Any logic that disables tools based on mentions
 - Bypassing established tool loading pipeline
+- Tool filtering that treats mentions as restrictions rather than additive instructions
 
 ### 2. **Tool Loading Pipeline Validation**
 Ensure the established tool loading pipeline remains intact:
@@ -50,12 +54,12 @@ Test individual agents to ensure they have tool access:
 # Test documentation-manager agent (frequently used)
 curl -X POST http://localhost:3000/api/chat \
   -H "Content-Type: application/json" \
-  -d '{"messages":[{"role":"user","content":"@agent-documentation-manager test tools access"}]}'
+  -d '{"messages":[{"role":"user","content":"@documentation-manager test tools access"}]}'
 
 # Test validation-gates agent
 curl -X POST http://localhost:3000/api/chat \
   -H "Content-Type: application/json" \
-  -d '{"messages":[{"role":"user","content":"@agent-validation-gates test validation commands"}]}'
+  -d '{"messages":[{"role":"user","content":"@validation-gates test validation commands"}]}'
 ```
 
 ### 5. **MCP Server Agent Integration**
@@ -91,8 +95,10 @@ pnpm test src/components/canvas-panel.tsx --grep "agent"
 
 ### ❌ **Critical Anti-Patterns (Must Fix):**
 - [ ] **NEVER**: `allowedMcpServers: mentions?.length ? {} : servers`
+- [ ] **NEVER**: `allowedAppDefaultToolkit: mentions?.length ? [] : toolkit`
 - [ ] **NEVER**: Assume mentions mean "no tools needed"
 - [ ] **NEVER**: Disable tools based on mentions
+- [ ] **NEVER**: Treat mentions as restrictions (they are additive instructions)
 - [ ] **NEVER**: Bypass `loadMcpTools()`, `loadWorkFlowTools()`, `loadAppDefaultTools()`
 
 ## Common Agent Failure Scenarios
@@ -103,6 +109,10 @@ When new chart tools are added, agents may lose access:
 # Validate chart tools are accessible to agents
 pnpm test src/lib/ai/tools/artifacts/ --grep "agent"
 grep -r "chart.*tool" src/app/api/chat/shared.chat.ts
+
+# Check that all 17 chart tools are registered
+echo "Expected chart tools: 17"
+ls -1 src/lib/ai/tools/artifacts/*-tool.ts | grep -E "(chart|table|dashboard)" | wc -l
 ```
 
 ### **Scenario 2: New MCP Server Added**

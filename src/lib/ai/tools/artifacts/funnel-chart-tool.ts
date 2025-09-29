@@ -3,6 +3,7 @@ import { z } from "zod";
 import { generateUUID } from "../../../utils";
 import logger from "../../../logger";
 import { CHART_VALIDATORS } from "../../../validation/chart-data-validator";
+import { DefaultToolName } from "../index";
 
 /**
  * Funnel Chart Tool - Creates Canvas Artifacts
@@ -13,6 +14,8 @@ import { CHART_VALIDATORS } from "../../../validation/chart-data-validator";
  * optimized for Canvas display with proper sizing.
  */
 export const funnelChartArtifactTool = createTool({
+  // Explicit tool name for debugging and registry validation
+  name: DefaultToolName.CreateFunnelChart,
   description: `Create a beautiful funnel chart artifact that opens in the Canvas workspace.
 
   This tool creates individual funnel charts with the same beautiful aesthetics as the existing

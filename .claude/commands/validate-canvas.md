@@ -5,7 +5,7 @@ Comprehensive validation of the Canvas workspace and chart visualization system:
 ## Canvas System Architecture Validation
 
 The Canvas system in better-chatbot features:
-- **15 specialized chart artifact tools** for progressive chart building
+- **17 specialized chart artifact tools** for progressive chart building
 - **Multi-grid dashboard layout** with responsive scaling
 - **Vercel AI SDK streaming integration** using `async function*` with `yield` patterns
 - **Geographic chart support** with TopoJSON data files
@@ -14,7 +14,7 @@ The Canvas system in better-chatbot features:
 ## Validation Categories
 
 ### 1. **Chart Artifact Tools Validation**
-Test all 15 specialized chart tools in `src/lib/ai/tools/artifacts/`:
+Test all 17 specialized chart tools in `src/lib/ai/tools/artifacts/`:
 
 ```bash
 echo "🎨 Validating Chart Artifact Tools..."
@@ -42,6 +42,10 @@ pnpm test src/lib/ai/tools/artifacts/radial-bar-tool.ts || echo "❌ Radial bar 
 
 # Geographic Charts
 pnpm test src/lib/ai/tools/artifacts/geographic-chart-tool.ts || echo "❌ Geographic chart tool failed"
+
+# Dashboard & Table Tools
+pnpm test src/lib/ai/tools/artifacts/dashboard-orchestrator-tool.ts || echo "❌ Dashboard orchestrator tool failed"
+pnpm test src/lib/ai/tools/artifacts/table-artifact-tool.ts || echo "❌ Table artifact tool failed"
 
 echo "✅ Chart artifact tools validation complete"
 ```
@@ -80,9 +84,9 @@ node -e "
 " && echo "✅ Gauge chart subArc fix validated" || echo "❌ Gauge chart subArc validation failed"
 
 # Complex Components
-pnmp test src/components/tool-invocation/sankey-chart.tsx || echo "❌ Sankey chart component failed"
-pnmp test src/components/tool-invocation/treemap-chart.tsx || echo "❌ Treemap chart component failed"
-pnmp test src/components/tool-invocation/calendar-heatmap.tsx || echo "❌ Calendar heatmap component failed"
+pnpm test src/components/tool-invocation/sankey-chart.tsx || echo "❌ Sankey chart component failed"
+pnpm test src/components/tool-invocation/treemap-chart.tsx || echo "❌ Treemap chart component failed"
+pnpm test src/components/tool-invocation/calendar-heatmap.tsx || echo "❌ Calendar heatmap component failed"
 
 # Composed Components
 pnpm test src/components/tool-invocation/composed-chart.tsx || echo "❌ Composed chart component failed"
@@ -90,6 +94,9 @@ pnpm test src/components/tool-invocation/radial-bar-chart.tsx || echo "❌ Radia
 
 # Geographic Components
 pnpm test src/components/tool-invocation/geographic-chart.tsx || echo "❌ Geographic chart component failed"
+
+# Table Components
+pnpm test src/components/tool-invocation/interactive-table.tsx || echo "❌ Interactive table component failed"
 
 echo "✅ Chart components validation complete"
 ```
@@ -262,8 +269,8 @@ At completion, provide a comprehensive status:
 
 ```bash
 echo "📊 Canvas System Status Summary:"
-echo "• Chart Artifact Tools: 15 specialized tools for progressive building"
-echo "• Chart Components: 15 rendering components with Canvas optimization"
+echo "• Chart Artifact Tools: 17 specialized tools for progressive building"
+echo "• Chart Components: 17 rendering components with Canvas optimization"
 echo "• Geographic Support: World maps, US states/counties, Nielsen DMA regions"
 echo "• Streaming Integration: Native AI SDK patterns with yield statements"
 echo "• Canvas Workspace: Multi-grid layout with responsive scaling"

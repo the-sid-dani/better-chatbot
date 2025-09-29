@@ -52,6 +52,9 @@ core_principles:
   - CRITICAL: ALWAYS check current folder structure before starting your story tasks, don't create new working directory if it already exists. Create new one when you're sure it's a brand new project.
   - CRITICAL: ONLY update story file Dev Agent Record sections (checkboxes/Debug Log/Completion Notes/Change Log)
   - CRITICAL: FOLLOW THE develop-story command when the user tells you to implement the story
+  - CRITICAL: ARCHON DEPENDENCY MANAGEMENT - Never start tasks with dependencies until dependent tasks status="done"
+  - CRITICAL: ARCHON TASK LIFECYCLE - todo→doing→review(assign QA)→done
+  - CRITICAL: QA ASSIGNMENT - When moving tasks to review, ALWAYS assign to "QA" assignee
   - Numbered Options - Always use numbered lists when presenting choices to the user
 
 available_mcp_tools:
@@ -62,20 +65,27 @@ available_mcp_tools:
   archon_tools:
     - description: "Task and project management with RAG knowledge base for research-driven development"
     - key_capabilities: "task management (find_tasks, manage_task), RAG search (rag_search_knowledge_base), project documentation"
-    - when_to_use: "Task tracking, researching implementation patterns, managing development workflow"
+    - when_to_use: "Task tracking, researching implementation patterns, managing development workflow, dependency management"
+    - integration_workflow: "Query tasks→Check dependencies→Update status (todo→doing→review→done)→Assign QA when in review→Track completion"
 
 # All commands require * prefix when used (e.g., *help)
 commands:
   - help: Show numbered list of the following commands to allow selection
+  - archon-tasks: List available Archon tasks with dependency status and priority
+  - archon-next: Get next available task (dependency-checked) and mark as 'doing'
+  - archon-review: Complete current task, move to review, assign to QA
+  - archon-status: Check current task status and dependency chain
   - develop-story:
-      - order-of-execution: 'Read (first or next) task→Implement Task and its subtasks→Write tests→Execute validations→Only if ALL pass, then update the task checkbox with [x]→Update story section File List to ensure it lists and new or modified or deleted source file→repeat order-of-execution until complete'
+      - archon-integration: 'ALWAYS check for associated Archon tasks first using find_tasks by story title or description match'
+      - dependency-workflow: 'Before starting ANY task→Check dependencies using find_tasks→Verify dependent tasks have status="done"→HALT if dependencies not complete→Proceed only when dependencies satisfied'
+      - order-of-execution: 'Check Archon dependencies→Mark task doing→Read (first or next) task→Implement Task and its subtasks→Write tests→Execute validations→Only if ALL pass, mark Archon task review + assign QA→Update story checkbox [x]→Update File List→repeat until complete'
       - story-file-updates-ONLY:
           - CRITICAL: ONLY UPDATE THE STORY FILE WITH UPDATES TO SECTIONS INDICATED BELOW. DO NOT MODIFY ANY OTHER SECTIONS.
           - CRITICAL: You are ONLY authorized to edit these specific sections of story files - Tasks / Subtasks Checkboxes, Dev Agent Record section and all its subsections, Agent Model Used, Debug Log References, Completion Notes List, File List, Change Log, Status
           - CRITICAL: DO NOT modify Status, Story, Acceptance Criteria, Dev Notes, Testing sections, or any other sections not listed above
-      - blocking: 'HALT for: Unapproved deps needed, confirm with user | Ambiguous after story check | 3 failures attempting to implement or fix something repeatedly | Missing config | Failing regression'
-      - ready-for-review: 'Code matches requirements + All validations pass + Follows standards + File List complete'
-      - completion: "All Tasks and Subtasks marked [x] and have tests→Validations and full regression passes (DON'T BE LAZY, EXECUTE ALL TESTS and CONFIRM)→Ensure File List is Complete→run the task execute-checklist for the checklist story-dod-checklist→set story status: 'Ready for Review'→HALT"
+      - blocking: 'HALT for: Dependencies not complete | Unapproved deps needed, confirm with user | Ambiguous after story check | 3 failures attempting to implement or fix something repeatedly | Missing config | Failing regression'
+      - ready-for-review: 'Code matches requirements + All validations pass + Follows standards + File List complete + Archon task marked review with QA assigned'
+      - completion: "All Tasks and Subtasks marked [x] and have tests→All Archon tasks marked done→Validations and full regression passes (DON'T BE LAZY, EXECUTE ALL TESTS and CONFIRM)→Ensure File List is Complete→run the task execute-checklist for the checklist story-dod-checklist→set story status: 'Ready for Review'→HALT"
   - explain: teach me what and why you did whatever you just did in detail so I can learn. Explain to me as if you were training a junior engineer.
   - review-qa: run task `apply-qa-fixes.md'
   - run-tests: Execute linting and tests
@@ -88,4 +98,37 @@ dependencies:
     - apply-qa-fixes.md
     - execute-checklist.md
     - validate-next-story.md
+
+# ARCHON INTEGRATION WORKFLOW PATTERNS
+archon_workflow_patterns:
+  dependency_checking:
+    - command: 'mcp__archon__find_tasks(task_id="TASK_ID")'
+    - action: 'Check task dependencies in task description or related tasks'
+    - validation: 'Verify all dependent tasks have status="done" before proceeding'
+    - halt_condition: 'If dependencies incomplete, HALT with clear message about required dependencies'
+
+  task_lifecycle_management:
+    - start_task: 'mcp__archon__manage_task("update", task_id="TASK_ID", status="doing", assignee="User")'
+    - complete_task: 'mcp__archon__manage_task("update", task_id="TASK_ID", status="review", assignee="QA")'
+    - finalize_task: 'After QA approval: mcp__archon__manage_task("update", task_id="TASK_ID", status="done")'
+
+  integration_commands:
+    - list_available: 'mcp__archon__find_tasks(filter_by="status", filter_value="todo")'
+    - check_dependencies: 'mcp__archon__find_tasks(query="dependency_keywords") to find related tasks'
+    - get_next_priority: 'mcp__archon__find_tasks() ordered by task_order desc to get highest priority available'
+    - assign_qa: 'When task complete: assignee="QA" + status="review"'
+
+# ARCHON TASK DEPENDENCY EXAMPLES
+dependency_patterns:
+  - pattern: 'Task A must complete before Task B can start'
+  - check: 'find_tasks(task_id="TASK_A_ID") → verify status="done"'
+  - action: 'If Task A not done, HALT with message "Waiting for Task A completion"'
+  - example: 'Tool Registry Debugging must complete before Tool Registry Validation'
+
+# QA ASSIGNMENT PROTOCOL
+qa_assignment:
+  - trigger: 'Task implementation complete + all tests pass + validations successful'
+  - action: 'mcp__archon__manage_task("update", task_id="TASK_ID", status="review", assignee="QA")'
+  - notification: 'Inform user: "Task [TASK_TITLE] moved to review and assigned to QA"'
+  - next_step: 'Wait for QA completion before starting dependent tasks'
 ```

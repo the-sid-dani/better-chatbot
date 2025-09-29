@@ -3,6 +3,7 @@ import { z } from "zod";
 import { generateUUID } from "../../../utils";
 import logger from "../../../logger";
 import { CHART_VALIDATORS } from "../../../validation/chart-data-validator";
+import { DefaultToolName } from "../index";
 
 /**
  * Calendar Heatmap Tool - Creates Canvas Artifacts
@@ -13,6 +14,8 @@ import { CHART_VALIDATORS } from "../../../validation/chart-data-validator";
  * optimized for Canvas display with proper sizing.
  */
 export const calendarHeatmapArtifactTool = createTool({
+  // Explicit tool name for debugging and registry validation
+  name: DefaultToolName.CreateCalendarHeatmap,
   description: `Create a beautiful calendar heatmap artifact that opens in the Canvas workspace.
 
   This tool creates individual calendar heatmaps with the same beautiful aesthetics as the existing

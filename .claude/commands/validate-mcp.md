@@ -178,7 +178,7 @@ echo "🗄️ Validating MCP Database Configuration..."
 pnpm test src/lib/ai/mcp/db-mcp-config-storage.test.ts || echo "❌ MCP database storage tests failed"
 
 # Database Schema for MCP
-pnmp test --grep "McpServer.*schema|mcp.*database" || echo "❌ MCP database schema tests failed"
+pnpm test --grep "McpServer.*schema|mcp.*database" || echo "❌ MCP database schema tests failed"
 
 # MCP Configuration CRUD
 pnpm test --grep "mcp.*crud|mcp.*config.*storage" || echo "❌ MCP config CRUD tests failed"

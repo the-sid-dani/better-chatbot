@@ -3,6 +3,7 @@ import { z } from "zod";
 import { generateUUID } from "../../../utils";
 import logger from "../../../logger";
 import { CHART_VALIDATORS } from "../../../validation/chart-data-validator";
+import { DefaultToolName } from "../index";
 
 /**
  * Enhanced Line Chart Tool - Creates Canvas Artifacts
@@ -12,6 +13,8 @@ import { CHART_VALIDATORS } from "../../../validation/chart-data-validator";
  * LineChart component, optimized for Canvas display with proper sizing.
  */
 export const lineChartArtifactTool = createTool({
+  // Explicit tool name for debugging and registry validation
+  name: DefaultToolName.CreateLineChart,
   description: `Create a beautiful line chart artifact that opens in the Canvas workspace.
 
   This tool creates individual line charts with the same beautiful aesthetics as the existing
@@ -63,6 +66,16 @@ export const lineChartArtifactTool = createTool({
 
   execute: async function* ({ title, data, description, yAxisLabel }) {
     try {
+      logger.info(
+        `🔧 [${DefaultToolName.CreateLineChart}] Tool execution started:`,
+        {
+          toolName: DefaultToolName.CreateLineChart,
+          title,
+          dataPointsCount: data?.length || 0,
+          hasDescription: !!description,
+          hasYAxisLabel: !!yAxisLabel,
+        },
+      );
       logger.info(`Creating line chart artifact: ${title}`);
 
       // Stream loading state
@@ -175,6 +188,16 @@ export const lineChartArtifactTool = createTool({
       };
 
       // Return in expected response format with content and structuredContent
+      logger.info(
+        `✅ [${DefaultToolName.CreateLineChart}] Tool execution completed successfully:`,
+        {
+          toolName: DefaultToolName.CreateLineChart,
+          artifactId,
+          title,
+          canvasReady: true,
+          shouldCreateArtifact: true,
+        },
+      );
       logger.info(`Line chart artifact created successfully: ${artifactId}`);
       return {
         content: [
@@ -190,6 +213,14 @@ export const lineChartArtifactTool = createTool({
         isError: false,
       };
     } catch (error) {
+      logger.error(
+        `❌ [${DefaultToolName.CreateLineChart}] Tool execution failed:`,
+        {
+          toolName: DefaultToolName.CreateLineChart,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      );
       logger.error("Failed to create line chart artifact:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";

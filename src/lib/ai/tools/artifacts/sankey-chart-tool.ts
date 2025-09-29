@@ -2,6 +2,7 @@ import { tool as createTool } from "ai";
 import { z } from "zod";
 import { generateUUID } from "../../../utils";
 import logger from "../../../logger";
+import { DefaultToolName } from "../index";
 
 /**
  * Sankey Chart Tool - Creates Canvas Artifacts
@@ -12,6 +13,8 @@ import logger from "../../../logger";
  * optimized for Canvas display with proper sizing.
  */
 export const sankeyChartArtifactTool = createTool({
+  // Explicit tool name for debugging and registry validation
+  name: DefaultToolName.CreateSankeyChart,
   description: `Create a beautiful sankey chart artifact that opens in the Canvas workspace.
 
   This tool creates individual sankey charts with the same beautiful aesthetics as the existing

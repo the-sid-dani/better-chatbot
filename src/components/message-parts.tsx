@@ -1007,9 +1007,9 @@ export const ToolMessagePart = memo(
                           "create_gauge_chart",
                           "create_calendar_heatmap",
                           // Basic artifact tools (from artifacts/index.ts)
-                          "create_bar_chart_artifact",
-                          "create_line_chart_artifact",
-                          "create_pie_chart_artifact",
+                          "create_bar_chart",
+                          "create_line_chart",
+                          "create_pie_chart",
                         ];
 
                         const isChartTool = chartToolNames.includes(toolName);

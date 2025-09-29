@@ -102,10 +102,10 @@ pnpm build:local    # Next.js App Router build validation
 
 ### Canvas System Validation
 ```bash
-# Canvas and Chart Tools (15 specialized tools)
+# Canvas and Chart Tools (17 specialized tools)
 pnpm test --grep "canvas|chart"
 pnpm test src/lib/ai/tools/artifacts/
-pnmp test src/components/tool-invocation/
+pnpm test src/components/tool-invocation/
 pnpm test src/lib/ai/canvas-naming.ts
 
 # Geographic Chart Data Validation

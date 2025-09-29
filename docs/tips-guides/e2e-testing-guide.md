@@ -1,6 +1,6 @@
 # 🧪 End-to-End Testing Guide
 
-Comprehensive guide for running and developing end-to-end tests for better-chatbot using Playwright.
+Comprehensive guide for running and developing end-to-end tests for Samba Orion using Playwright.
 
 ## Quick Start
 
@@ -95,7 +95,7 @@ pnpm docker:pg
 Set the `POSTGRES_URL` environment variable in your .env to the test database URL.
 
 ```text
-POSTGRES_URL="postgres://user:password@localhost:5432/better_chatbot"
+POSTGRES_URL="postgres://user:password@localhost:5432/samba_orion"
 ```
 
 ## 🎯 Authentication Strategy

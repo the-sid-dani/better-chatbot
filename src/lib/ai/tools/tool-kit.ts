@@ -1,6 +1,11 @@
 // Legacy visualization tools removed - now using artifact tools only
 import { exaSearchTool, exaContentsTool } from "./web/web-search";
-import { AppDefaultToolkit, DefaultToolName } from ".";
+import {
+  AppDefaultToolkit,
+  DefaultToolName,
+  DefaultToolNameType,
+  CompleteToolRegistry,
+} from ".";
 import { Tool } from "ai";
 import { httpFetchTool } from "./http/fetch";
 import { jsExecutionTool } from "./code/js-run-tool";
@@ -22,10 +27,13 @@ import { tableArtifactTool } from "./artifacts/table-artifact-tool";
 import { barChartArtifactTool } from "./artifacts/bar-chart-tool";
 import { lineChartArtifactTool } from "./artifacts/line-chart-tool";
 import { pieChartArtifactTool } from "./artifacts/pie-chart-tool";
+// Centralized validation utilities (commented to prevent circular dependency in builds)
+// import { assertToolRegistryValid, logToolRegistryStatus } from "./tool-registry-validator";
 
+// Type-safe tool registry with compile-time validation
 export const APP_DEFAULT_TOOL_KIT: Record<
   AppDefaultToolkit,
-  Record<string, Tool>
+  Record<DefaultToolNameType, Tool>
 > = {
   [AppDefaultToolkit.WebSearch]: {
     [DefaultToolName.WebSearch]: exaSearchTool,
@@ -62,4 +70,150 @@ export const APP_DEFAULT_TOOL_KIT: Record<
     [DefaultToolName.CreateGaugeChart]: gaugeChartArtifactTool,
     [DefaultToolName.CreateCalendarHeatmap]: calendarHeatmapArtifactTool,
   },
+} as const;
+
+// Compile-time validation: Ensure all DefaultToolName entries are implemented
+// This will cause TypeScript errors if any enum values are missing from the registry
+const _typeValidation: CompleteToolRegistry = APP_DEFAULT_TOOL_KIT.artifacts;
+
+// Type guard for runtime tool name validation
+export const isValidToolName = (name: string): name is DefaultToolNameType => {
+  return Object.values(DefaultToolName).includes(name as DefaultToolNameType);
 };
+
+// Helper function to get typed tool from registry
+export const getTypedTool = (
+  toolName: DefaultToolNameType,
+): Tool | undefined => {
+  // Search across all toolkits for the tool
+  for (const toolkit of Object.values(APP_DEFAULT_TOOL_KIT)) {
+    if (toolName in toolkit) {
+      return toolkit[toolName];
+    }
+  }
+  return undefined;
+};
+
+/**
+ * Runtime validation for APP_DEFAULT_TOOL_KIT consistency
+ * Ensures all DefaultToolName entries have corresponding tool implementations
+ */
+const validateToolRegistry = () => {
+  const allEnumValues = Object.values(DefaultToolName);
+  const allRegisteredTools: string[] = [];
+
+  // Collect all registered tool names from all toolkits
+  Object.values(APP_DEFAULT_TOOL_KIT).forEach((toolkit) => {
+    allRegisteredTools.push(...Object.keys(toolkit));
+  });
+
+  // Find missing tools
+  const missingTools = allEnumValues.filter(
+    (enumValue) => !allRegisteredTools.includes(enumValue),
+  );
+
+  // Find extra tools (registered but not in enum)
+  const extraTools = allRegisteredTools.filter(
+    (registered) => !allEnumValues.includes(registered as DefaultToolName),
+  );
+
+  // Validation results
+  const validationResults = {
+    enumCount: allEnumValues.length,
+    registeredCount: allRegisteredTools.length,
+    missing: missingTools,
+    extra: extraTools,
+    isValid: missingTools.length === 0,
+  };
+
+  // Log validation results
+  console.log("🔍 Tool Registry Validation:", {
+    enumEntries: validationResults.enumCount,
+    registeredTools: validationResults.registeredCount,
+    validationPassed: validationResults.isValid,
+    missingCount: missingTools.length,
+    extraCount: extraTools.length,
+  });
+
+  // Handle missing tools (critical error)
+  if (missingTools.length > 0) {
+    const errorMessage = `Tool Registry Validation Failed: Missing tool implementations for enum entries: ${missingTools.join(", ")}. These tools are defined in DefaultToolName enum but not registered in APP_DEFAULT_TOOL_KIT.`;
+    console.error("🚨 CRITICAL TOOL REGISTRY ERROR:", errorMessage);
+    console.error("🚨 Missing tools:", missingTools);
+    console.error("🚨 Available registered tools:", allRegisteredTools);
+
+    // Throw error to prevent system startup with invalid tool registry
+    throw new Error(errorMessage);
+  }
+
+  // Handle extra tools (warning only)
+  if (extraTools.length > 0) {
+    console.warn(
+      "⚠️ Extra tools registered (not in DefaultToolName enum):",
+      extraTools,
+    );
+    console.warn(
+      "⚠️ Consider adding these tools to DefaultToolName enum or removing them from registry",
+    );
+  }
+
+  // Success case
+  if (validationResults.isValid) {
+    console.log(
+      "✅ Tool Registry Validation PASSED: All enum entries have implementations",
+    );
+  }
+
+  return validationResults;
+};
+
+/**
+ * Specific chart tool validation
+ * Validates that all chart tools in DefaultToolName have implementations
+ */
+const validateChartTools = () => {
+  const chartEnumValues = Object.values(DefaultToolName).filter((name) =>
+    name.includes("chart"),
+  );
+  const artifactTools = Object.keys(
+    APP_DEFAULT_TOOL_KIT[AppDefaultToolkit.Artifacts],
+  );
+  const registeredChartTools = artifactTools.filter((name) =>
+    name.includes("chart"),
+  );
+
+  const missingChartTools = chartEnumValues.filter(
+    (enumValue) => !registeredChartTools.includes(enumValue),
+  );
+
+  console.log("🔍 Chart Tool Validation:", {
+    expectedChartTools: chartEnumValues.length,
+    registeredChartTools: registeredChartTools.length,
+    chartValidationPassed: missingChartTools.length === 0,
+  });
+
+  if (missingChartTools.length > 0) {
+    const errorMessage = `Chart Tool Validation Failed: Missing chart tool implementations: ${missingChartTools.join(", ")}`;
+    console.error("🚨 CHART TOOL ERROR:", errorMessage);
+    throw new Error(errorMessage);
+  }
+
+  console.log(
+    "✅ Chart Tool Validation PASSED: All chart tools properly registered",
+  );
+  return true;
+};
+
+// Development-only validation (non-blocking for production builds)
+if (process.env.NODE_ENV === "development") {
+  try {
+    // Keep existing inline validation for development debugging
+    validateToolRegistry();
+    validateChartTools();
+    console.log("🎉 APP_DEFAULT_TOOL_KIT validation completed successfully");
+  } catch (error) {
+    // Log but don't throw - prevents build failures
+    console.warn("⚠️ Tool registry validation issues detected:", error);
+    console.warn("⚠️ This may cause chart tools to fail at runtime");
+  }
+}

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { generateUUID } from "../../../utils";
 import logger from "../../../logger";
 import { CHART_VALIDATORS } from "../../../validation/chart-data-validator";
+import { DefaultToolName } from "../index";
 
 /**
  * Area Chart Tool - Creates Canvas Artifacts
@@ -13,6 +14,8 @@ import { CHART_VALIDATORS } from "../../../validation/chart-data-validator";
  * optimized for Canvas display with proper sizing.
  */
 export const areaChartArtifactTool = createTool({
+  // Explicit tool name for debugging and registry validation
+  name: DefaultToolName.CreateAreaChart,
   description: `Create a beautiful area chart artifact that opens in the Canvas workspace.
 
   This tool creates individual area charts with the same beautiful aesthetics as the existing

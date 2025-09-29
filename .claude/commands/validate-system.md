@@ -47,7 +47,7 @@ pnpm build:local || echo "❌ Build failed"
 if [[ "$1" == *"canvas"* || "$1" == *"full"* ]]; then
   echo "🎨 Validating Canvas system..."
 
-  # Canvas and Chart Tools (15 specialized tools)
+  # Canvas and Chart Tools (17 specialized tools)
   pnpm test --grep "canvas|chart" || echo "❌ Canvas tests failed"
 
   # Chart Artifact Tools

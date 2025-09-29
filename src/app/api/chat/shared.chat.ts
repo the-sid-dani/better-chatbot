@@ -10,6 +10,7 @@ import {
   ToolUIPart,
   getToolName,
   UIMessageStreamWriter,
+  NoSuchToolError,
 } from "ai";
 import {
   ChatMention,
@@ -40,7 +41,7 @@ import { createWorkflowExecutor } from "lib/ai/workflow/executor/workflow-execut
 import { NodeKind } from "lib/ai/workflow/workflow.interface";
 import { mcpClientsManager } from "lib/ai/mcp/mcp-manager";
 import { APP_DEFAULT_TOOL_KIT } from "lib/ai/tools/tool-kit";
-import { AppDefaultToolkit } from "lib/ai/tools";
+import { AppDefaultToolkit, DefaultToolName } from "lib/ai/tools";
 
 export function filterMCPToolsByMentions(
   tools: Record<string, VercelAIMcpTool>,
@@ -158,9 +159,41 @@ export function manualToolExecuteByLastMessage(
 }
 
 export function handleError(error: any) {
+  // Enhanced error handling for Vercel AI SDK 5.0
   if (LoadAPIKeyError.isInstance(error)) {
     return error.message;
   }
+
+  // Handle specific AI SDK 5.0 tool errors
+  if (NoSuchToolError.isInstance(error)) {
+    logger.error("🚨 NoSuchToolError in route:", {
+      toolName: error.toolName,
+      message: error.message,
+      suggestion: "Tool not found in registry - check APP_DEFAULT_TOOL_KIT",
+    });
+    return `Tool not found: ${error.toolName}. Please check if the tool is properly registered.`;
+  }
+
+  if (
+    error instanceof Error &&
+    error.message.includes("tool") &&
+    error.message.includes("argument")
+  ) {
+    // Handle tool argument errors generically (AI SDK version compatibility)
+    logger.error("🚨 Tool Arguments Error in route:", {
+      message: error.message,
+      stack: error.stack,
+      suggestion: "Tool arguments don't match expected schema",
+    });
+    return `Invalid tool arguments: ${error.message}`;
+  }
+
+  // General error handling
+  logger.error("🚨 Route Error:", {
+    name: error.name,
+    message: error.message,
+    stack: error.stack,
+  });
   logger.error(error);
   logger.error(`Route Error: ${error.name}`);
   return errorToString(error.message);
@@ -477,21 +510,87 @@ export const loadAppDefaultTools = (opt?: {
       const allowedAppDefaultToolkit =
         opt?.allowedAppDefaultToolkit ?? Object.values(AppDefaultToolkit);
 
-      return (
+      const finalTools =
         allowedAppDefaultToolkit.reduce(
           (acc, key) => {
+            console.log(`🔍 Loading toolkit: ${key}`, {
+              toolkitKey: key,
+              toolCount: Object.keys(tools[key] || {}).length,
+              toolNames: Object.keys(tools[key] || {}),
+            });
             return { ...acc, ...tools[key] };
           },
           {} as Record<string, Tool>,
-        ) || {}
+        ) || {};
+
+      // Enhanced debugging for chart tool registration
+      console.log("🔍 Final tool registry analysis:", {
+        totalToolCount: Object.keys(finalTools).length,
+        finalToolKeys: Object.keys(finalTools),
+        chartToolsFound: Object.keys(finalTools).filter((key) =>
+          key.includes("chart"),
+        ),
+        defaultToolNameEnum: Object.values(DefaultToolName),
+        chartToolsInEnum: Object.values(DefaultToolName).filter((name) =>
+          name.includes("chart"),
+        ),
+      });
+
+      // Specific chart tool validation
+      const expectedChartTools = Object.values(DefaultToolName).filter((name) =>
+        name.includes("chart"),
       );
+      const missingChartTools = expectedChartTools.filter(
+        (expected) => !Object.keys(finalTools).includes(expected),
+      );
+      const extraChartTools = Object.keys(finalTools).filter(
+        (actual) =>
+          actual.includes("chart") && !expectedChartTools.includes(actual),
+      );
+
+      if (missingChartTools.length > 0) {
+        console.error("🚨 Missing chart tools:", missingChartTools);
+      }
+      if (extraChartTools.length > 0) {
+        console.warn("⚠️ Extra chart tools (not in enum):", extraChartTools);
+      }
+
+      console.log("🔍 Chart tool registry status:", {
+        expectedCount: expectedChartTools.length,
+        actualCount: Object.keys(finalTools).filter((key) =>
+          key.includes("chart"),
+        ).length,
+        missing: missingChartTools,
+        extra: extraChartTools,
+        registrationComplete: missingChartTools.length === 0,
+      });
+
+      return finalTools;
     })
     .ifFail((e) => {
+      // Enhanced error handling for tool loading failures
+      logger.error("🚨 APP_DEFAULT_TOOL_KIT Loading Failed:", {
+        error: e.message,
+        stack: e.stack,
+        toolkitsRequested: opt?.allowedAppDefaultToolkit,
+        suggestion: "Check tool imports and registry consistency",
+      });
       console.error("🚨 APP_DEFAULT_TOOL_KIT Loading Failed:", e);
       console.error("🚨 This causes agents to lose chart tools!");
+
+      // For production: don't throw, return minimal tools to prevent complete failure
+      if (process.env.NODE_ENV === "production") {
+        logger.warn(
+          "🚨 Production mode: Returning empty tools instead of throwing",
+        );
+        return {} as Record<string, Tool>;
+      }
+
+      // For development: throw to surface issues
       throw e;
     })
     .orElse(() => {
+      logger.warn("⚠️ APP_DEFAULT_TOOL_KIT failed - returning empty tools");
       console.warn("⚠️ APP_DEFAULT_TOOL_KIT failed - returning empty tools");
       return {} as Record<string, Tool>;
     });

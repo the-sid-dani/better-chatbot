@@ -3,6 +3,7 @@ import { z } from "zod";
 import { generateUUID } from "../../../utils";
 import logger from "../../../logger";
 import { CHART_VALIDATORS } from "../../../validation/chart-data-validator";
+import { DefaultToolName } from "../index";
 
 /**
  * Enhanced Table Tool - Creates Canvas Artifacts
@@ -12,6 +13,8 @@ import { CHART_VALIDATORS } from "../../../validation/chart-data-validator";
  * filtering, search, pagination, and Excel export capabilities.
  */
 export const tableArtifactTool = createTool({
+  // Explicit tool name for debugging and registry validation
+  name: DefaultToolName.CreateTable,
   description: `Create an interactive table artifact that opens in the Canvas workspace.
 
   This tool creates individual tables with advanced functionality including sorting,

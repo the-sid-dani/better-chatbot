@@ -5,6 +5,9 @@ export enum AppDefaultToolkit {
   Artifacts = "artifacts",
 }
 
+// Type constraint for compile-time validation
+export type AppDefaultToolkitType = keyof typeof AppDefaultToolkit;
+
 export enum DefaultToolName {
   CreateTable = "createTable",
   WebSearch = "webSearch",
@@ -32,5 +35,26 @@ export enum DefaultToolName {
   CreateGaugeChart = "create_gauge_chart",
   CreateCalendarHeatmap = "create_calendar_heatmap",
 }
+
+// Type constraints for compile-time validation
+export type DefaultToolNameType =
+  (typeof DefaultToolName)[keyof typeof DefaultToolName];
+
+// Type guard for validating tool names at runtime
+export const isValidDefaultToolName = (
+  name: string,
+): name is DefaultToolNameType => {
+  return Object.values(DefaultToolName).includes(name as DefaultToolNameType);
+};
+
+// Type-safe tool registry constraint
+export type ToolRegistryEntry<T extends DefaultToolNameType> = {
+  readonly [K in T]: any; // Tool implementation
+};
+
+// Helper type for ensuring all enum values are implemented
+export type CompleteToolRegistry = {
+  readonly [K in DefaultToolNameType]: any;
+};
 
 export const SequentialThinkingToolName = "sequential-thinking";

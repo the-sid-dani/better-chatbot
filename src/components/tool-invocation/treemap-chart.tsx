@@ -42,6 +42,105 @@ const chartColors = [
   "var(--chart-5)",
 ];
 
+/**
+ * Calculate responsive font size based on cell dimensions and text length
+ * Ensures text stays within cell boundaries while maintaining readability
+ */
+const calculateResponsiveFontSize = (
+  width: number,
+  height: number,
+  text: string,
+  isLabel: boolean = true,
+): number => {
+  const maxFontSize = isLabel ? 12 : 11; // Original max sizes
+  const minFontSize = 8; // Minimum readable size
+
+  // Calculate font size based on cell dimensions
+  const maxTextWidth = width - 8; // Leave 4px padding on each side
+  const maxTextHeight = height / (isLabel ? 3 : 4); // Account for line spacing
+
+  // Estimate text width (approximate: char width = fontSize * 0.6)
+  const estimatedCharWidth = 0.6;
+  const maxFontFromWidth = Math.floor(
+    maxTextWidth / (text.length * estimatedCharWidth),
+  );
+  const maxFontFromHeight = Math.floor(maxTextHeight);
+
+  // Use the most restrictive constraint
+  const calculatedSize = Math.min(
+    maxFontFromWidth,
+    maxFontFromHeight,
+    maxFontSize,
+  );
+
+  // Ensure minimum readability
+  return Math.max(calculatedSize, minFontSize);
+};
+
+/**
+ * Determine text display strategy based on cell hierarchy (UX-optimized)
+ * Large cells: Show title + value | Medium cells: Title only | Small cells: No text (visual only)
+ */
+const getTextDisplayStrategy = (
+  width: number,
+  height: number,
+  size: number,
+  allData: any[],
+): {
+  showTitle: boolean;
+  showValue: boolean;
+  priority: "high" | "medium" | "low";
+} => {
+  const cellArea = width * height;
+  const maxSize = Math.max(...allData.map((item) => item.size || 0));
+  const sizeRatio = size / maxSize;
+
+  // Define size thresholds for hierarchy
+  const largeCell = cellArea > 8000 && sizeRatio > 0.1; // Top-tier data points
+  const mediumCell = cellArea > 4000 && sizeRatio > 0.05; // Secondary data points
+  const minDisplayArea = 2000; // Minimum area to show any text
+
+  if (largeCell) {
+    return { showTitle: true, showValue: true, priority: "high" };
+  } else if (mediumCell && cellArea > minDisplayArea) {
+    return { showTitle: true, showValue: false, priority: "medium" };
+  } else {
+    return { showTitle: false, showValue: false, priority: "low" };
+  }
+};
+
+/**
+ * Split text into two lines if it's too long for the cell width
+ */
+const _splitTextForCell = (
+  text: string,
+  width: number,
+  fontSize: number,
+): { line1: string; line2: string } => {
+  const maxCharsPerLine = Math.floor(width / (fontSize * 0.6)) - 1; // Conservative estimate
+
+  if (text.length <= maxCharsPerLine) {
+    return { line1: text, line2: "" };
+  }
+
+  // Find a good break point (prefer spaces)
+  const midPoint = Math.floor(maxCharsPerLine);
+  let breakPoint = midPoint;
+
+  // Look for a space near the midpoint
+  for (let i = midPoint; i > midPoint - 5 && i > 0; i--) {
+    if (text[i] === " ") {
+      breakPoint = i;
+      break;
+    }
+  }
+
+  const line1 = text.substring(0, breakPoint).trim();
+  const line2 = text.substring(breakPoint).trim();
+
+  return { line1, line2 };
+};
+
 export function TreemapChart(props: TreemapChartProps) {
   const { title, data, description } = props;
 
@@ -201,8 +300,26 @@ export function TreemapChart(props: TreemapChartProps) {
               animationBegin={0}
               animationDuration={0}
               content={({ x, y, width, height, name, size }) => {
-                // Only render text if the cell is large enough
-                if (width < 40 || height < 20) return null;
+                // UX-optimized text display strategy based on cell hierarchy
+                const textStrategy = getTextDisplayStrategy(
+                  width,
+                  height,
+                  size || 0,
+                  deduplicateData,
+                );
+
+                // Calculate font sizes only for cells that will show text
+                const nameFontSize = textStrategy.showTitle
+                  ? calculateResponsiveFontSize(width, height, name || "", true)
+                  : 0;
+                const sizeFontSize = textStrategy.showValue
+                  ? calculateResponsiveFontSize(
+                      width,
+                      height,
+                      size?.toLocaleString() || "",
+                      false,
+                    )
+                  : 0;
 
                 return (
                   <g>
@@ -212,37 +329,45 @@ export function TreemapChart(props: TreemapChartProps) {
                       width={width}
                       height={height}
                       fill={`var(--color-${sanitizeCssVariableName(name || "")})`}
-                      stroke="hsl(var(--border))"
+                      stroke="white"
                       strokeWidth={1}
                     />
-                    <text
-                      x={x + width / 2}
-                      y={y + height / 2 - 4}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      fill="white"
-                      className="text-xs font-bold"
-                      style={{
-                        textShadow: "0 1px 2px rgba(0,0,0,0.5)",
-                        fontSize: "12px",
-                      }}
-                    >
-                      {name}
-                    </text>
-                    <text
-                      x={x + width / 2}
-                      y={y + height / 2 + 8}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      fill="rgba(255,255,255,0.9)"
-                      className="text-xs"
-                      style={{
-                        textShadow: "0 1px 2px rgba(0,0,0,0.5)",
-                        fontSize: "11px",
-                      }}
-                    >
-                      {size?.toLocaleString()}
-                    </text>
+                    {/* UX-optimized text rendering based on hierarchy */}
+                    {textStrategy.showTitle && (
+                      <text
+                        x={x + width / 2}
+                        y={
+                          textStrategy.showValue
+                            ? y + height / 2 - 4
+                            : y + height / 2
+                        }
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill="white"
+                        className="font-bold"
+                        style={{
+                          textShadow: "0 1px 2px rgba(0,0,0,0.8)",
+                          fontSize: `${nameFontSize}px`,
+                        }}
+                      >
+                        {name}
+                      </text>
+                    )}
+                    {textStrategy.showValue && (
+                      <text
+                        x={x + width / 2}
+                        y={y + height / 2 + 12}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill="rgba(255,255,255,0.9)"
+                        style={{
+                          textShadow: "0 1px 2px rgba(0,0,0,0.8)",
+                          fontSize: `${sizeFontSize}px`,
+                        }}
+                      >
+                        {size?.toLocaleString()}
+                      </text>
+                    )}
                   </g>
                 );
               }}

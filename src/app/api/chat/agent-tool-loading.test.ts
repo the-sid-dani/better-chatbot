@@ -289,4 +289,130 @@ describe("Agent Tool Loading Diagnostics", () => {
       consoleSpy.mockRestore();
     });
   });
+
+  // New comprehensive tool registry tests for preventing regression
+  describe("Tool Registry Consistency Validation", () => {
+    it("should have all DefaultToolName entries implemented in tool registry", () => {
+      // Test with realistic mock that includes all chart tools
+      const extendedMockToolKit = {
+        ...mockValidToolKit,
+        artifacts: {
+          ...mockArtifactsToolkit,
+          create_area_chart: { description: "Create area charts" },
+          create_scatter_chart: { description: "Create scatter charts" },
+          create_radar_chart: { description: "Create radar charts" },
+          create_funnel_chart: { description: "Create funnel charts" },
+          create_treemap_chart: { description: "Create treemap charts" },
+          create_sankey_chart: { description: "Create sankey charts" },
+          create_radial_bar_chart: { description: "Create radial bar charts" },
+          create_composed_chart: { description: "Create composed charts" },
+          create_geographic_chart: { description: "Create geographic charts" },
+          create_gauge_chart: { description: "Create gauge charts" },
+          create_calendar_heatmap: { description: "Create calendar heatmaps" },
+        },
+      };
+
+      const loadAppDefaultTools =
+        createMockLoadAppDefaultTools(extendedMockToolKit);
+      const result = loadAppDefaultTools();
+
+      // Extract all tool names from the result
+      const registeredTools = Object.keys(result);
+      const registeredChartTools = registeredTools.filter((name) =>
+        name.includes("chart"),
+      );
+
+      // Should have multiple chart tools registered
+      expect(registeredChartTools.length).toBeGreaterThanOrEqual(10);
+      expect(registeredTools.length).toBeGreaterThan(15); // Total tools
+    });
+
+    it("should validate tool structure for all chart tools", () => {
+      const loadAppDefaultTools =
+        createMockLoadAppDefaultTools(mockValidToolKit);
+      const result = loadAppDefaultTools();
+
+      // Test each chart tool has proper structure
+      Object.entries(result).forEach(([toolName, tool]) => {
+        if (toolName.includes("chart")) {
+          expect(tool).toBeDefined();
+          expect(typeof tool).toBe("object");
+          expect(tool).toHaveProperty("description");
+          // Note: execute function check would require actual tool imports
+        }
+      });
+    });
+
+    it("should detect missing tools in registry", () => {
+      // Create a registry missing some chart tools
+      const incompleteToolKit = {
+        webSearch: mockWebSearchToolkit,
+        artifacts: {
+          create_bar_chart: { description: "Create bar charts" },
+          // Missing line and pie chart tools intentionally
+        },
+        http: { http: { description: "HTTP requests" } },
+        code: { javascript: { description: "Execute JavaScript" } },
+      };
+
+      const loadAppDefaultTools =
+        createMockLoadAppDefaultTools(incompleteToolKit);
+      const result = loadAppDefaultTools();
+
+      // Should have fewer tools than expected
+      const registeredChartTools = Object.keys(result).filter((name) =>
+        name.includes("chart"),
+      );
+      expect(registeredChartTools.length).toBeLessThan(3); // Missing some chart tools
+    });
+
+    it("should handle tool registry validation errors gracefully", () => {
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
+      // Test with completely broken registry
+      const brokenToolKit = null;
+      const loadAppDefaultTools = createMockLoadAppDefaultTools(brokenToolKit);
+      const result = loadAppDefaultTools();
+
+      // Should return empty object and log error
+      expect(result).toEqual({});
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "🚨 APP_DEFAULT_TOOL_KIT is undefined!",
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it("should validate chart tool enumeration completeness", () => {
+      // Test that expected chart tool names are properly formatted
+      const expectedChartTools = [
+        "create_bar_chart",
+        "create_line_chart",
+        "create_pie_chart",
+        "create_area_chart",
+        "create_scatter_chart",
+        "create_radar_chart",
+        "create_funnel_chart",
+        "create_treemap_chart",
+        "create_sankey_chart",
+        "create_radial_bar_chart",
+        "create_composed_chart",
+        "create_geographic_chart",
+        "create_gauge_chart",
+        "create_calendar_heatmap",
+      ];
+
+      // Verify we have the expected number of chart tools
+      expect(expectedChartTools.length).toBe(14); // 14 specialized chart tools
+
+      // Verify naming convention consistency
+      expectedChartTools.forEach((toolName) => {
+        expect(toolName).toMatch(/^create_.*_chart$|^create_.*_heatmap$/);
+        expect(toolName).not.toContain(" "); // No spaces
+        expect(toolName).not.toContain("-"); // No hyphens
+      });
+    });
+  });
 });

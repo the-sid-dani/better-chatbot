@@ -1,8 +1,8 @@
-# 🏗️ **Better Chatbot: Vercel AI SDK-Centric Architecture**
+# 🏗️ **Samba Orion: Vercel AI SDK-Centric Architecture**
 
 ## 📋 **Executive Summary**
 
-Better Chatbot is built **entirely on Vercel AI SDK** as the foundational AI framework, providing a unified interface to multiple LLM providers with comprehensive observability through Langfuse SDK v4 integration. Every AI operation, tool execution, and streaming response leverages Vercel AI SDK abstractions.
+Samba Orion is built **entirely on Vercel AI SDK** as the foundational AI framework, providing a unified interface to multiple LLM providers with comprehensive observability through Langfuse SDK v4 integration. Every AI operation, tool execution, and streaming response leverages Vercel AI SDK abstractions.
 
 ## 🎯 **Architectural Foundation**
 

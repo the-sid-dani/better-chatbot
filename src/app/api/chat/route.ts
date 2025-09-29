@@ -7,6 +7,7 @@ import {
   stepCountIs,
   streamText,
   UIMessage,
+  NoSuchToolError,
 } from "ai";
 import {
   observe,
@@ -282,12 +283,72 @@ const handler = async (request: Request) => {
           trace.getActiveSpan()?.end();
         },
         onError: async (error) => {
+          // Enhanced error handling for Vercel AI SDK 5.0
+          let errorMessage = "Unknown error occurred";
+          let errorType = "general";
+          let errorDetails: any = {};
+
+          // Handle specific AI SDK 5.0 error types
+          if (NoSuchToolError.isInstance(error)) {
+            errorType = "no_such_tool";
+            errorMessage = `Tool not found: ${error.toolName}`;
+            errorDetails = {
+              toolName: error.toolName,
+              availableTools: Object.keys(vercelAITooles),
+              suggestion:
+                "Check if tool is properly registered in APP_DEFAULT_TOOL_KIT",
+            };
+            logger.error("🚨 NoSuchToolError:", {
+              toolName: error.toolName,
+              availableTools: Object.keys(vercelAITooles),
+              message: error.message,
+            });
+          } else if (
+            error instanceof Error &&
+            error.message.includes("tool") &&
+            error.message.includes("argument")
+          ) {
+            // Handle tool argument errors generically (AI SDK version compatibility)
+            errorType = "invalid_tool_arguments";
+            errorMessage = `Invalid tool arguments: ${error.message}`;
+            errorDetails = {
+              error: error.message,
+              suggestion: "Check tool input schema and provided arguments",
+            };
+            logger.error("🚨 Tool Arguments Error:", {
+              message: error.message,
+              stack: error.stack,
+            });
+          } else if (error instanceof Error) {
+            errorMessage = error.message;
+            errorDetails = {
+              name: error.name,
+              stack: error.stack,
+            };
+            logger.error("🚨 General Error:", {
+              name: error.name,
+              message: error.message,
+              stack: error.stack,
+            });
+          } else {
+            logger.error("🚨 Unknown Error Type:", error);
+          }
+
           updateActiveObservation({
-            output: error,
+            output: {
+              error: errorMessage,
+              errorType,
+              errorDetails,
+              timestamp: new Date().toISOString(),
+            },
             level: "ERROR",
           });
           updateActiveTrace({
-            output: error,
+            output: {
+              error: errorMessage,
+              errorType,
+              errorDetails,
+            },
           });
 
           // End span manually after stream has finished

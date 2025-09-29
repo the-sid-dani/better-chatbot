@@ -123,6 +123,70 @@ const geoDataUrls = {
   "usa-dma": "/geo/nielsentopo.json",
 };
 
+/**
+ * Extract meaningful value label from chart title and description (UX-optimized)
+ * Examples: "Sales by Region" → "Sales", "Population Growth" → "Population"
+ */
+const extractValueLabel = (title: string, description?: string): string => {
+  const text = `${title} ${description || ""}`.toLowerCase();
+
+  // Common data type patterns with intelligent recognition
+  // IMPORTANT: Order matters! Most specific patterns first to avoid generic matches
+  const patterns = [
+    { keywords: ["audience", "viewers", "users", "visits"], label: "Audience" },
+    {
+      keywords: ["market", "share", "percentage", "percent"],
+      label: "Market Share",
+    },
+    {
+      keywords: ["growth", "increase", "rate", "change"],
+      label: "Growth Rate",
+    },
+    { keywords: ["sales", "revenue", "income", "earnings"], label: "Sales" },
+    {
+      keywords: ["population", "people", "residents", "inhabitants"],
+      label: "Population",
+    },
+    { keywords: ["budget", "spending", "cost", "expense"], label: "Budget" },
+    { keywords: ["score", "rating", "index", "rank"], label: "Score" },
+    { keywords: ["gdp", "economic", "economy"], label: "GDP" },
+    { keywords: ["temperature", "weather", "climate"], label: "Temperature" },
+    // Generic patterns last (fallback only)
+    { keywords: ["count", "number", "total", "quantity"], label: "Count" },
+  ];
+
+  for (const pattern of patterns) {
+    if (pattern.keywords.some((keyword) => text.includes(keyword))) {
+      return pattern.label;
+    }
+  }
+
+  // Fallback: try to extract first meaningful word from title
+  const titleWords = title
+    .split(" ")
+    .filter(
+      (word) =>
+        word.length > 2 &&
+        !["by", "in", "of", "the", "and", "for"].includes(word.toLowerCase()),
+    );
+
+  return titleWords.length > 0 ? titleWords[0] : "Value";
+};
+
+/**
+ * Get appropriate region label based on geographic type (UX-optimized)
+ */
+const getRegionLabel = (geoType: GeographicChartProps["geoType"]): string => {
+  const labelMap = {
+    world: "Country",
+    "usa-states": "State",
+    "usa-counties": "County",
+    "usa-dma": "Market Area",
+  };
+
+  return labelMap[geoType] || "Region";
+};
+
 export function GeographicChart(props: GeographicChartProps) {
   const { title, data, geoType, description } = props;
 
@@ -528,7 +592,7 @@ export function GeographicChart(props: GeographicChartProps) {
             <div className="grid grid-cols-2 gap-2">
               <div className="flex flex-col">
                 <span className="text-[0.60rem] uppercase text-muted-foreground">
-                  Region
+                  {getRegionLabel(geoType)}
                 </span>
                 <span className="font-bold text-muted-foreground text-xs">
                   {tooltip.name}
@@ -536,7 +600,7 @@ export function GeographicChart(props: GeographicChartProps) {
               </div>
               <div className="flex flex-col">
                 <span className="text-[0.60rem] uppercase text-muted-foreground">
-                  Value
+                  {extractValueLabel(title, description)}
                 </span>
                 <span className="font-bold text-xs">
                   {tooltip.value !== undefined

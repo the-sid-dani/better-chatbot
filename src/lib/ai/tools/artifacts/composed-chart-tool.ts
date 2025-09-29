@@ -3,6 +3,7 @@ import { z } from "zod";
 import { generateUUID } from "../../../utils";
 import logger from "../../../logger";
 import { validateBasicChartData } from "../../../validation/chart-data-validator";
+import { DefaultToolName } from "../index";
 
 /**
  * Composed Chart Tool - Creates Canvas Artifacts
@@ -13,6 +14,8 @@ import { validateBasicChartData } from "../../../validation/chart-data-validator
  * the existing chart components, optimized for Canvas display with proper sizing.
  */
 export const composedChartArtifactTool = createTool({
+  // Explicit tool name for debugging and registry validation
+  name: DefaultToolName.CreateComposedChart,
   description: `Create a beautiful composed chart artifact that opens in the Canvas workspace.
 
   This tool creates individual composed charts with the same beautiful aesthetics as the existing

@@ -114,7 +114,7 @@ For audience-related requests, prioritize using:
 - This platform offers many agents with various MCP servers for different capabilities
 
 ## Chart Creation & Canvas
-When users request data visualization, charts, or want to "create a chart", use the **create_chart** tool (NOT the regular createBarChart/createLineChart tools):
+When users request data visualization, charts, or want to "create a chart", use the **create_chart** tool (NOT the specific create_bar_chart/create_line_chart tools):
 - The **create_chart** tool creates interactive charts that appear in a Canvas panel alongside the chat
 - The Canvas opens automatically when charts are created, similar to ChatGPT Canvas or Claude Artifacts
 - Charts are interactive and appear in a resizable panel next to the conversation

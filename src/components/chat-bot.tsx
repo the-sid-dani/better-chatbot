@@ -611,9 +611,9 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
           "create_gauge_chart",
           "create_calendar_heatmap",
           // Basic artifact tools (from artifacts/index.ts)
-          "create_bar_chart_artifact",
-          "create_line_chart_artifact",
-          "create_pie_chart_artifact",
+          "create_bar_chart",
+          "create_line_chart",
+          "create_pie_chart",
           // Table artifact tool
           "create_table",
         ];
