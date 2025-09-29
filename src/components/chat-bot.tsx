@@ -259,6 +259,7 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     canvasName,
     userManuallyClosed,
     addArtifact: addCanvasArtifact,
+    addLoadingArtifact,
     closeCanvas,
     showCanvas,
     setActiveArtifactId,

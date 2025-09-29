@@ -15,6 +15,11 @@ import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { JsonViewPopup } from "../json-view-popup";
 import { sanitizeCssVariableName } from "./shared.tool-invocation";
 import { generateUniqueKey } from "lib/utils";
+import {
+  extractValueLabel,
+  extractCategoryLabel,
+  generateIntelligentTooltipLabels,
+} from "./shared-tooltip-intelligence";
 
 // TreemapChart component props interface
 export interface TreemapChartProps {
@@ -381,12 +386,20 @@ export function TreemapChart(props: TreemapChartProps) {
                     payload[0]?.payload
                   ) {
                     const data = payload[0].payload;
+
+                    // Generate intelligent tooltip labels based on chart context
+                    const intelligentLabels = generateIntelligentTooltipLabels({
+                      title,
+                      description,
+                      chartType: "treemap",
+                    });
+
                     return (
                       <div className="rounded-lg border bg-background p-2 shadow-sm">
                         <div className="grid grid-cols-2 gap-2">
                           <div className="flex flex-col">
                             <span className="text-[0.70rem] uppercase text-muted-foreground">
-                              Name
+                              {intelligentLabels.categoryLabel}
                             </span>
                             <span className="font-bold text-muted-foreground">
                               {data.name}
@@ -394,10 +407,11 @@ export function TreemapChart(props: TreemapChartProps) {
                           </div>
                           <div className="flex flex-col">
                             <span className="text-[0.70rem] uppercase text-muted-foreground">
-                              Value
+                              {intelligentLabels.valueLabel}
                             </span>
                             <span className="font-bold">
                               {data.size?.toLocaleString()}
+                              {intelligentLabels.unitSuffix}
                             </span>
                           </div>
                         </div>

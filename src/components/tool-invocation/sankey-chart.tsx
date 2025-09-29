@@ -14,6 +14,7 @@ import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 
 import { JsonViewPopup } from "../json-view-popup";
 import { generateUniqueKey } from "lib/utils";
+import { generateIntelligentTooltipLabels } from "./shared-tooltip-intelligence";
 
 // SankeyChart component props interface
 export interface SankeyChartProps {
@@ -219,15 +220,19 @@ export function SankeyChart(props: SankeyChartProps) {
                   }));
                 }}
               />
-              {/* Link label */}
+              {/* Link label - Enhanced visibility */}
               <text
                 x={(sourceX + targetX) / 2}
                 y={(sourceY + targetY) / 2 - 10}
                 textAnchor="middle"
-                fontSize="10"
-                fill="hsl(var(--foreground))"
-                fontWeight="500"
-                style={{ pointerEvents: "none" }}
+                fontSize="12"
+                fill="white"
+                fontWeight="bold"
+                style={{
+                  pointerEvents: "none",
+                  textShadow:
+                    "0 1px 3px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.5)",
+                }}
               >
                 {link.value.toLocaleString()}
               </text>
@@ -309,11 +314,18 @@ export function SankeyChart(props: SankeyChartProps) {
     );
   }, [layout, deduplicateData, setTooltip]);
 
-  // Custom tooltip component matching bar chart styling
+  // Custom tooltip component with intelligent labeling
   const CustomTooltip = React.useMemo(() => {
     if (!tooltip.visible || !tooltip.data) return null;
 
     const { type, content } = tooltip.data;
+
+    // Generate intelligent tooltip labels based on chart context
+    const intelligentLabels = generateIntelligentTooltipLabels({
+      title,
+      description,
+      chartType: "sankey",
+    });
 
     return (
       <div
@@ -327,7 +339,7 @@ export function SankeyChart(props: SankeyChartProps) {
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                Flow
+                {intelligentLabels.flowLabel}
               </span>
               <span className="font-bold text-muted-foreground">
                 {content.source} → {content.target}
@@ -335,10 +347,11 @@ export function SankeyChart(props: SankeyChartProps) {
             </div>
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                Value
+                {intelligentLabels.valueLabel}
               </span>
               <span className="font-bold">
                 {content.value.toLocaleString()}
+                {intelligentLabels.unitSuffix}
               </span>
             </div>
           </div>
@@ -346,7 +359,7 @@ export function SankeyChart(props: SankeyChartProps) {
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                Node
+                {intelligentLabels.categoryLabel}
               </span>
               <span className="font-bold text-muted-foreground">
                 {content.name}
@@ -365,6 +378,7 @@ export function SankeyChart(props: SankeyChartProps) {
                 </span>
                 <span className="font-bold">
                   {content.inflow.toLocaleString()}
+                  {intelligentLabels.unitSuffix}
                 </span>
               </div>
             )}
@@ -375,6 +389,7 @@ export function SankeyChart(props: SankeyChartProps) {
                 </span>
                 <span className="font-bold">
                   {content.outflow.toLocaleString()}
+                  {intelligentLabels.unitSuffix}
                 </span>
               </div>
             )}
@@ -382,7 +397,7 @@ export function SankeyChart(props: SankeyChartProps) {
         )}
       </div>
     );
-  }, [tooltip]);
+  }, [tooltip, title, description]);
 
   return (
     <Card className="bg-card h-full flex flex-col">

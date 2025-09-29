@@ -13,6 +13,7 @@ import {
 import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 
 import { JsonViewPopup } from "../json-view-popup";
+import { generateIntelligentTooltipLabels } from "./shared-tooltip-intelligence";
 
 // Dynamic import for @uiw/react-heat-map to avoid SSR issues
 const HeatMap = dynamic(() => import("@uiw/react-heat-map"), { ssr: false });
@@ -128,7 +129,18 @@ export function CalendarHeatmap(props: CalendarHeatmapProps) {
     return config;
   }, [title, colorScale]);
 
-  // Custom tooltip functionality (currently unused)
+  // Tooltip state for calendar heatmap hover
+  const [tooltip, setTooltip] = React.useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    data: { date: string; value: number } | null;
+  }>({
+    visible: false,
+    x: 0,
+    y: 0,
+    data: null,
+  });
 
   return (
     <Card className="bg-card h-full flex flex-col">
@@ -189,6 +201,25 @@ export function CalendarHeatmap(props: CalendarHeatmapProps) {
                       fill={color}
                       stroke="hsl(var(--border))"
                       strokeWidth={0.5}
+                      style={{ cursor: "pointer" }}
+                      onMouseEnter={(e) => {
+                        setTooltip({
+                          visible: true,
+                          x: e.clientX,
+                          y: e.clientY,
+                          data: { date: data.date, value: data.count },
+                        });
+                      }}
+                      onMouseLeave={() => {
+                        setTooltip((prev) => ({ ...prev, visible: false }));
+                      }}
+                      onMouseMove={(e) => {
+                        setTooltip((prev) => ({
+                          ...prev,
+                          x: e.clientX,
+                          y: e.clientY,
+                        }));
+                      }}
                     />
                   );
                 }}
@@ -196,6 +227,48 @@ export function CalendarHeatmap(props: CalendarHeatmapProps) {
             </div>
           </div>
         </ChartContainer>
+
+        {/* Intelligent tooltip display */}
+        {tooltip.visible && tooltip.data && typeof document !== "undefined" && (
+          <div
+            className="fixed z-50 rounded-lg border bg-background p-2 shadow-sm pointer-events-none"
+            style={{
+              left: tooltip.x + 10,
+              top: tooltip.y - 10,
+              transform: "translate(-50%, -100%)",
+            }}
+          >
+            {(() => {
+              const intelligentLabels = generateIntelligentTooltipLabels({
+                title,
+                description,
+                chartType: "calendar",
+              });
+
+              return (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col">
+                    <span className="text-[0.60rem] uppercase text-muted-foreground">
+                      Date
+                    </span>
+                    <span className="font-bold text-muted-foreground text-xs">
+                      {new Date(tooltip.data.date).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[0.60rem] uppercase text-muted-foreground">
+                      {intelligentLabels.valueLabel}
+                    </span>
+                    <span className="font-bold text-xs">
+                      {tooltip.data.value?.toLocaleString()}
+                      {intelligentLabels.unitSuffix}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

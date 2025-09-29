@@ -23,6 +23,7 @@ import {
 
 import { JsonViewPopup } from "../json-view-popup";
 import { sanitizeCssVariableName } from "./shared.tool-invocation";
+import { generateIntelligentTooltipLabels } from "./shared-tooltip-intelligence";
 import { generateUniqueKey } from "lib/utils";
 
 // RadialBarChart component props interface
@@ -115,16 +116,24 @@ export function RadialBarChart(props: RadialBarChartProps) {
     return config;
   }, [deduplicateData]);
 
-  // Custom tooltip content
+  // Custom tooltip content with intelligent labeling
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0];
+
+      // Generate intelligent tooltip labels based on chart context
+      const intelligentLabels = generateIntelligentTooltipLabels({
+        title,
+        description,
+        chartType: "radial",
+      });
+
       return (
         <div className="rounded-lg border bg-background p-2 shadow-sm">
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                Metric
+                {intelligentLabels.metricLabel}
               </span>
               <span className="font-bold text-muted-foreground">
                 {data.payload.name}
@@ -132,10 +141,11 @@ export function RadialBarChart(props: RadialBarChartProps) {
             </div>
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                Value
+                {intelligentLabels.valueLabel}
               </span>
               <span className="font-bold" style={{ color: data.payload.fill }}>
                 {data.payload.value?.toLocaleString()}
+                {intelligentLabels.unitSuffix}
               </span>
             </div>
             <div className="flex flex-col">
@@ -148,10 +158,11 @@ export function RadialBarChart(props: RadialBarChartProps) {
             </div>
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                Max
+                Maximum
               </span>
               <span className="font-bold text-muted-foreground">
                 {data.payload.maxValue?.toLocaleString()}
+                {intelligentLabels.unitSuffix}
               </span>
             </div>
           </div>

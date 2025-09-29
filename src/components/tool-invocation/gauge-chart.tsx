@@ -14,6 +14,7 @@ import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 
 import { JsonViewPopup } from "../json-view-popup";
 import { generateUniqueKey, generateUUID } from "lib/utils";
+import { generateIntelligentTooltipLabels } from "./shared-tooltip-intelligence";
 
 // Dynamic import for react-gauge-component to avoid SSR issues
 const GaugeComponent = dynamic(() => import("react-gauge-component"), {
@@ -72,6 +73,9 @@ export function GaugeChart(props: GaugeChartProps) {
     unit,
     description,
   } = props;
+
+  // Tooltip state for gauge hover
+  const [showTooltip, setShowTooltip] = React.useState(false);
 
   const deduplicatedProps = React.useMemo(() => {
     // For gauge charts, we mainly need to ensure value is properly clamped
@@ -173,7 +177,11 @@ export function GaugeChart(props: GaugeChartProps) {
       <CardContent className="flex-1 pb-0 pt-2 min-h-0">
         <ChartContainer config={chartConfig} className="h-full w-full">
           <div className="w-full h-full flex items-center justify-center">
-            <div className="w-full h-full max-w-md max-h-md">
+            <div
+              className="w-full h-full max-w-md max-h-md relative"
+              onMouseEnter={() => setShowTooltip(true)}
+              onMouseLeave={() => setShowTooltip(false)}
+            >
               <GaugeComponent
                 id={`gauge-${generateUUID()}`}
                 type={resolvedGaugeType}
@@ -213,6 +221,48 @@ export function GaugeChart(props: GaugeChartProps) {
                 }
                 style={{ width: "100%", height: "100%" }}
               />
+
+              {/* Intelligent tooltip overlay */}
+              {showTooltip &&
+                (() => {
+                  const intelligentLabels = generateIntelligentTooltipLabels({
+                    title,
+                    description,
+                    unit,
+                    chartType: "gauge",
+                  });
+
+                  return (
+                    <div className="absolute top-2 left-2 rounded-lg border bg-background p-2 shadow-sm z-10">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex flex-col">
+                          <span className="text-[0.70rem] uppercase text-muted-foreground">
+                            Current {intelligentLabels.valueLabel}
+                          </span>
+                          <span className="font-bold">
+                            {deduplicatedProps.value.toLocaleString()}
+                            {intelligentLabels.unitSuffix}
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[0.70rem] uppercase text-muted-foreground">
+                            Percentage
+                          </span>
+                          <span className="font-bold">{percentage}%</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[0.70rem] uppercase text-muted-foreground">
+                            Range
+                          </span>
+                          <span className="font-bold text-muted-foreground">
+                            {deduplicatedProps.minValue} -{" "}
+                            {deduplicatedProps.maxValue}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
             </div>
           </div>
         </ChartContainer>

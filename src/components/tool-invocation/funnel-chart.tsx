@@ -19,6 +19,7 @@ import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 
 import { JsonViewPopup } from "../json-view-popup";
 import { generateUniqueKey } from "lib/utils";
+import { generateIntelligentTooltipLabels } from "./shared-tooltip-intelligence";
 
 // FunnelChart component props interface
 export interface FunnelChartProps {
@@ -92,16 +93,25 @@ export function FunnelChart(props: FunnelChartProps) {
     }));
   }, [sortedData]);
 
-  // Custom tooltip content
+  // Custom tooltip content with intelligent labeling
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0];
+
+      // Generate intelligent tooltip labels based on chart context
+      const intelligentLabels = generateIntelligentTooltipLabels({
+        title,
+        description,
+        unit,
+        chartType: "funnel",
+      });
+
       return (
         <div className="rounded-lg border bg-background p-2 shadow-sm">
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                Stage
+                {intelligentLabels.stageLabel}
               </span>
               <span className="font-bold text-muted-foreground">
                 {data.payload.stage}
@@ -109,10 +119,13 @@ export function FunnelChart(props: FunnelChartProps) {
             </div>
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                Value
+                {intelligentLabels.valueLabel}
               </span>
               <span className="font-bold" style={{ color: data.payload.fill }}>
-                {data.payload.value?.toLocaleString()} {unit || ""}
+                {data.payload.value?.toLocaleString()}
+                {intelligentLabels.unitSuffix
+                  ? ` ${intelligentLabels.unitSuffix}`
+                  : ""}
               </span>
             </div>
           </div>
