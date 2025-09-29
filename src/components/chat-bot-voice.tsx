@@ -91,7 +91,6 @@ export function ChatBotVoice() {
     canvasName,
     userManuallyClosed,
     addArtifact: addCanvasArtifact,
-    addLoadingArtifact,
     updateArtifact: updateCanvasArtifact,
     closeCanvas,
     showCanvas,
@@ -207,108 +206,7 @@ export function ChatBotVoice() {
           logger.debug("Voice Chat Canvas closed by user - respecting choice");
         }
 
-        // Process loading charts/tables - create loading artifacts when tools start
-        const loadingCharts = chartTools.filter((part) => {
-          if (!isToolUIPart(part)) return false;
-
-          // Detect tools that are starting (input state) but not yet completed
-          const isStarting =
-            part.state.startsWith("input") ||
-            part.state === "loading" ||
-            (!part.state.startsWith("output") && part.state !== "error");
-
-          if (isStarting) {
-            const toolName = getToolName(part);
-            const toolKey = `${lastMessage.id}-${toolName}-${part.toolCallId}`;
-
-            // Check if we've already created loading artifact for this tool
-            if (processedToolsRef.current.has(toolKey)) {
-              return false;
-            }
-
-            // Mark as processed for loading
-            processedToolsRef.current.add(toolKey);
-            return true;
-          }
-
-          return false;
-        });
-
-        logger.debug("Voice Chat Processing Loading Charts", {
-          loadingCount: loadingCharts.length,
-          loadingTools: loadingCharts.map((part) => ({
-            name: getToolName(part),
-            state: isToolUIPart(part) ? part.state : "unknown",
-          })),
-        });
-
-        // Create loading artifacts for chart tools that are starting
-        loadingCharts.forEach((part) => {
-          if (!isToolUIPart(part)) return;
-
-          const toolName = getToolName(part);
-          const args = part.args as any;
-
-          // Extract chart name and type from tool arguments
-          const chartTitle =
-            args?.title ||
-            args?.name ||
-            `${toolName.replace("create_", "").replace("_", " ")}`;
-          const chartType = toolName.includes("bar")
-            ? "bar"
-            : toolName.includes("line")
-              ? "line"
-              : toolName.includes("pie")
-                ? "pie"
-                : toolName.includes("area")
-                  ? "area"
-                  : toolName.includes("scatter")
-                    ? "scatter"
-                    : toolName.includes("radar")
-                      ? "radar"
-                      : toolName.includes("funnel")
-                        ? "funnel"
-                        : toolName.includes("treemap")
-                          ? "treemap"
-                          : toolName.includes("sankey")
-                            ? "sankey"
-                            : toolName.includes("radial")
-                              ? "radial-bar"
-                              : toolName.includes("composed")
-                                ? "composed"
-                                : toolName.includes("geographic")
-                                  ? "geographic"
-                                  : toolName.includes("gauge")
-                                    ? "gauge"
-                                    : toolName.includes("calendar") ||
-                                        toolName.includes("heatmap")
-                                      ? "calendar-heatmap"
-                                      : toolName.includes("table")
-                                        ? "table"
-                                        : "bar";
-
-          const loadingArtifactId = part.toolCallId || generateUUID();
-
-          logger.debug("Voice Chat Creating Loading Artifact", {
-            toolName,
-            chartType,
-            chartTitle,
-            artifactId: loadingArtifactId,
-          });
-
-          // Create loading artifact
-          addLoadingArtifact({
-            id: loadingArtifactId,
-            type: toolName.includes("table") ? "table" : "chart",
-            title: chartTitle,
-            canvasName: args?.canvasName || "Voice Data Visualization",
-            metadata: {
-              chartType,
-              dataPoints: 0,
-              isVoiceOriginated: true, // Mark as voice-originated
-            },
-          });
-        });
+        // Note: Removed loading artifact creation logic for voice chat as well
 
         // Process completed charts/tables with duplicate prevention (same logic as regular chat)
         const completedCharts = chartTools.filter((part) => {
@@ -581,7 +479,6 @@ export function ChatBotVoice() {
     userManuallyClosed,
     showCanvas,
     addCanvasArtifact,
-    addLoadingArtifact,
     updateCanvasArtifact,
     canvasArtifacts,
   ]);

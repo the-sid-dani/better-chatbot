@@ -259,7 +259,7 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     canvasName,
     userManuallyClosed,
     addArtifact: addCanvasArtifact,
-    addLoadingArtifact,
+    updateArtifact: updateCanvasArtifact,
     closeCanvas,
     showCanvas,
     setActiveArtifactId,
@@ -644,107 +644,10 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
           );
         }
 
-        // Process loading charts/tables - create loading artifacts when tools start
-        const loadingCharts = chartTools.filter((part) => {
-          if (!isToolUIPart(part)) return false;
+        // Note: Removed loading chart detection and creation logic - no longer needed
 
-          // Detect tools that are starting (input state) but not yet completed
-          const isStarting =
-            part.state.startsWith("input") ||
-            part.state === "loading" ||
-            (!part.state.startsWith("output") && part.state !== "error");
-
-          if (isStarting) {
-            const toolName = getToolName(part);
-            const toolKey = `${lastMessage.id}-${toolName}-${part.toolCallId}`;
-
-            // Check if we've already created loading artifact for this tool
-            if (processedToolsRef.current.has(toolKey)) {
-              return false;
-            }
-
-            // Mark as processed for loading
-            processedToolsRef.current.add(toolKey);
-            return true;
-          }
-
-          return false;
-        });
-
-        console.log("🔄 ChatBot Tool Debug: Processing loading charts/tables", {
-          loadingCount: loadingCharts.length,
-          loadingTools: loadingCharts.map((part) => ({
-            name: getToolName(part),
-            state: isToolUIPart(part) ? part.state : "unknown",
-          })),
-        });
-
-        // Create loading artifacts for chart tools that are starting
-        loadingCharts.forEach((part) => {
-          if (!isToolUIPart(part)) return;
-
-          const toolName = getToolName(part);
-          const args = part.args as any; // Tool call arguments contain chart parameters
-
-          // Extract chart name and type from tool arguments
-          const chartTitle =
-            args?.title ||
-            args?.name ||
-            `${toolName.replace("create_", "").replace("_", " ")}`;
-          const chartType = toolName.includes("bar")
-            ? "bar"
-            : toolName.includes("line")
-              ? "line"
-              : toolName.includes("pie")
-                ? "pie"
-                : toolName.includes("area")
-                  ? "area"
-                  : toolName.includes("scatter")
-                    ? "scatter"
-                    : toolName.includes("radar")
-                      ? "radar"
-                      : toolName.includes("funnel")
-                        ? "funnel"
-                        : toolName.includes("treemap")
-                          ? "treemap"
-                          : toolName.includes("sankey")
-                            ? "sankey"
-                            : toolName.includes("radial")
-                              ? "radial-bar"
-                              : toolName.includes("composed")
-                                ? "composed"
-                                : toolName.includes("geographic")
-                                  ? "geographic"
-                                  : toolName.includes("gauge")
-                                    ? "gauge"
-                                    : toolName.includes("calendar") ||
-                                        toolName.includes("heatmap")
-                                      ? "calendar-heatmap"
-                                      : toolName.includes("table")
-                                        ? "table"
-                                        : "bar";
-
-          const loadingArtifactId = part.toolCallId || generateUUID();
-
-          console.log("⏳ ChatBot Tool Debug: Creating loading artifact", {
-            toolName,
-            chartType,
-            chartTitle,
-            artifactId: loadingArtifactId,
-          });
-
-          // Create loading artifact
-          addLoadingArtifact({
-            id: loadingArtifactId,
-            type: toolName.includes("table") ? "table" : "chart",
-            title: chartTitle,
-            canvasName: args?.canvasName || "Data Visualization",
-            metadata: {
-              chartType,
-              dataPoints: 0,
-            },
-          });
-        });
+        // Note: Removed loading artifact creation logic to eliminate stuck loading states
+        // Charts will appear directly in Canvas when tools complete successfully
 
         // Process completed charts/tables with duplicate prevention
         const completedCharts = chartTools.filter((part) => {

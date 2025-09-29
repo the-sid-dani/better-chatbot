@@ -8,10 +8,20 @@
  * This prevents XSS attacks through malicious chart titles, labels, and data.
  */
 
-import * as DOMPurifyLib from "dompurify";
+// Simple text sanitization without DOMPurify dependency
+const sanitizeText = (text: string): string => {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+};
 
-// Handle both CJS and ESM exports properly
-const DOMPurify = (DOMPurifyLib as any).default || DOMPurifyLib;
+// Simple sanitizer interface
+const DOMPurify = {
+  sanitize: (text: string, _config?: any) => sanitizeText(text),
+};
 
 // Configure DOMPurify for chart content - whitelist approach for maximum security
 const CHART_PURIFY_CONFIG = {
