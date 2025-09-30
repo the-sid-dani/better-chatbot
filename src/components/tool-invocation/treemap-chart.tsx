@@ -199,14 +199,17 @@ export function TreemapChart(props: TreemapChartProps) {
 
     if (hasChildren) {
       // Already hierarchical data - add colors to children
-      return deduplicateData.map((item, _index) => ({
-        name: item.name,
-        children: item.children!.map((child, _childIndex) => ({
-          name: child.name,
-          size: child.value,
-          fill: `var(--color-${sanitizeCssVariableName(child.name)})`,
-        })),
-      }));
+      // Only include items that actually have children
+      return deduplicateData
+        .filter((item) => item.children && item.children.length > 0)
+        .map((item, _index) => ({
+          name: item.name,
+          children: item.children!.map((child, _childIndex) => ({
+            name: child.name,
+            size: child.value,
+            fill: `var(--color-${sanitizeCssVariableName(child.name)})`,
+          })),
+        }));
     } else {
       // Flat data - wrap all items as children under a root
       return [

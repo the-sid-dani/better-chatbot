@@ -91,7 +91,16 @@ export const barChartArtifactTool = createTool({
       });
 
       if (!validationResult.success) {
-        logger.error(`Bar chart validation failed: ${validationResult.error}`);
+        logger.error(`Bar chart validation failed:`, {
+          error: validationResult.error,
+          details: validationResult.validationDetails,
+          inputData: {
+            title,
+            dataLength: data?.length,
+            description,
+            yAxisLabel,
+          },
+        });
         throw new Error(
           validationResult.error || "Chart data validation failed",
         );

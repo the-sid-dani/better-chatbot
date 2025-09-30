@@ -277,16 +277,11 @@ function ChartRenderer({ artifact }: { artifact: CanvasArtifact }) {
       case "line":
         return <LineChart {...chartProps} />;
       case "pie":
-        // Transform data for pie chart
-        const pieData =
-          data?.map((point: any) => ({
-            label: point.xAxisLabel,
-            value: point.series[0]?.value || 0,
-          })) || [];
+        // Pie chart data is already in correct format {label, value}
         return (
           <PieChart
             title={chartProps.title}
-            data={pieData}
+            data={data || []}
             description={description}
           />
         );

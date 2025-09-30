@@ -1,7 +1,7 @@
 import { tool as createTool } from "ai";
 import { z } from "zod";
-import { generateUUID } from "../../../utils";
 import logger from "../../../logger";
+import { generateUUID } from "../../../utils";
 import { validateBasicChartData } from "../../../validation/chart-data-validator";
 
 // Dashboard orchestration schema - describes the dashboard plan
@@ -102,7 +102,7 @@ export const dashboardOrchestratorTool = createTool({
 
   inputSchema: dashboardPlanSchema,
 
-  execute: async (dashboardPlan) => {
+  execute: async function* (dashboardPlan) {
     try {
       const {
         title,
@@ -123,7 +123,13 @@ export const dashboardOrchestratorTool = createTool({
       // Generate dashboard ID
       const dashboardId = generateUUID();
 
-      // Stage 1: Planning - Create the dashboard structure with metrics first
+      // Stage 1: Planning - Yield planning status
+      yield {
+        status: "loading",
+        message: "Planning dashboard structure...",
+        progress: 10,
+      };
+
       logger.info(
         "Dashboard orchestration - Stage 1: Planning dashboard structure",
       );
@@ -133,6 +139,12 @@ export const dashboardOrchestratorTool = createTool({
         ...metric,
         id: metric.id || generateUUID(),
       }));
+
+      yield {
+        status: "processing",
+        message: `Dashboard planned with ${charts.length} charts and ${metricsWithIds.length} metrics`,
+        progress: 25,
+      };
 
       // Stage 2: Progressive Chart Creation
       logger.info(
@@ -147,6 +159,13 @@ export const dashboardOrchestratorTool = createTool({
         logger.info(
           `Creating chart ${i + 1}/${totalCharts}: ${chart.title} (${chart.type})`,
         );
+
+        // Yield progress for each chart
+        yield {
+          status: "processing",
+          message: `Creating chart ${i + 1}/${totalCharts}: ${chart.title}`,
+          progress: 25 + Math.round((i / totalCharts) * 50),
+        };
 
         // Simulate chart creation (in real implementation, this would call individual chart tools)
         // For now, we'll prepare the chart data with proper IDs
@@ -165,6 +184,12 @@ export const dashboardOrchestratorTool = createTool({
       }
 
       // Stage 3: Layout Building
+      yield {
+        status: "processing",
+        message: "Building dashboard layout...",
+        progress: 80,
+      };
+
       logger.info(
         "Dashboard orchestration - Stage 3: Building dashboard layout",
       );
@@ -195,101 +220,50 @@ export const dashboardOrchestratorTool = createTool({
         },
       };
 
-      // Stage 4: Complete
+      // Stage 4: Complete - Final yield with Canvas-compatible format
       logger.info(
         "Dashboard orchestration - Stage 4: Dashboard creation complete",
       );
 
-      // Return the dashboard orchestration result
+      // Final success yield with Canvas-compatible format
+      yield {
+        status: "success",
+        message: `Created dashboard "${title}" with ${createdCharts.length} charts and ${metricsWithIds.length} metrics`,
+        chartId: dashboardId,
+        title,
+        chartType: "dashboard", // Top-level chartType for Canvas routing
+        canvasName: "Data Visualization",
+        chartData: dashboardContent, // chartData instead of artifact wrapper
+        shouldCreateArtifact: true, // Required flag for Canvas processing
+        progress: 100,
+      };
+
+      logger.info(`Dashboard artifact created successfully: ${dashboardId}`);
+
       return {
-        success: true,
-        artifactId: dashboardId,
-        artifact: {
-          kind: "dashboard" as const,
-          title,
-          content: JSON.stringify(dashboardContent, null, 2),
-          metadata: dashboardContent.metadata,
-        },
-        orchestration: {
-          stages: [
-            {
-              stage: "planning",
-              status: "complete",
-              description:
-                "Dashboard structure planned with metrics and layout",
-              metrics: metricsWithIds.length,
-              chartsPlanned: charts.length,
-            },
-            {
-              stage: "chart_creation",
-              status: "complete",
-              description: "All charts created progressively",
-              chartsCreated: createdCharts.length,
-              chartTypes: Array.from(new Set(createdCharts.map((c) => c.type))),
-            },
-            {
-              stage: "layout_building",
-              status: "complete",
-              description: "Dashboard layout assembled with responsive grid",
-              layout: layout.chartsLayout,
-              metricsLayout: layout.metricsLayout,
-            },
-            {
-              stage: "complete",
-              status: "complete",
-              description:
-                "Dashboard successfully created and available in workspace",
-            },
-          ],
-          totalStages: 4,
-          completedStages: 4,
-          progress: 100,
-        },
-        message: `✅ Dashboard "${title}" created successfully with ${createdCharts.length} charts and ${metricsWithIds.length} metrics!
-
-🏗️ Orchestration Summary:
-• Planning: Structured dashboard with ${metricsWithIds.length} key metrics
-• Chart Creation: Built ${createdCharts.length} charts (${Array.from(new Set(createdCharts.map((c) => c.type))).join(", ")})
-• Layout: Arranged in ${layout.chartsLayout} layout with ${layout.metricsLayout} metrics grid
-• Complete: Dashboard is now available in the workspace
-
-The dashboard provides comprehensive data analysis with interactive visualizations and real-time metrics.`,
-
-        // Detailed results for UI feedback
-        results: {
-          dashboardId,
-          title,
-          description,
-          totalCharts: createdCharts.length,
-          totalMetrics: metricsWithIds.length,
-          chartTypes: Array.from(new Set(createdCharts.map((c) => c.type))),
-          totalDataPoints: createdCharts.reduce(
-            (sum, chart) => sum + chart.data.length,
-            0,
-          ),
-          layout,
-          analysisIncluded: !!analysis,
-        },
+        content: [
+          {
+            type: "text",
+            text: `Created dashboard "${title}" with ${createdCharts.length} charts and ${metricsWithIds.length} metrics`,
+          },
+        ],
       };
     } catch (error) {
       logger.error("Dashboard orchestration failed:", error);
+
+      yield {
+        status: "error",
+        message: `Failed to create dashboard: ${error instanceof Error ? error.message : "Unknown error"}`,
+        chartType: "dashboard",
+      };
+
       return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        message: `❌ Dashboard orchestration failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-        orchestration: {
-          stages: [
-            {
-              stage: "planning",
-              status: "error",
-              description: "Dashboard orchestration encountered an error",
-              error: error instanceof Error ? error.message : "Unknown error",
-            },
-          ],
-          totalStages: 4,
-          completedStages: 0,
-          progress: 0,
-        },
+        content: [
+          {
+            type: "text",
+            text: `Error creating dashboard: ${error instanceof Error ? error.message : "Unknown error"}`,
+          },
+        ],
       };
     }
   },

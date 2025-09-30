@@ -11,7 +11,6 @@ import { httpFetchTool } from "./http/fetch";
 import { jsExecutionTool } from "./code/js-run-tool";
 import { pythonExecutionTool } from "./code/python-run-tool";
 // Direct imports to avoid circular dependency in chart-tool.ts aggregation
-import { createChartTool, updateChartTool } from "./chart-tool";
 import { treemapChartArtifactTool } from "./artifacts/treemap-chart-tool";
 import { areaChartArtifactTool } from "./artifacts/area-chart-tool";
 import { scatterChartArtifactTool } from "./artifacts/scatter-chart-tool";
@@ -47,9 +46,6 @@ export const APP_DEFAULT_TOOL_KIT: Record<
     [DefaultToolName.PythonExecution]: pythonExecutionTool,
   },
   [AppDefaultToolkit.Artifacts]: {
-    // Main chart tools - direct imports to avoid circular dependency
-    [DefaultToolName.CreateChart]: createChartTool,
-    [DefaultToolName.UpdateChart]: updateChartTool,
     // Core chart tools - fixed streaming artifacts
     [DefaultToolName.CreateBarChart]: barChartArtifactTool,
     [DefaultToolName.CreateLineChart]: lineChartArtifactTool,

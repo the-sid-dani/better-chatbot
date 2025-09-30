@@ -15,8 +15,6 @@ export enum DefaultToolName {
   Http = "http",
   JavascriptExecution = "mini-javascript-execution",
   PythonExecution = "python-execution",
-  CreateChart = "create_chart",
-  UpdateChart = "update_chart",
   // Core chart tools
   CreateBarChart = "create_bar_chart",
   CreateLineChart = "create_line_chart",

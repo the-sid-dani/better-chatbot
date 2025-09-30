@@ -170,12 +170,8 @@ When users request data visualization, ALWAYS analyze the data characteristics f
 - Examples: "Global Market Analytics", "Sales Performance Dashboard", "Football Audience Overview"
 - Use the SAME canvasName for ALL charts that belong together
 
-**Chart Editing:**
-- Use **update_chart** tool to modify existing charts
-
 **❌ ANTI-PATTERNS (Avoid These):**
 - DON'T use bar charts for everything - analyze the data first!
-- DON'T use create_chart for dashboards - use specialized tools
 - DON'T mix different canvasNames for charts that belong together
 
 </general_capabilities>`;

@@ -1,7 +1,7 @@
 import { tool as createTool } from "ai";
 import { z } from "zod";
-import { generateUUID } from "../../../utils";
 import logger from "../../../logger";
+import { generateUUID } from "../../../utils";
 import { CHART_VALIDATORS } from "../../../validation/chart-data-validator";
 import { DefaultToolName } from "../index";
 
@@ -61,14 +61,14 @@ export const calendarHeatmapArtifactTool = createTool({
       .describe("Brief description of what the chart shows"),
   }),
 
-  execute: async ({
+  execute: async function* ({
     title,
     data,
     startDate,
     endDate,
     colorScale = "github",
     description,
-  }) => {
+  }) {
     try {
       logger.info(`Creating calendar heatmap artifact: ${title}`);
 
@@ -188,41 +188,60 @@ export const calendarHeatmapArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return success with artifact creation data (matches existing pattern)
-      const result = {
-        success: true,
-        artifactId,
-        artifact: {
-          kind: "charts" as const,
-          title: `Calendar Heatmap: ${title}`,
-          content: JSON.stringify(chartContent, null, 2),
-          metadata: chartContent.metadata,
-        },
-        message: `Created calendar heatmap "${title}" with ${data.length} data points spanning ${daysCovered} days. The chart is now available in the Canvas workspace with beautiful styling.`,
-        chartType: "calendar-heatmap",
-        dataPoints: data.length,
-        daysCovered,
-        startDate: actualStartDate,
-        endDate: actualEndDate,
-        colorScale,
-        // Additional metadata for Canvas integration
-        canvasReady: true,
-        componentType: "CalendarHeatmap",
+      // Progressive yield pattern for streaming
+      yield {
+        status: "loading",
+        message: "Preparing calendar heatmap...",
+        progress: 30,
       };
 
-      // Note: Canvas artifact creation happens in ChatBot component via tool result detection
+      yield {
+        status: "processing",
+        message: `Processing ${data.length} data points across ${daysCovered} days...`,
+        progress: 60,
+      };
+
+      // Final success yield with Canvas-compatible format
+      yield {
+        status: "success",
+        message: `Created calendar heatmap "${title}" with ${data.length} data points spanning ${daysCovered} days`,
+        chartId: artifactId,
+        title,
+        chartType: "calendar-heatmap", // Top-level chartType for Canvas routing
+        canvasName: "Data Visualization",
+        chartData: chartContent, // chartData instead of artifact wrapper
+        shouldCreateArtifact: true, // Required flag for Canvas processing
+        progress: 100,
+      };
 
       logger.info(
         `Calendar heatmap artifact created successfully: ${artifactId}`,
       );
-      return result;
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Created calendar heatmap "${title}" with ${data.length} data points spanning ${daysCovered} days`,
+          },
+        ],
+      };
     } catch (error) {
       logger.error("Failed to create calendar heatmap artifact:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+
+      yield {
+        status: "error",
         message: `Failed to create calendar heatmap: ${error instanceof Error ? error.message : "Unknown error"}`,
         chartType: "calendar-heatmap",
+      };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error creating calendar heatmap: ${error instanceof Error ? error.message : "Unknown error"}`,
+          },
+        ],
       };
     }
   },

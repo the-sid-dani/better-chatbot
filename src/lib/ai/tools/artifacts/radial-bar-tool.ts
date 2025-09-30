@@ -1,7 +1,7 @@
 import { tool as createTool } from "ai";
 import { z } from "zod";
-import { generateUUID } from "../../../utils";
 import logger from "../../../logger";
+import { generateUUID } from "../../../utils";
 import { DefaultToolName } from "../index";
 
 /**
@@ -62,13 +62,13 @@ export const radialBarChartArtifactTool = createTool({
       .describe("Outer radius of the radial bars (default: 80)"),
   }),
 
-  execute: async ({
+  execute: async function* ({
     title,
     data,
     description,
     innerRadius = 30,
     outerRadius = 80,
-  }) => {
+  }) {
     try {
       logger.info(`Creating radial bar chart artifact: ${title}`);
 
@@ -147,39 +147,60 @@ export const radialBarChartArtifactTool = createTool({
       // Generate unique artifact ID
       const artifactId = generateUUID();
 
-      // Return success with artifact creation data (matches existing pattern)
-      const result = {
-        success: true,
-        artifactId,
-        artifact: {
-          kind: "charts" as const,
-          title: `Radial Bar Chart: ${title}`,
-          content: JSON.stringify(chartContent, null, 2),
-          metadata: chartContent.metadata,
-        },
-        message: `Created radial bar chart "${title}" with ${data.length} metrics in circular format. The chart is now available in the Canvas workspace with beautiful styling.`,
-        chartType: "radial-bar",
-        items: data.length,
-        innerRadius,
-        outerRadius,
-        // Additional metadata for Canvas integration
-        canvasReady: true,
-        componentType: "RadialBarChart",
+      // Progressive yield pattern for streaming
+      yield {
+        status: "loading",
+        message: "Preparing radial bar chart...",
+        progress: 30,
       };
 
-      // Note: Canvas artifact creation happens in ChatBot component via tool result detection
+      yield {
+        status: "processing",
+        message: `Processing ${data.length} metrics...`,
+        progress: 60,
+      };
+
+      // Final success yield with Canvas-compatible format
+      yield {
+        status: "success",
+        message: `Created radial bar chart "${title}" with ${data.length} metrics in circular format`,
+        chartId: artifactId,
+        title,
+        chartType: "radial-bar", // Top-level chartType for Canvas routing
+        canvasName: "Data Visualization",
+        chartData: chartContent, // chartData instead of artifact wrapper
+        shouldCreateArtifact: true, // Required flag for Canvas processing
+        progress: 100,
+      };
 
       logger.info(
         `Radial bar chart artifact created successfully: ${artifactId}`,
       );
-      return result;
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Created radial bar chart "${title}" with ${data.length} metrics`,
+          },
+        ],
+      };
     } catch (error) {
       logger.error("Failed to create radial bar chart artifact:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+
+      yield {
+        status: "error",
         message: `Failed to create radial bar chart: ${error instanceof Error ? error.message : "Unknown error"}`,
         chartType: "radial-bar",
+      };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error creating radial bar chart: ${error instanceof Error ? error.message : "Unknown error"}`,
+          },
+        ],
       };
     }
   },

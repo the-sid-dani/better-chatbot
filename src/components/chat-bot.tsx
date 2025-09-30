@@ -737,75 +737,13 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
               },
             );
 
-            let chartData;
-            let chartType;
-            let title;
-            let artifactType: "chart" | "table" = "chart"; // Default to chart
-
-            // Handle new artifact format - check both old and new structured format
-            const artifactData =
-              result.artifact ||
-              result.structuredContent?.result?.[0]?.artifact;
-            if (artifactData) {
-              const artifactContent = JSON.parse(artifactData.content);
-
-              if (isTableTool) {
-                // Handle table artifacts
-                artifactType = "table";
-                chartType = "table";
-                title = artifactData.title;
-                chartData = {
-                  title: artifactContent.title,
-                  description: artifactContent.description,
-                  columns: artifactContent.columns,
-                  data: artifactContent.data,
-                };
-              } else {
-                // Handle chart artifacts
-                // Extract the correct chart type
-                chartType =
-                  artifactContent.metadata?.chartType ||
-                  artifactContent.type.replace("-chart", "");
-                title = artifactData.title;
-
-                // Create chartData in the format expected by ChartRenderer
-                chartData = {
-                  chartType: chartType,
-                  title: artifactContent.title,
-                  data: artifactContent.data || [],
-                  description: artifactContent.description,
-                  yAxisLabel: artifactContent.yAxisLabel,
-                  xAxisLabel: artifactContent.xAxisLabel,
-                  // Add additional properties for special chart types
-                  areaType: artifactContent.areaType,
-                  showBubbles: artifactContent.showBubbles,
-                  geoType: artifactContent.geoType,
-                  colorScale: artifactContent.colorScale,
-                  value: artifactContent.value,
-                  minValue: artifactContent.minValue,
-                  maxValue: artifactContent.maxValue,
-                  gaugeType: artifactContent.gaugeType,
-                  unit: artifactContent.unit,
-                  thresholds: artifactContent.thresholds,
-                  nodes: artifactContent.nodes,
-                  links: artifactContent.links,
-                  innerRadius: artifactContent.innerRadius,
-                  outerRadius: artifactContent.outerRadius,
-                  startDate: artifactContent.startDate,
-                  endDate: artifactContent.endDate,
-                };
-              }
-            }
-            // Handle original format - also check structured content for legacy support
-            else {
-              const structuredResult = result.structuredContent?.result?.[0];
-              chartData = result.chartData || structuredResult?.chartData;
-              chartType = result.chartType || structuredResult?.chartType;
-              title =
-                result.title ||
-                structuredResult?.title ||
-                structuredResult?.message;
-            }
+            // All chart tools now use direct chartData format (simplified after standardization)
+            const chartData = result.chartData;
+            const chartType = result.chartType;
+            const title = result.title;
+            const artifactType: "chart" | "table" = isTableTool
+              ? "table"
+              : "chart";
 
             const artifact = {
               id: artifactId,
@@ -828,7 +766,7 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
 
             addCanvasArtifact(artifact);
           } else {
-            // Update existing loading artifact with completed data
+            // Update existing loading artifact with completed data (simplified after standardization)
             console.log(
               "🔄 ChatBot Tool Debug: Updating existing loading artifact",
               {
@@ -839,80 +777,20 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
               },
             );
 
-            // Extract chart data for updating (same logic as creation)
-            let chartData;
-            let chartType;
-            let title;
-            let _artifactType: "chart" | "table" = "chart";
-
-            const artifactData =
-              result.artifact ||
-              result.structuredContent?.result?.[0]?.artifact;
-            if (artifactData) {
-              const artifactContent = JSON.parse(artifactData.content);
-
-              if (isTableTool) {
-                _artifactType = "table";
-                chartType = "table";
-                title = artifactData.title;
-                chartData = {
-                  title: artifactContent.title,
-                  description: artifactContent.description,
-                  columns: artifactContent.columns,
-                  data: artifactContent.data,
-                };
-              } else {
-                chartType =
-                  artifactContent.metadata?.chartType ||
-                  artifactContent.type.replace("-chart", "");
-                title = artifactData.title;
-
-                chartData = {
-                  chartType: chartType,
-                  title: artifactContent.title,
-                  data: artifactContent.data || [],
-                  description: artifactContent.description,
-                  yAxisLabel: artifactContent.yAxisLabel,
-                  xAxisLabel: artifactContent.xAxisLabel,
-                  areaType: artifactContent.areaType,
-                  showBubbles: artifactContent.showBubbles,
-                  geoType: artifactContent.geoType,
-                  colorScale: artifactContent.colorScale,
-                  value: artifactContent.value,
-                  minValue: artifactContent.minValue,
-                  maxValue: artifactContent.maxValue,
-                  gaugeType: artifactContent.gaugeType,
-                  unit: artifactContent.unit,
-                  thresholds: artifactContent.thresholds,
-                  nodes: artifactContent.nodes,
-                  links: artifactContent.links,
-                  innerRadius: artifactContent.innerRadius,
-                  outerRadius: artifactContent.outerRadius,
-                  startDate: artifactContent.startDate,
-                  endDate: artifactContent.endDate,
-                };
-              }
-            } else {
-              const structuredResult = result.structuredContent?.result?.[0];
-              chartData = result.chartData || structuredResult?.chartData;
-              chartType = result.chartType || structuredResult?.chartType;
-              title =
-                result.title ||
-                structuredResult?.title ||
-                structuredResult?.message;
-            }
-
-            // Update the loading artifact with completed data
+            // All chart tools now use direct chartData format
             updateCanvasArtifact(existingArtifact.id, {
-              data: chartData,
+              data: result.chartData,
               status: "completed",
-              title: title || existingArtifact.title,
+              title: result.title || existingArtifact.title,
               canvasName: result.canvasName || existingArtifact.canvasName,
               metadata: {
                 ...existingArtifact.metadata,
                 chartType:
-                  chartType || existingArtifact.metadata?.chartType || "bar",
-                dataPoints: result.dataPoints || chartData?.data?.length || 0,
+                  result.chartType ||
+                  existingArtifact.metadata?.chartType ||
+                  "bar",
+                dataPoints:
+                  result.dataPoints || result.chartData?.data?.length || 0,
                 toolName,
                 lastUpdated: new Date().toISOString(),
               },
