@@ -81,6 +81,10 @@ interface ChatContentProps {
   handleFocus: () => void;
   isDeleteThreadPopupOpen: boolean;
   setIsDeleteThreadPopupOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  canvasArtifacts: any[];
+  isCanvasVisible: boolean;
+  showCanvas: () => void;
+  closeCanvas: () => void;
 }
 
 // Props interface for ScrollToBottomButton component
@@ -144,6 +148,10 @@ const ChatContent = memo(function ChatContent({
   handleFocus,
   isDeleteThreadPopupOpen,
   setIsDeleteThreadPopupOpen,
+  canvasArtifacts,
+  isCanvasVisible,
+  showCanvas,
+  closeCanvas,
 }: ChatContentProps) {
   return (
     <div
@@ -968,6 +976,10 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
               handleFocus={handleFocus}
               isDeleteThreadPopupOpen={isDeleteThreadPopupOpen}
               setIsDeleteThreadPopupOpen={setIsDeleteThreadPopupOpen}
+              canvasArtifacts={canvasArtifacts}
+              isCanvasVisible={isCanvasVisible}
+              showCanvas={showCanvas}
+              closeCanvas={closeCanvas}
             />
           </ResizablePanel>
 
@@ -1012,6 +1024,10 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
             handleFocus={handleFocus}
             isDeleteThreadPopupOpen={isDeleteThreadPopupOpen}
             setIsDeleteThreadPopupOpen={setIsDeleteThreadPopupOpen}
+            canvasArtifacts={canvasArtifacts}
+            isCanvasVisible={isCanvasVisible}
+            showCanvas={showCanvas}
+            closeCanvas={closeCanvas}
           />
         </div>
       )}
