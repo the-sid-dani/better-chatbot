@@ -84,6 +84,7 @@
     "@tiptap/starter-kit": "^2.26.1",
     "@tiptap/suggestion": "^2.26.1",
     "@uiw/react-heat-map": "^2.3.3",
+    "@vercel/speed-insights": "^1.2.0",
     "@xyflow/react": "^12.8.4",
     "ai": "^5.0.26",
     "bcrypt-ts": "^7.1.0",
