@@ -51,6 +51,11 @@ interface PromptInputProps {
   threadId?: string;
   disabledMention?: boolean;
   onFocus?: () => void;
+  // Canvas integration
+  canvasArtifacts?: any[];
+  isCanvasVisible?: boolean;
+  showCanvas?: () => void;
+  closeCanvas?: () => void;
 }
 
 const ChatMentionInput = dynamic(() => import("./chat-mention-input"), {
@@ -74,6 +79,10 @@ export default function PromptInput({
   voiceDisabled,
   threadId,
   disabledMention,
+  canvasArtifacts = [],
+  isCanvasVisible = false,
+  showCanvas,
+  closeCanvas,
 }: PromptInputProps) {
   const t = useTranslations("Chat");
 
@@ -342,6 +351,31 @@ export default function PromptInput({
                 )}
 
                 <div className="flex-1" />
+
+                {/* Canvas Controls */}
+                {canvasArtifacts.length > 0 && showCanvas && closeCanvas && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={isCanvasVisible ? "default" : "ghost"}
+                        size={"sm"}
+                        className="rounded-full hover:bg-input! p-2!"
+                        onClick={() => {
+                          if (isCanvasVisible) {
+                            closeCanvas();
+                          } else {
+                            showCanvas();
+                          }
+                        }}
+                      >
+                        <span className="text-xs">📊</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {isCanvasVisible ? "Hide Canvas" : "Show Canvas"}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
 
                 <SelectModel onSelect={setChatModel} currentModel={chatModel}>
                   <Button

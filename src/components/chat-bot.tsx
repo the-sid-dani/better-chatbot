@@ -222,6 +222,10 @@ const ChatContent = memo(function ChatContent({
           isLoading={isLoading || isPendingToolCall}
           onStop={stop}
           onFocus={isFirstTime ? undefined : handleFocus}
+          canvasArtifacts={canvasArtifacts}
+          isCanvasVisible={isCanvasVisible}
+          showCanvas={showCanvas}
+          closeCanvas={closeCanvas}
         />
       </div>
       <DeleteThreadPopup
