@@ -5,12 +5,15 @@ import {
   documentRepository,
   createArtifact,
   validateArtifactKind,
-  registerDocumentHandler
+  registerDocumentHandler,
 } from "@/lib/artifacts/server";
 import { chartsDocumentHandler } from "../../../../artifacts/charts/server";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { generateUUID } from "lib/utils";
 import { safe } from "ts-safe";
+import { observe } from "@langfuse/tracing";
+import { after } from "next/server";
+import { langfuseSpanProcessor } from "@/instrumentation";
 
 // Register chart handler on module load
 registerDocumentHandler(chartsDocumentHandler);
@@ -23,7 +26,10 @@ const createArtifactSchema = z.object({
 });
 
 const listArtifactsSchema = z.object({
-  kind: z.string().refine(validateArtifactKind, "Invalid artifact kind").optional(),
+  kind: z
+    .string()
+    .refine(validateArtifactKind, "Invalid artifact kind")
+    .optional(),
   limit: z.coerce.number().min(1).max(100).default(20),
   offset: z.coerce.number().min(0).default(0),
 });
@@ -37,7 +43,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const validationResult = safe(() =>
-    listArtifactsSchema.parse(Object.fromEntries(searchParams))
+    listArtifactsSchema.parse(Object.fromEntries(searchParams)),
   );
 
   const { kind, limit, offset } = validationResult
@@ -47,7 +53,10 @@ export async function GET(request: NextRequest) {
     .unwrap();
 
   try {
-    const artifacts = await documentRepository.getUserDocuments(session.user.id, kind as any);
+    const artifacts = await documentRepository.getUserDocuments(
+      session.user.id,
+      kind as any,
+    );
 
     // Apply pagination
     const paginatedArtifacts = artifacts.slice(offset, offset + limit);
@@ -65,13 +74,13 @@ export async function GET(request: NextRequest) {
     console.error("Failed to list artifacts:", error);
     return NextResponse.json(
       { error: "Failed to retrieve artifacts" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 // POST /api/artifacts - Create new artifact with streaming
-export async function POST(request: NextRequest) {
+const createArtifactHandler = async (request: NextRequest) => {
   const session = await getSession();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -96,7 +105,7 @@ export async function POST(request: NextRequest) {
           title,
           kind as any,
           dataStream,
-          metadata
+          metadata,
         );
 
         // Stream final success
@@ -111,7 +120,6 @@ export async function POST(request: NextRequest) {
             updatedAt: artifact.updatedAt,
           },
         });
-
       } catch (error) {
         console.error("Failed to create artifact:", error);
 
@@ -125,7 +133,17 @@ export async function POST(request: NextRequest) {
     generateId: generateUUID,
   });
 
+  // Force flush for serverless environments
+  after(async () => {
+    await langfuseSpanProcessor.forceFlush();
+  });
+
   return createUIMessageStreamResponse({
     stream,
   });
-}
+};
+
+export const POST = observe(createArtifactHandler, {
+  name: "create-artifact-handler",
+  endOnExit: false,
+});

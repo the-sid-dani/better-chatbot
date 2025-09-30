@@ -50,10 +50,20 @@ export async function generateTitleFromUserMessageAction({
   await getSession();
   const prompt = toAny(message.parts?.at(-1))?.text || "unknown";
 
+  const environment =
+    process.env.VERCEL_ENV || process.env.NODE_ENV || "development";
+
   const { text: title } = await generateText({
     model,
     system: CREATE_THREAD_TITLE_PROMPT,
     prompt,
+    experimental_telemetry: {
+      isEnabled: true,
+      metadata: {
+        operation: "generate-title-action",
+        environment,
+      },
+    },
   });
 
   return title.trim();
@@ -113,6 +123,8 @@ export async function generateExampleToolSchemaAction(options: {
   prompt?: string;
 }) {
   const model = customModelProvider.getModel(options.model);
+  const environment =
+    process.env.VERCEL_ENV || process.env.NODE_ENV || "development";
 
   const schema = jsonSchema(
     toAny({
@@ -128,6 +140,14 @@ export async function generateExampleToolSchemaAction(options: {
       toolInfo: options.toolInfo,
       prompt: options.prompt,
     }),
+    experimental_telemetry: {
+      isEnabled: true,
+      metadata: {
+        operation: "generate-tool-example",
+        toolName: options.toolInfo.name,
+        environment,
+      },
+    },
   });
 
   return object;
@@ -196,11 +216,23 @@ export async function generateObjectAction({
   };
   schema: JSONSchema7 | ObjectJsonSchema7;
 }) {
+  const environment =
+    process.env.VERCEL_ENV || process.env.NODE_ENV || "development";
+
   const result = await generateObject({
     model: customModelProvider.getModel(model),
     system: prompt.system,
     prompt: prompt.user || "",
     schema: jsonSchemaToZod(schema),
+    experimental_telemetry: {
+      isEnabled: true,
+      metadata: {
+        operation: "generate-object-action",
+        provider: model?.provider,
+        model: model?.model,
+        environment,
+      },
+    },
   });
   return result.object;
 }

@@ -1,4 +1,3 @@
-// after import removed - not needed in SDK v4 approach
 import {
   convertToModelMessages,
   createUIMessageStream,
@@ -15,8 +14,9 @@ import {
   updateActiveTrace,
 } from "@langfuse/tracing";
 import { trace } from "@opentelemetry/api";
+import { after } from "next/server";
 
-// Import will be available after we fix the instrumentation export
+import { langfuseSpanProcessor } from "@/instrumentation";
 
 import { customModelProvider, isToolCallUnsupportedModel } from "lib/ai/models";
 
@@ -124,8 +124,11 @@ const handler = async (request: Request) => {
     input: inputText,
   });
 
+  const environment =
+    process.env.VERCEL_ENV || process.env.NODE_ENV || "development";
+
   updateActiveTrace({
-    name: "samba-orion",
+    name: agent?.name ? `agent-${agent.name}-chat` : "samba-orion-chat",
     sessionId: id,
     userId: session.user.id,
     input: inputText,
@@ -135,7 +138,14 @@ const handler = async (request: Request) => {
       provider: chatModel?.provider,
       model: chatModel?.model,
       toolChoice,
-      environment: "development",
+      environment,
+      tags: [
+        "chat",
+        `provider:${chatModel?.provider || "unknown"}`,
+        `model:${chatModel?.model || "unknown"}`,
+        ...(agent?.name ? [`agent:${agent.name}`] : []),
+        `environment:${environment}`,
+      ],
     },
   });
 
@@ -403,8 +413,10 @@ const handler = async (request: Request) => {
     originalMessages: messages,
   });
 
-  // Important in serverless environments: schedule flush after request is finished
-  // Note: In SDK v4, the flush is handled automatically by the NodeTracerProvider
+  // CRITICAL: Force flush in serverless environments to prevent trace loss
+  after(async () => {
+    await langfuseSpanProcessor.forceFlush();
+  });
 
   return createUIMessageStreamResponse({
     stream,
@@ -413,6 +425,6 @@ const handler = async (request: Request) => {
 
 // Export the wrapped handler following docs pattern
 export const POST = observe(handler, {
-  name: "samba-orion-chat-handler",
+  name: "chat-api-handler",
   endOnExit: false, // end observation _after_ stream has finished
 });

@@ -1,5 +1,8 @@
 import { smoothStream, streamText } from "ai";
+import { observe } from "@langfuse/tracing";
+import { after } from "next/server";
 
+import { langfuseSpanProcessor } from "@/instrumentation";
 import { customModelProvider } from "lib/ai/models";
 import { CREATE_THREAD_TITLE_PROMPT } from "lib/ai/prompts";
 import globalLogger from "logger";
@@ -13,7 +16,7 @@ const logger = globalLogger.withDefaults({
   message: colorize("blackBright", `Title API: `),
 });
 
-export async function POST(request: Request) {
+const handler = async (request: Request) => {
   try {
     const json = await request.json();
 
@@ -36,10 +39,23 @@ export async function POST(request: Request) {
       `chatModel: ${chatModel?.provider}/${chatModel?.model}, threadId: ${threadId}`,
     );
 
+    const environment =
+      process.env.VERCEL_ENV || process.env.NODE_ENV || "development";
+
     const result = streamText({
       model: customModelProvider.getModel(chatModel),
       system: CREATE_THREAD_TITLE_PROMPT,
       experimental_transform: smoothStream({ chunking: "word" }),
+      experimental_telemetry: {
+        isEnabled: true,
+        metadata: {
+          threadId,
+          provider: chatModel?.provider,
+          model: chatModel?.model,
+          environment,
+          operation: "title-generation",
+        },
+      },
       prompt: message,
       abortSignal: request.signal,
       onFinish: (ctx) => {
@@ -53,8 +69,18 @@ export async function POST(request: Request) {
       },
     });
 
+    // Force flush for serverless environments
+    after(async () => {
+      await langfuseSpanProcessor.forceFlush();
+    });
+
     return result.toUIMessageStreamResponse();
   } catch (err) {
     return new Response(handleError(err), { status: 500 });
   }
-}
+};
+
+export const POST = observe(handler, {
+  name: "title-generation-handler",
+  endOnExit: false,
+});
