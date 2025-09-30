@@ -82,8 +82,14 @@ jobs:
           # Create minimal .env for Playwright (only non-runtime vars if needed)
           touch .env
 
+      - name: Setup database
+        run: |
+          # Force drop and recreate database to ensure clean state
+          PGPASSWORD=testpass psql -h localhost -U testuser -d postgres -c "DROP DATABASE IF EXISTS better_chatbot_test;"
+          PGPASSWORD=testpass psql -h localhost -U testuser -d postgres -c "CREATE DATABASE better_chatbot_test;"
+
       - name: Run database migrations
-        run: pnpm db:reset
+        run: pnpm db:push
 
       - name: Build application
         run: pnpm build:local
