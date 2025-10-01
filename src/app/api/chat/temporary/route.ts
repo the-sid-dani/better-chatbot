@@ -10,6 +10,7 @@ import { observe } from "@langfuse/tracing";
 import { after } from "next/server";
 
 import { langfuseSpanProcessor } from "@/instrumentation";
+import { langfuse } from "@/lib/observability/langfuse-client";
 import { customModelProvider } from "lib/ai/models";
 import globalLogger from "logger";
 import { buildUserSystemPrompt } from "lib/ai/prompts";
