@@ -127,6 +127,10 @@ const handler = async (request: Request) => {
   const environment =
     process.env.VERCEL_ENV || process.env.NODE_ENV || "development";
 
+  // Get MCP server list for metadata
+  const mcpClients = await mcpClientsManager.getClients();
+  const mcpServerList = mcpClients.map((client) => client.serverName);
+
   updateActiveTrace({
     name: agent?.name ? `agent-${agent.name}-chat` : "samba-orion-chat",
     sessionId: id,
@@ -139,6 +143,8 @@ const handler = async (request: Request) => {
       model: chatModel?.model,
       toolChoice,
       environment,
+      mcpServerCount: mcpClients.length,
+      mcpServerList,
       tags: [
         "chat",
         `provider:${chatModel?.provider || "unknown"}`,
@@ -282,11 +288,33 @@ const handler = async (request: Request) => {
         toolChoice: "auto",
         abortSignal: request.signal,
         onFinish: async (result) => {
+          // Count tool executions from result
+          const toolExecutionCount =
+            result.steps?.reduce((count, step) => {
+              return (
+                count +
+                (step.toolCalls?.length || 0) +
+                (step.toolResults?.length || 0)
+              );
+            }, 0) || 0;
+
+          const mcpToolCount = Object.keys(MCP_TOOLS ?? {}).length;
+          const workflowToolCount = Object.keys(WORKFLOW_TOOLS ?? {}).length;
+          const appToolCount = Object.keys(APP_DEFAULT_TOOLS ?? {}).length;
+
           updateActiveObservation({
             output: result.content,
           });
           updateActiveTrace({
             output: result.content,
+            metadata: {
+              toolExecutionCount,
+              mcpToolCount,
+              workflowToolCount,
+              appToolCount,
+              totalToolsAvailable:
+                mcpToolCount + workflowToolCount + appToolCount,
+            },
           });
 
           // End span manually after stream has finished
