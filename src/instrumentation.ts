@@ -66,8 +66,28 @@ const shouldExportSpan: ShouldExportSpan = (span) => {
   return span.otelSpan.instrumentationScope.name !== "next.js";
 };
 
+// CRITICAL: Explicitly configure LangfuseSpanProcessor with baseUrl and auth
+// The processor needs explicit configuration to send traces to self-hosted instance
+const langfuseConfig = {
+  baseUrl:
+    process.env.LANGFUSE_HOST ||
+    process.env.LANGFUSE_BASE_URL ||
+    "https://cloud.langfuse.com",
+  publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+  secretKey: process.env.LANGFUSE_SECRET_KEY,
+};
+
+// Debug: Log configuration (without exposing full keys)
+console.log("🔍 Langfuse Span Processor Config:", {
+  baseUrl: langfuseConfig.baseUrl,
+  hasPublicKey: !!langfuseConfig.publicKey,
+  hasSecretKey: !!langfuseConfig.secretKey,
+  publicKeyPrefix: langfuseConfig.publicKey?.substring(0, 10) + "...",
+});
+
 export const langfuseSpanProcessor = new LangfuseSpanProcessor({
   shouldExportSpan,
+  ...langfuseConfig,
 });
 
 // Use NodeTracerProvider as recommended by Langfuse docs for Next.js
