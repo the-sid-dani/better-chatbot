@@ -1,9 +1,9 @@
 "use client";
 
-import { getToolName, isToolUIPart, TextPart } from "ai";
+import { TextPart, getToolName, isToolUIPart } from "ai";
 import { DEFAULT_VOICE_TOOLS, UIMessageWithCompleted } from "lib/ai/speech";
-import { generateUUID } from "lib/utils";
 import logger from "lib/logger";
+import { generateUUID } from "lib/utils";
 
 import {
   OPENAI_VOICE,
@@ -12,17 +12,18 @@ import {
 import { cn } from "lib/utils";
 import {
   CheckIcon,
+  ChevronRight,
+  LayoutDashboard,
   Loader,
+  MessageSquareMoreIcon,
+  MessagesSquareIcon,
   MicIcon,
   MicOffIcon,
   PhoneIcon,
   Settings2Icon,
   TriangleAlertIcon,
-  XIcon,
-  MessagesSquareIcon,
-  MessageSquareMoreIcon,
   WrenchIcon,
-  ChevronRight,
+  XIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -31,12 +32,6 @@ import { Alert, AlertDescription, AlertTitle } from "ui/alert";
 import { Button } from "ui/button";
 
 import { Drawer, DrawerContent, DrawerPortal, DrawerTitle } from "ui/drawer";
-import { CanvasPanel, useCanvas } from "./canvas-panel";
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "ui/resizable";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,16 +46,22 @@ import {
 import { GeminiIcon } from "ui/gemini-icon";
 import { MessageLoading } from "ui/message-loading";
 import { OpenAIIcon } from "ui/openai-icon";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "ui/resizable";
 import { Tooltip, TooltipContent, TooltipTrigger } from "ui/tooltip";
+import { CanvasPanel, useCanvas } from "./canvas-panel";
 import { ToolMessagePart } from "./message-parts";
 
-import { EnabledMcpToolsDropdown } from "./enabled-mcp-tools-dropdown";
 import { appStore } from "@/app/store";
-import { useShallow } from "zustand/shallow";
+import { Shortcuts, isShortcutEvent } from "lib/keyboard-shortcuts";
 import { useTranslations } from "next-intl";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "ui/dialog";
 import JsonView from "ui/json-view";
-import { isShortcutEvent, Shortcuts } from "lib/keyboard-shortcuts";
+import { useShallow } from "zustand/shallow";
+import { EnabledMcpToolsDropdown } from "./enabled-mcp-tools-dropdown";
 
 const prependTools = [
   {
@@ -100,6 +101,9 @@ export function ChatBotVoice() {
   // Cleanup processed tools when voice chat session changes
   const processedToolsRef = useRef(new Set<string>());
 
+  // Track if we've initialized artifacts from history
+  const isInitializedRef = useRef(false);
+
   const {
     isListening,
     isAssistantSpeaking,
@@ -130,6 +134,8 @@ export function ChatBotVoice() {
     setIsClosing(true);
     await safe(() => stop());
     setIsClosing(false);
+    isInitializedRef.current = false;
+    processedToolsRef.current.clear();
     appStoreMutate({
       voiceChat: {
         ...voiceChat,
@@ -138,11 +144,128 @@ export function ChatBotVoice() {
     });
   }, [messages, model]);
 
+  // ONE-TIME: Process all historical messages on voice chat open to restore charts
+  useEffect(() => {
+    // Skip if already initialized or no messages
+    if (
+      isInitializedRef.current ||
+      messages.length === 0 ||
+      !voiceChat.isOpen
+    ) {
+      return;
+    }
+
+    logger.info("Voice Chat: Initializing artifacts from message history", {
+      messageCount: messages.length,
+    });
+
+    // Chart tool names (same list as real-time processing)
+    const chartToolNames = [
+      "create_chart",
+      "create_area_chart",
+      "create_scatter_chart",
+      "create_radar_chart",
+      "create_funnel_chart",
+      "create_treemap_chart",
+      "create_sankey_chart",
+      "create_radial_bar_chart",
+      "create_composed_chart",
+      "create_geographic_chart",
+      "create_gauge_chart",
+      "create_calendar_heatmap",
+      "create_bar_chart",
+      "create_line_chart",
+      "create_pie_chart",
+      "create_table",
+    ];
+
+    // Process ALL assistant messages (not just last one)
+    messages.forEach((message) => {
+      if (message.role !== "assistant") return;
+
+      // Extract chart tools from this message
+      const chartTools = message.parts.filter(
+        (part) =>
+          isToolUIPart(part) && chartToolNames.includes(getToolName(part)),
+      );
+
+      // Process completed charts (same logic as real-time processing)
+      chartTools.forEach((part) => {
+        if (!isToolUIPart(part) || !part.state.startsWith("output")) return;
+
+        const result = part.output as any;
+        const isCompleted =
+          (result?.shouldCreateArtifact && result?.status === "success") ||
+          result?.success === true ||
+          (result?.structuredContent?.result?.[0]?.success === true &&
+            result?.isError === false);
+
+        if (!isCompleted) return;
+
+        const artifactId =
+          result.chartId ||
+          result.artifactId ||
+          result.structuredContent?.result?.[0]?.artifactId ||
+          generateUUID();
+
+        const toolKey = `${message.id}-${artifactId}`;
+
+        // Duplicate prevention
+        if (processedToolsRef.current.has(toolKey)) return;
+        processedToolsRef.current.add(toolKey);
+
+        // Create artifact (simplified logic for voice chat)
+        const toolName = getToolName(part);
+        const isTableTool = toolName === "create_table";
+        const chartData = result.chartData;
+        const chartType = result.chartType;
+        const title = result.title;
+
+        const artifact = {
+          id: artifactId,
+          type: (isTableTool ? "table" : "chart") as "chart" | "table",
+          title:
+            title ||
+            (isTableTool ? `Table: ${chartType}` : `${chartType} Chart`),
+          canvasName:
+            result.canvasName ||
+            (isTableTool ? "Voice Data Table" : "Voice Data Visualization"),
+          data: chartData,
+          status: "completed" as const,
+          metadata: {
+            chartType: chartType || "bar",
+            dataPoints: result.dataPoints || chartData?.data?.length || 0,
+            toolName,
+            lastUpdated: new Date().toISOString(),
+            isVoiceOriginated: true,
+          },
+        };
+
+        addCanvasArtifact(artifact);
+      });
+    });
+
+    isInitializedRef.current = true;
+    logger.info("Voice Chat: Artifact initialization complete", {
+      artifactCount: canvasArtifacts.length,
+    });
+  }, [
+    messages.length,
+    voiceChat.isOpen,
+    addCanvasArtifact,
+    canvasArtifacts.length,
+  ]);
+
   // CRITICAL: Chart tool detection for Canvas integration (copied from chat-bot.tsx)
   // Voice chat needs same Canvas processing as regular chat
   const processingDebounceRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
+    // Wait for initialization before processing new messages
+    if (!isInitializedRef.current) {
+      return;
+    }
+
     // Clear any existing debounce
     if (processingDebounceRef.current) {
       clearTimeout(processingDebounceRef.current);
@@ -660,7 +783,7 @@ export function ChatBotVoice() {
                         }
                       }}
                     >
-                      <span className="text-xs">📊</span>
+                      <LayoutDashboard className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>

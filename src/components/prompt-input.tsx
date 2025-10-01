@@ -4,6 +4,7 @@ import {
   AudioWaveformIcon,
   ChevronDown,
   CornerRightUp,
+  LayoutDashboard,
   PlusIcon,
   Square,
   XIcon,
@@ -368,7 +369,7 @@ export default function PromptInput({
                           }
                         }}
                       >
-                        <span className="text-xs">📊</span>
+                        <LayoutDashboard className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>

@@ -1,5 +1,6 @@
 import { LangfuseSpanProcessor, ShouldExportSpan } from "@langfuse/otel";
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
+import { Langfuse } from "langfuse";
 import { IS_VERCEL_ENV } from "lib/const";
 
 // Validate required Langfuse environment variables at startup
@@ -59,6 +60,21 @@ To fix:
 // Run validation
 validateLangfuseConfig();
 
+// Initialize Langfuse SDK client for observe() decorators
+export const langfuse = new Langfuse({
+  publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+  secretKey: process.env.LANGFUSE_SECRET_KEY,
+  baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
+  release: process.env.LANGFUSE_TRACING_RELEASE || "1.0.0",
+  environment:
+    process.env.LANGFUSE_TRACING_ENVIRONMENT ||
+    process.env.VERCEL_ENV ||
+    process.env.NODE_ENV ||
+    "development",
+  flushAt: 1, // Flush immediately in development for debugging
+  flushInterval: 1000, // Flush every 1 second
+});
+
 // Filter out Next.js infrastructure spans
 const shouldExportSpan: ShouldExportSpan = (span) => {
   return span.otelSpan.instrumentationScope.name !== "next.js";
@@ -73,6 +89,14 @@ const tracerProvider = new NodeTracerProvider({
 });
 
 tracerProvider.register();
+
+// Ensure traces are flushed on shutdown
+process.on("SIGTERM", async () => {
+  console.log("🔄 Flushing Langfuse traces before shutdown...");
+  await langfuse.flushAsync();
+  await langfuseSpanProcessor.forceFlush();
+  console.log("✅ Langfuse traces flushed successfully");
+});
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
