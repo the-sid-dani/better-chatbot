@@ -1,8 +1,23 @@
 #!/usr/bin/env node
 
 /**
- * Script to update all chart artifact tools to use direct chartData format
- * instead of the structuredContent format with JSON.stringify
+ * DEPRECATED - This script was used during the chart tools migration (Sept 2025)
+ *
+ * Historical Purpose:
+ * - Updated chart artifact tools to use direct chartData format
+ * - Migrated from structuredContent format with JSON.stringify
+ * - Aligned all 16 specialized chart tools with unified Canvas integration pattern
+ *
+ * Status: All migrations complete. Script kept for historical reference only.
+ *
+ * Current Chart Tools (17 total):
+ * - 16 specialized: bar, line, pie, area, scatter, radar, funnel, treemap,
+ *   sankey, radial_bar, composed, geographic, gauge, calendar_heatmap, table, radial_bar
+ * - 1 orchestrator: dashboard-orchestrator
+ *
+ * Removed Tools (deprecated Sept 2025):
+ * - create_chart (generic catch-all)
+ * - update_chart (generic catch-all)
  */
 
 import fs from "fs";

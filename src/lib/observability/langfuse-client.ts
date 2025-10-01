@@ -1,13 +1,13 @@
 /**
- * Langfuse SDK Client
+ * Langfuse SDK Client (v4)
  *
- * This module initializes the Langfuse SDK client for observe() decorators.
+ * This module initializes the Langfuse v4 client for observe() decorators.
  * IMPORTANT: Only import this in Node.js runtime (API routes), NOT in Edge runtime (middleware).
  */
 
-import { Langfuse } from "langfuse";
+import { LangfuseClient } from "@langfuse/client";
 
-export const langfuse = new Langfuse({
+export const langfuse = new LangfuseClient({
   publicKey: process.env.LANGFUSE_PUBLIC_KEY,
   secretKey: process.env.LANGFUSE_SECRET_KEY,
   // Prioritize LANGFUSE_HOST (Langfuse docs standard) for self-hosted instances

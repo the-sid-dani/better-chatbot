@@ -1,33 +1,39 @@
 "use client";
 
-import { useChat } from "@ai-sdk/react";
-import { toast } from "sonner";
-import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
-import PromptInput from "./prompt-input";
-import clsx from "clsx";
 import { appStore } from "@/app/store";
+import { useChat } from "@ai-sdk/react";
+import clsx from "clsx";
 import { cn, createDebounce, generateUUID, truncateString } from "lib/utils";
-import { ErrorMessage, PreviewMessage } from "./message";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { ChatGreeting } from "./chat-greeting";
+import { ErrorMessage, PreviewMessage } from "./message";
+import PromptInput from "./prompt-input";
 
-import { useShallow } from "zustand/shallow";
 import {
   DefaultChatTransport,
-  isToolUIPart,
-  lastAssistantMessageIsCompleteWithToolCalls,
   UIMessage,
   getToolName,
+  isToolUIPart,
+  lastAssistantMessageIsCompleteWithToolCalls,
 } from "ai";
+import { useShallow } from "zustand/shallow";
 
-import { safe } from "ts-safe";
-import { mutate } from "swr";
-import { ChatApiSchemaRequestBody, ChatModel } from "app-types/chat";
-import { useToRef } from "@/hooks/use-latest";
-import { isShortcutEvent, Shortcuts } from "lib/keyboard-shortcuts";
-import { Button } from "ui/button";
 import { deleteThreadAction } from "@/app/api/chat/actions";
-import { useRouter } from "next/navigation";
+import { useGenerateThreadTitle } from "@/hooks/queries/use-generate-thread-title";
+import { useToRef } from "@/hooks/use-latest";
+import { useMounted } from "@/hooks/use-mounted";
+import { ChatApiSchemaRequestBody, ChatModel } from "app-types/chat";
+import { AnimatePresence, motion } from "framer-motion";
+import { getStorageManager } from "lib/browser-stroage";
+import { Shortcuts, isShortcutEvent } from "lib/keyboard-shortcuts";
 import { ArrowDown, Loader } from "lucide-react";
+import { useTranslations } from "next-intl";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import { mutate } from "swr";
+import { safe } from "ts-safe";
+import { Button } from "ui/button";
 import {
   Dialog,
   DialogContent,
@@ -36,19 +42,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "ui/dialog";
-import { useTranslations } from "next-intl";
-import { Think } from "ui/think";
-import { useGenerateThreadTitle } from "@/hooks/queries/use-generate-thread-title";
-import dynamic from "next/dynamic";
-import { useMounted } from "@/hooks/use-mounted";
-import { getStorageManager } from "lib/browser-stroage";
-import { AnimatePresence, motion } from "framer-motion";
-import { CanvasPanel, useCanvas } from "./canvas-panel";
 import {
-  ResizablePanelGroup,
-  ResizablePanel,
   ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
 } from "ui/resizable";
+import { Think } from "ui/think";
+import { CanvasPanel, useCanvas } from "./canvas-panel";
 // getToolName already imported above, isToolUIPart already imported above
 
 type Props = {
@@ -280,6 +280,9 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
   // Cleanup processed tools when thread changes to prevent memory leaks
   const processedToolsRef = useRef(new Set<string>());
 
+  // Track if we've initialized artifacts from history
+  const isInitializedRef = useRef(false);
+
   // Monitor for excessive re-renders
   const renderCountRef = useRef(0);
   renderCountRef.current += 1;
@@ -289,6 +292,7 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
       "🧼 ChatBot Debug: Thread changed - clearing processed tools cache",
     );
     processedToolsRef.current.clear();
+    isInitializedRef.current = false;
   }, [threadId]);
 
   // Debug canvas state changes with enhanced logging
@@ -433,6 +437,109 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     threadId,
     mentions: threadMentions[threadId],
   });
+
+  // ONE-TIME: Process all historical messages on first load to restore charts after page refresh
+  useEffect(() => {
+    // Skip if already initialized or no messages
+    if (isInitializedRef.current || messages.length === 0) {
+      return;
+    }
+
+    console.log("🔄 ChatBot: Initializing artifacts from message history", {
+      messageCount: messages.length,
+      threadId,
+    });
+
+    // Chart tool names (same list as real-time processing)
+    const chartToolNames = [
+      "create_chart",
+      "create_area_chart",
+      "create_scatter_chart",
+      "create_radar_chart",
+      "create_funnel_chart",
+      "create_treemap_chart",
+      "create_sankey_chart",
+      "create_radial_bar_chart",
+      "create_composed_chart",
+      "create_geographic_chart",
+      "create_gauge_chart",
+      "create_calendar_heatmap",
+      "create_bar_chart",
+      "create_line_chart",
+      "create_pie_chart",
+      "create_table",
+    ];
+
+    // Process ALL assistant messages (not just last one)
+    messages.forEach((message) => {
+      if (message.role !== "assistant") return;
+
+      // Extract chart tools from this message
+      const chartTools = message.parts.filter(
+        (part) =>
+          isToolUIPart(part) && chartToolNames.includes(getToolName(part)),
+      );
+
+      // Process completed charts (same logic as real-time processing)
+      chartTools.forEach((part) => {
+        if (!isToolUIPart(part) || !part.state.startsWith("output")) return;
+
+        const result = part.output as any;
+        const isCompleted =
+          (result?.shouldCreateArtifact && result?.status === "success") ||
+          result?.success === true ||
+          (result?.structuredContent?.result?.[0]?.success === true &&
+            result?.isError === false);
+
+        if (!isCompleted) return;
+
+        const artifactId =
+          result.chartId ||
+          result.artifactId ||
+          result.structuredContent?.result?.[0]?.artifactId ||
+          generateUUID();
+
+        const toolKey = `${message.id}-${artifactId}`;
+
+        // Duplicate prevention
+        if (processedToolsRef.current.has(toolKey)) return;
+        processedToolsRef.current.add(toolKey);
+
+        // Create artifact (reuse existing logic)
+        const toolName = getToolName(part);
+        const isTableTool = toolName === "create_table";
+        const chartData = result.chartData;
+        const chartType = result.chartType;
+        const title = result.title;
+
+        const artifact = {
+          id: artifactId,
+          type: (isTableTool ? "table" : "chart") as "chart" | "table",
+          title:
+            title ||
+            (isTableTool ? `Table: ${chartType}` : `${chartType} Chart`),
+          canvasName:
+            result.canvasName ||
+            (isTableTool ? "Data Table" : "Data Visualization"),
+          data: chartData,
+          status: "completed" as const,
+          metadata: {
+            chartType: chartType || "bar",
+            dataPoints: result.dataPoints || chartData?.data?.length || 0,
+            toolName,
+            lastUpdated: new Date().toISOString(),
+          },
+        };
+
+        addCanvasArtifact(artifact);
+      });
+    });
+
+    isInitializedRef.current = true;
+    console.log("✅ ChatBot: Artifact initialization complete", {
+      artifactCount: canvasArtifacts.length,
+    });
+  }, [messages.length, threadId, addCanvasArtifact, canvasArtifacts.length]);
 
   const isLoading = useMemo(
     () => status === "streaming" || status === "submitted",
@@ -589,6 +696,11 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
   const processingDebounceRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
+    // Wait for initialization before processing new messages
+    if (!isInitializedRef.current) {
+      return;
+    }
+
     // Clear any existing debounce
     if (processingDebounceRef.current) {
       clearTimeout(processingDebounceRef.current);

@@ -8,10 +8,31 @@ Charts Artifacts provide a seamless way to transform data discussions into inter
 
 ## Features
 
-### Supported Chart Types
+### Supported Chart Types (16 Specialized Tools)
+
+**Core Charts:**
 - **Bar Charts**: Perfect for comparisons and categorical data
 - **Line Charts**: Ideal for trends over time and continuous data
 - **Pie Charts**: Great for showing parts of a whole
+- **Area Charts**: Show cumulative totals and proportions over time
+
+**Advanced Visualizations:**
+- **Scatter Charts**: Plot relationships between two variables
+- **Radar Charts**: Multi-dimensional data comparison
+- **Funnel Charts**: Visualize process flows and conversion rates
+- **Treemap Charts**: Hierarchical data with nested rectangles
+- **Sankey Diagrams**: Flow visualizations showing data movement
+- **Radial Bar Charts**: Circular bar charts for cyclical data
+- **Composed Charts**: Combine multiple chart types in one view
+
+**Specialized Charts:**
+- **Geographic Charts**: Maps with regional data visualization
+- **Gauge Charts**: Single-value indicators with ranges
+- **Calendar Heatmaps**: Time-based data patterns across dates
+- **Data Tables**: Structured tabular data presentation
+
+**Dashboard Orchestration:**
+- **Dashboard Orchestrator**: Create coordinated multi-chart dashboards
 
 ### Interactive Workspace
 - **Side-by-side Layout**: Charts appear in a workspace next to the chat
@@ -93,9 +114,9 @@ Workspace Display → Interactive Editing → Database Persistence
 
 ### Data Flow
 
-1. **Creation**: AI calls `create_chart` tool with data and specifications
-2. **Generation**: Server processes request and streams chart data
-3. **Display**: Client renders chart in workspace using Recharts
+1. **Creation**: AI calls specialized chart tool (e.g., `create_bar_chart`) with data and specifications
+2. **Generation**: Server processes request and streams chart data progressively
+3. **Display**: Client renders chart in Canvas workspace using Recharts
 4. **Interaction**: User can edit directly or request AI modifications
 5. **Persistence**: Changes saved to database with version history
 
@@ -149,28 +170,35 @@ Example data:
 
 ## API Reference
 
-### Chart Creation Tool
+### Specialized Chart Tools
+
+Each chart type has its own dedicated tool with specific parameters optimized for that visualization:
+
 ```typescript
-create_chart({
+// Example: Bar Chart Tool
+create_bar_chart({
   title: string,
-  chartType: "bar" | "line" | "pie",
   data: ChartDataPoint[],
   xAxisLabel?: string,
   yAxisLabel?: string,
+  canvasName?: string,
   description?: string
 })
+
+// Example: Geographic Chart Tool
+create_geographic_chart({
+  title: string,
+  mapType: "world" | "usa-states" | "usa-counties" | "usa-dma",
+  data: Array<{ region: string, value: number }>,
+  canvasName?: string,
+  description?: string
+})
+
+// All chart tools follow similar patterns with type-specific parameters
 ```
 
-### Chart Update Tool
-```typescript
-update_chart({
-  artifactId: string,
-  changes: string,
-  newData?: ChartDataPoint[],
-  chartType?: "bar" | "line" | "pie",
-  // ... other optional updates
-})
-```
+**Available Tools:**
+`create_bar_chart`, `create_line_chart`, `create_pie_chart`, `create_area_chart`, `create_scatter_chart`, `create_radar_chart`, `create_funnel_chart`, `create_treemap_chart`, `create_sankey_chart`, `create_radial_bar_chart`, `create_composed_chart`, `create_geographic_chart`, `create_gauge_chart`, `create_calendar_heatmap`, `createTable`, `create_dashboard`
 
 ### REST API Endpoints
 - `GET /api/artifacts` - List user's artifacts
@@ -230,12 +258,13 @@ AI: Adds tablet data series to the chart
 
 ## Future Enhancements
 
-- Additional chart types (scatter, histogram, heatmap)
+- Additional chart types (histogram, waterfall, bullet charts)
 - Advanced styling and theming options
-- Data import from external sources
+- Data import from CSV/Excel files
 - Chart export functionality (PNG, SVG, PDF)
-- Real-time data connections
+- Real-time data connections and live updates
 - Collaborative editing features
+- Chart templates and preset styles
 
 ---
 
