@@ -1,5 +1,5 @@
 import { LangfuseSpanProcessor, ShouldExportSpan } from "@langfuse/otel";
-import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
+import { NodeSDK } from "@opentelemetry/sdk-node";
 import { IS_VERCEL_ENV } from "lib/const";
 
 // Validate required Langfuse environment variables at startup
@@ -70,11 +70,13 @@ export const langfuseSpanProcessor = new LangfuseSpanProcessor({
   shouldExportSpan,
 });
 
-const tracerProvider = new NodeTracerProvider({
+// CRITICAL: Use NodeSDK (not NodeTracerProvider) for @langfuse/tracing observe() decorator
+// This is required for the observe() decorator to properly send traces to Langfuse
+const sdk = new NodeSDK({
   spanProcessors: [langfuseSpanProcessor],
 });
 
-tracerProvider.register();
+sdk.start();
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
