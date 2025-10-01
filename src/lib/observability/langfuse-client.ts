@@ -10,7 +10,11 @@ import { Langfuse } from "langfuse";
 export const langfuse = new Langfuse({
   publicKey: process.env.LANGFUSE_PUBLIC_KEY,
   secretKey: process.env.LANGFUSE_SECRET_KEY,
-  baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
+  // Prioritize LANGFUSE_HOST (Langfuse docs standard) for self-hosted instances
+  baseUrl:
+    process.env.LANGFUSE_HOST ||
+    process.env.LANGFUSE_BASE_URL ||
+    "https://cloud.langfuse.com",
   release: process.env.LANGFUSE_TRACING_RELEASE || "1.0.0",
   environment:
     process.env.LANGFUSE_TRACING_ENVIRONMENT ||
@@ -19,6 +23,7 @@ export const langfuse = new Langfuse({
     "development",
   flushAt: 1, // Flush immediately for debugging
   flushInterval: 1000, // Flush every 1 second
+  debug: true, // Enable debug logging to troubleshoot production tracing
 });
 
 // Ensure traces are flushed on shutdown (serverless environments)

@@ -49,7 +49,9 @@ To fix:
     }
   } else {
     const baseUrl =
-      process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com";
+      process.env.LANGFUSE_HOST ||
+      process.env.LANGFUSE_BASE_URL ||
+      "https://cloud.langfuse.com";
     const environment =
       process.env.VERCEL_ENV || process.env.NODE_ENV || "development";
     console.log(`✅ Langfuse configured: ${baseUrl} [${environment}]`);
