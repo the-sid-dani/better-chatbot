@@ -82,8 +82,9 @@ export function filterMCPToolsByAllowedMCPServers(
   tools: Record<string, VercelAIMcpTool>,
   allowedMcpServers?: Record<string, AllowedMCPServer>,
 ): Record<string, VercelAIMcpTool> {
+  // No restrictions specified = allow all available tools
   if (!allowedMcpServers || Object.keys(allowedMcpServers).length === 0) {
-    return {};
+    return tools;
   }
   return objectFlow(tools).filter((_tool) => {
     if (!allowedMcpServers[_tool._mcpServerId]?.tools) return false;

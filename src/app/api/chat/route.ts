@@ -323,12 +323,12 @@ const handler = async (request: Request) => {
         onStepFinish: async ({ stepResult, finishReason }) => {
           logger.info("🔧 Step finished:", {
             finishReason,
-            toolCallCount: stepResult.toolCalls?.length || 0,
-            toolResultCount: stepResult.toolResults?.length || 0,
+            toolCallCount: stepResult?.toolCalls?.length || 0,
+            toolResultCount: stepResult?.toolResults?.length || 0,
           });
 
           // Process tool results
-          if (stepResult.toolResults && stepResult.toolResults.length > 0) {
+          if (stepResult?.toolResults && stepResult.toolResults.length > 0) {
             for (const toolResult of stepResult.toolResults) {
               logger.info("📊 Tool result captured:", {
                 toolName: toolResult.toolName,

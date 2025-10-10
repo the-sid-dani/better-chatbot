@@ -44,7 +44,8 @@
     "playwright:install": "playwright install",
     "check": "pnpm lint:fix && pnpm check-types && pnpm test",
     "check:fast": "pnpm lint && pnpm check-types:fast",
-    "build:optimized": "NODE_OPTIONS=\"--max-old-space-size=8192\" cross-env NO_HTTPS='1' next build"
+    "build:optimized": "NODE_OPTIONS=\"--max-old-space-size=8192\" cross-env NO_HTTPS='1' next build",
+    "pre-deploy": "pnpm check && pnpm build:local && echo '\n✅ Safe to deploy! Run: git push'"
   },
   "dependencies": {
     "@ai-sdk-tools/artifacts": "^0.4.0",

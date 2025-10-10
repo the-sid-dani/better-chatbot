@@ -2,6 +2,7 @@ import { Think } from "ui/think";
 import { getTranslations } from "next-intl/server";
 import { FlipWords } from "ui/flip-words";
 import { BackgroundPaths } from "ui/background-paths";
+import Image from "next/image";
 
 export default async function AuthLayout({
   children,
@@ -16,14 +17,12 @@ export default async function AuthLayout({
               <BackgroundPaths />
             </div>
             <h1 className="text-xl font-semibold flex items-center gap-2 animate-in fade-in duration-1000">
-              <img
+              <Image
                 src="/samba-resources/logos/samba-logo-2024.png"
                 alt="Samba AI Logo"
+                width={32}
+                height={32}
                 className="h-8 w-auto"
-                onError={(e) => {
-                  // Fallback to Think component if image fails
-                  e.currentTarget.style.display = "none";
-                }}
               />
               <span>Samba AI</span>
             </h1>
