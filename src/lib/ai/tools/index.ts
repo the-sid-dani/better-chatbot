@@ -32,6 +32,9 @@ export enum DefaultToolName {
   CreateGeographicChart = "create_geographic_chart",
   CreateGaugeChart = "create_gauge_chart",
   CreateCalendarHeatmap = "create_calendar_heatmap",
+  // Specialized display tools
+  CreateBANChart = "create_ban_chart",
+  // CreateAIInsights = "create_ai_insights", // COMMENTED OUT - causing 70% pause issues
 }
 
 // Type constraints for compile-time validation
@@ -56,3 +59,17 @@ export type CompleteToolRegistry = {
 };
 
 export const SequentialThinkingToolName = "sequential-thinking";
+
+// Helper to get all chart and table tool names dynamically
+// Prevents hardcoding maintenance issues in voice/canvas integration
+export const getAllChartToolNames = (): string[] => {
+  return Object.values(DefaultToolName).filter((toolName) => {
+    // Include all chart tools and table tool
+    // Exclude code execution and web search tools
+    return (
+      toolName.includes("chart") ||
+      toolName.includes("heatmap") ||
+      toolName === DefaultToolName.CreateTable
+    );
+  });
+};

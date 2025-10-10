@@ -26,10 +26,7 @@ export const chartDescription = z
   .max(500, "Description too long (max 500 characters)")
   .optional();
 
-export const numericValue = z
-  .number()
-  .finite("Value must be a finite number")
-  .safe("Value must be within safe number range");
+export const numericValue = z.number().finite("Value must be a finite number");
 
 // Base chart data structures
 export const chartDataPointSchema = z.object({
@@ -255,6 +252,53 @@ export const gaugeChartDataSchema = z.object({
     )
     .max(5, "Too many gauge ranges (max 5)")
     .optional(),
+  description: chartDescription,
+});
+
+// BAN (Big Ass Number) Chart Schema
+export const banChartDataSchema = z.object({
+  title: chartTitle,
+  value: z
+    .union([z.number(), z.string()])
+    .describe("Main metric value to display"),
+  unit: sanitizedString
+    .optional()
+    .describe("Unit of measurement (e.g., '%', '$', 'users')"),
+  trend: z
+    .object({
+      value: z.number().describe("Trend percentage (positive or negative)"),
+      direction: z.enum(["up", "down", "neutral"]).describe("Trend direction"),
+      label: sanitizedString.optional().describe("Trend context label"),
+    })
+    .optional()
+    .describe("Optional trend indicator"),
+  comparison: z
+    .object({
+      value: z.union([z.number(), z.string()]).describe("Comparison value"),
+      label: sanitizedString.describe(
+        "Comparison label (e.g., 'vs last month')",
+      ),
+    })
+    .optional()
+    .describe("Optional comparison value"),
+  description: chartDescription,
+});
+
+// AI Insights Schema
+export const aiInsightsDataSchema = z.object({
+  title: chartTitle,
+  prompt: z.string().min(1).max(1000).describe("Analysis prompt or context"),
+  canvasData: z.any().optional().describe("Canvas data to analyze"),
+  insights: z
+    .string()
+    .min(1)
+    .max(5000)
+    .optional()
+    .describe("Pre-generated insights (up to 5000 chars)"),
+  severity: z
+    .enum(["info", "warning", "success", "error"])
+    .default("info")
+    .describe("Insight severity level"),
   description: chartDescription,
 });
 

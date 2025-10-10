@@ -56,7 +56,7 @@ export const BASE_THEMES = [
 export const OAUTH_REQUIRED_CODE = "OAUTH_REQUIRED";
 
 // Application name used for MCP client identification
-export const APP_NAME = "samba-orion";
+export const APP_NAME = "samba-ai";
 
 export const SUPPORTED_LOCALES = [
   {

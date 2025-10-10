@@ -623,3 +623,77 @@ export const convertToSavePart = <T extends UIMessagePart<any, any>>(
     })
     .unwrap();
 };
+
+/**
+ * Build UIMessage from streamText result for database persistence
+ * Extracts text and tool parts from completed stream
+ *
+ * @param result - streamText result object with steps and content
+ * @param originalMessage - Original user message for ID fallback
+ * @returns UIMessage ready for database persistence
+ */
+export function buildResponseMessageFromStreamResult(
+  result: any, // StreamTextResult from Vercel AI SDK
+  originalMessage: UIMessage,
+): UIMessage {
+  const parts: any[] = [];
+
+  // Extract text content from result
+  if (result.text && result.text.trim()) {
+    parts.push({
+      type: "text",
+      text: result.text,
+    });
+  }
+
+  // Extract tool calls and results from steps
+  if (result.steps && Array.isArray(result.steps)) {
+    for (const step of result.steps) {
+      // Process tool calls
+      if (step.toolCalls && Array.isArray(step.toolCalls)) {
+        for (const toolCall of step.toolCalls) {
+          const toolPart: any = {
+            type: `tool-${toolCall.toolName}`,
+            toolCallId: toolCall.toolCallId,
+            input: toolCall.args,
+            state: "call",
+          };
+          parts.push(toolPart);
+        }
+      }
+
+      // Process tool results - update corresponding call parts
+      if (step.toolResults && Array.isArray(step.toolResults)) {
+        for (const toolResult of step.toolResults) {
+          // Find the corresponding call part
+          const callPart = parts.find(
+            (p) =>
+              typeof p === "object" && p.toolCallId === toolResult.toolCallId,
+          );
+
+          if (callPart) {
+            // Update the existing part with result
+            callPart.state = "output-available";
+            callPart.output = toolResult.result;
+          } else {
+            // No call part found - create result part directly
+            parts.push({
+              type: `tool-${toolResult.toolName}`,
+              toolCallId: toolResult.toolCallId,
+              input: {}, // No input available if call wasn't found
+              state: "output-available",
+              output: toolResult.result,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // Build the response message
+  return {
+    id: result.id || originalMessage.id,
+    role: "assistant" as const,
+    parts,
+  };
+}

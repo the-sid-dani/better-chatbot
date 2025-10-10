@@ -13,6 +13,9 @@ import {
   PieChart as PieChartIcon,
   AreaChart as AreaChartIcon,
   Clock,
+  Hash,
+  Lightbulb,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,6 +34,8 @@ import { GeographicChart } from "./tool-invocation/geographic-chart";
 import { GaugeChart } from "./tool-invocation/gauge-chart";
 import { CalendarHeatmap } from "./tool-invocation/calendar-heatmap";
 import { InteractiveTable } from "./tool-invocation/interactive-table";
+import { BANChart } from "./tool-invocation/ban-chart";
+import { AIInsights } from "./tool-invocation/ai-insights";
 
 interface CanvasArtifact {
   id: string;
@@ -60,18 +65,38 @@ interface CanvasPanelProps {
   chartToolNames?: string[];
 }
 
-// Enhanced Loading placeholder component
+// Enhanced Loading placeholder component with timeout detection
 function LoadingPlaceholder({ artifact }: { artifact: CanvasArtifact }) {
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [showWarning, setShowWarning] = useState(false);
 
   useEffect(() => {
     const startTime = Date.now();
     const interval = setInterval(() => {
-      setElapsedTime(Date.now() - startTime);
+      const elapsed = Date.now() - startTime;
+      setElapsedTime(elapsed);
+
+      // Show warning after 15s
+      if (elapsed > 15000 && !showWarning) {
+        console.warn("⚠️ Chart generation taking longer than expected:", {
+          artifactId: artifact.id,
+          elapsedSeconds: Math.floor(elapsed / 1000),
+        });
+        setShowWarning(true);
+      }
+
+      // Auto-fail after 30s
+      if (elapsed > 30000) {
+        console.error("❌ Chart generation timeout:", {
+          artifactId: artifact.id,
+          elapsedSeconds: Math.floor(elapsed / 1000),
+        });
+        clearInterval(interval);
+      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [artifact.id, showWarning]);
 
   const formatElapsedTime = (ms: number) => {
     const seconds = Math.floor(ms / 1000);
@@ -89,11 +114,40 @@ function LoadingPlaceholder({ artifact }: { artifact: CanvasArtifact }) {
         return <PieChartIcon className="h-5 w-5 text-primary" />;
       case "area":
         return <AreaChartIcon className="h-5 w-5 text-primary" />;
+      case "ban":
+        return <Hash className="h-5 w-5 text-primary" />;
+      case "insights":
+        return <Lightbulb className="h-5 w-5 text-primary" />;
       default:
         return <BarChart3 className="h-5 w-5 text-primary" />;
     }
   };
 
+  // Show warning state after 15s
+  if (showWarning) {
+    return (
+      <Card className="h-full flex items-center justify-center p-6 border-warning">
+        <div className="flex flex-col items-center space-y-4 text-center">
+          <div className="relative">
+            <AlertTriangle className="w-12 h-12 text-warning animate-pulse" />
+          </div>
+          <div className="space-y-2">
+            <h3 className="font-medium text-warning">
+              Taking longer than expected
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Chart generation in progress ({formatElapsedTime(elapsedTime)})
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Will timeout after 30 seconds if not completed
+            </p>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  // Normal loading state
   return (
     <Card className="h-full flex items-center justify-center p-6">
       <div className="flex items-center space-x-4">
@@ -310,6 +364,12 @@ function ChartRenderer({ artifact }: { artifact: CanvasArtifact }) {
       case "calendar-heatmap":
       case "heatmap":
         return <CalendarHeatmap {...chartProps} />;
+      case "ban":
+      case "ban-chart":
+        return <BANChart {...chartProps} />;
+      case "insights":
+      case "ai-insights":
+        return <AIInsights {...chartProps} />;
       default:
         // Fallback to bar chart for unknown types
         console.warn(
@@ -377,7 +437,7 @@ function TableRenderer({ artifact }: { artifact: CanvasArtifact }) {
         <h3 className="font-semibold text-sm truncate">{artifact.title}</h3>
       </div>
       <div className="flex-1 p-4 overflow-hidden">
-        <div className="h-full max-h-[350px]">
+        <div className="h-full max-h-[350px] overflow-y-auto">
           <InteractiveTable {...tableProps} />
         </div>
       </div>
@@ -548,20 +608,31 @@ export function CanvasPanel({
                   artifacts.length >= 4 && "grid-cols-2",
                 )}
               >
-                {artifacts.map((artifact, _index) => (
-                  <div
-                    key={`chart-${artifact.id}`}
-                    className="bg-card/30 border border-border/20 rounded-2xl overflow-hidden min-h-[400px] flex flex-col"
-                  >
-                    {artifact.status === "loading" ? (
-                      <LoadingPlaceholder artifact={artifact} />
-                    ) : artifact.type === "chart" ? (
-                      <ChartRenderer artifact={artifact} />
-                    ) : artifact.type === "table" ? (
-                      <TableRenderer artifact={artifact} />
-                    ) : null}
-                  </div>
-                ))}
+                {artifacts.map((artifact, _index) => {
+                  console.log("🔍 Canvas Rendering Artifact:", {
+                    id: artifact.id,
+                    type: artifact.type,
+                    title: artifact.title,
+                    chartType: artifact.metadata?.chartType,
+                    toolName: artifact.metadata?.toolName,
+                    isTable: artifact.type === "table",
+                  });
+
+                  return (
+                    <div
+                      key={`chart-${artifact.id}`}
+                      className="bg-card/30 border border-border/20 rounded-2xl overflow-hidden min-h-[400px] flex flex-col"
+                    >
+                      {artifact.status === "loading" ? (
+                        <LoadingPlaceholder artifact={artifact} />
+                      ) : artifact.type === "table" ? (
+                        <TableRenderer artifact={artifact} />
+                      ) : artifact.type === "chart" ? (
+                        <ChartRenderer artifact={artifact} />
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : (

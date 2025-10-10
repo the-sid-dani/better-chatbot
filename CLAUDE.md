@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-**Samba-Orion** is an AI chatbot platform built on **Vercel AI SDK** with Next.js 15. This is a branded fork of "better-chatbot" that maintains upstream compatibility.
+**Samba-AI** is an AI chatbot platform built on **Vercel AI SDK** with Next.js 15. This is a branded fork of "better-chatbot" that maintains upstream compatibility.
 
 ## Core Features
 - Unified LLM interface (OpenAI, Anthropic, Google, xAI, Ollama, OpenRouter)

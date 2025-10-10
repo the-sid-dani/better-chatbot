@@ -78,6 +78,7 @@ export const pgChatRepository: ChatRepository = {
   ): Promise<
     (ChatThread & {
       lastMessageAt: number;
+      isVoice?: boolean;
     })[]
   > => {
     const threadWithLatestMessage = await db
@@ -89,6 +90,13 @@ export const pgChatRepository: ChatRepository = {
         lastMessageAt: sql<string>`MAX(${ChatMessageSchema.createdAt})`.as(
           "last_message_at",
         ),
+        firstMessageSource: sql<string | null>`(
+          SELECT metadata->>'source'
+          FROM ${ChatMessageSchema}
+          WHERE ${ChatMessageSchema.threadId} = ${ChatThreadSchema.id}
+          ORDER BY ${ChatMessageSchema.createdAt} ASC
+          LIMIT 1
+        )`.as("first_message_source"),
       })
       .from(ChatThreadSchema)
       .leftJoin(
@@ -108,6 +116,7 @@ export const pgChatRepository: ChatRepository = {
         lastMessageAt: row.lastMessageAt
           ? new Date(row.lastMessageAt).getTime()
           : 0,
+        isVoice: row.firstMessageSource === "voice",
       };
     });
   },

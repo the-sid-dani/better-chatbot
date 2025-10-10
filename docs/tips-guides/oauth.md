@@ -107,4 +107,4 @@ BETTER_AUTH_URL=https://yourdomain.com
 
 ## Done
 
-You can now sign in to Samba Orion using your Google, GitHub or Microsoft account. Restart the application to apply the changes.
+You can now sign in to Samba AI using your Google, GitHub or Microsoft account. Restart the application to apply the changes.

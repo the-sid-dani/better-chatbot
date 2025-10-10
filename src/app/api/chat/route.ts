@@ -45,6 +45,7 @@ import {
   loadWorkFlowTools,
   loadAppDefaultTools,
   convertToSavePart,
+  buildResponseMessageFromStreamResult,
 } from "./shared.chat";
 import {
   rememberAgentAction,
@@ -64,7 +65,24 @@ const handler = async (request: Request) => {
 
   const session = await getSession();
 
+  // CRITICAL: Set trace metadata IMMEDIATELY to avoid ghost traces
+  const environment =
+    process.env.VERCEL_ENV || process.env.NODE_ENV || "development";
+
+  updateActiveTrace({
+    name: "samba-ai-chat",
+    userId: session?.user.id || "anonymous",
+    metadata: {
+      environment,
+      tags: ["chat", `environment:${environment}`],
+    },
+  });
+
   if (!session?.user.id) {
+    updateActiveTrace({
+      output: { error: "Unauthorized" },
+      metadata: { errorType: "auth_error" },
+    });
     return new Response("Unauthorized", { status: 401 });
   }
 
@@ -93,6 +111,10 @@ const handler = async (request: Request) => {
   }
 
   if (thread!.userId !== session.user.id) {
+    updateActiveTrace({
+      output: { error: "Forbidden" },
+      metadata: { errorType: "auth_error", threadId: id },
+    });
     return new Response("Forbidden", { status: 403 });
   }
 
@@ -116,7 +138,7 @@ const handler = async (request: Request) => {
 
   const agent = await rememberAgentAction(agentId, session.user.id);
 
-  // Set session id and user id on active trace (following docs pattern)
+  // Extract input text for observation
   const inputText =
     message.parts?.find((part) => "text" in part && part.type === "text")
       ?.text || "";
@@ -125,19 +147,19 @@ const handler = async (request: Request) => {
     input: inputText,
   });
 
-  const environment =
-    process.env.VERCEL_ENV || process.env.NODE_ENV || "development";
-
   // Get MCP server list for metadata
   const mcpClients = await mcpClientsManager.getClients();
   const mcpServerList = mcpClients.map((client) => client.serverName);
 
+  // Update trace with full context and USE LANGFUSE SESSION for grouping
   updateActiveTrace({
-    name: agent?.name ? `agent-${agent.name}-chat` : "samba-orion-chat",
-    sessionId: id,
+    name: agent?.name ? `agent-${agent.name}-chat` : "samba-ai-chat",
+    sessionId: id, // This groups all messages in same conversation
     userId: session.user.id,
     input: inputText,
     metadata: {
+      threadId: id, // Add threadId for explicit grouping
+      messageId: message.id,
       agentId: agent?.id,
       agentName: agent?.name,
       provider: chatModel?.provider,
@@ -152,6 +174,7 @@ const handler = async (request: Request) => {
         `model:${chatModel?.model || "unknown"}`,
         ...(agent?.name ? [`agent:${agent.name}`] : []),
         `environment:${environment}`,
+        `thread:${id}`, // Add thread tag for filtering
       ],
     },
   });
@@ -282,44 +305,208 @@ const handler = async (request: Request) => {
         // Following the exact pattern from docs/langfuse-vercel-ai-sdk.md
         experimental_telemetry: {
           isEnabled: true,
+          // Enhanced function ID generation for detailed tracking
+          functionId: ({ type, toolName, toolCallId }) => {
+            if (type === "tool-call") {
+              return `tool-${toolName}-${toolCallId}-${Date.now()}`;
+            }
+            return undefined;
+          },
         },
         maxRetries: 2,
         tools: vercelAITooles,
         stopWhen: stepCountIs(10),
         toolChoice: "auto",
         abortSignal: request.signal,
+
+        // NEW: Capture tool results as they complete (PRIMARY FIX for Canvas chart rendering)
+        onStepFinish: async ({ stepResult, finishReason }) => {
+          logger.info("🔧 Step finished:", {
+            finishReason,
+            toolCallCount: stepResult.toolCalls?.length || 0,
+            toolResultCount: stepResult.toolResults?.length || 0,
+          });
+
+          // Process tool results
+          if (stepResult.toolResults && stepResult.toolResults.length > 0) {
+            for (const toolResult of stepResult.toolResults) {
+              logger.info("📊 Tool result captured:", {
+                toolName: toolResult.toolName,
+                toolCallId: toolResult.toolCallId,
+                hasResult: !!toolResult.result,
+              });
+
+              // Write tool result to stream for client processing
+              dataStream.write({
+                type: "tool-result",
+                toolCallId: toolResult.toolCallId,
+                toolName: toolResult.toolName,
+                result: toolResult.result,
+                timestamp: new Date().toISOString(),
+              });
+            }
+          }
+        },
+
         onFinish: async (result) => {
-          // Count tool executions from result
-          const toolExecutionCount =
-            result.steps?.reduce((count, step) => {
-              return (
-                count +
-                (step.toolCalls?.length || 0) +
-                (step.toolResults?.length || 0)
-              );
-            }, 0) || 0;
-
-          const mcpToolCount = Object.keys(MCP_TOOLS ?? {}).length;
-          const workflowToolCount = Object.keys(WORKFLOW_TOOLS ?? {}).length;
-          const appToolCount = Object.keys(APP_DEFAULT_TOOLS ?? {}).length;
-
-          updateActiveObservation({
-            output: result.content,
-          });
-          updateActiveTrace({
-            output: result.content,
-            metadata: {
-              toolExecutionCount,
-              mcpToolCount,
-              workflowToolCount,
-              appToolCount,
-              totalToolsAvailable:
-                mcpToolCount + workflowToolCount + appToolCount,
+          logger.info(
+            "🎯 onFinish START: Processing message persistence + observability",
+            {
+              threadId: thread!.id,
+              messageId: message.id,
+              timestamp: new Date().toISOString(),
             },
-          });
+          );
 
-          // End span manually after stream has finished
+          // ============================================
+          // PHASE 1: MESSAGE PERSISTENCE (CRITICAL)
+          // ============================================
+          try {
+            logger.info("💾 Building response message from stream result");
+
+            // Build assistant response message from streaming result
+            const responseMessage = buildResponseMessageFromStreamResult(
+              result,
+              message,
+            );
+
+            logger.info("💾 Persisting messages to database", {
+              userMessageId: message.id,
+              assistantMessageId: responseMessage.id,
+              threadId: thread!.id,
+              partCount: responseMessage.parts.length,
+            });
+
+            // Persist using existing logic from outer onFinish
+            if (responseMessage.id == message.id) {
+              // Single message case (response merged with user message)
+              await chatRepository.upsertMessage({
+                threadId: thread!.id,
+                ...responseMessage,
+                parts: responseMessage.parts.map(convertToSavePart),
+                metadata,
+              });
+              logger.info("✅ Single merged message persisted");
+            } else {
+              // Separate messages case (user + assistant)
+
+              // Persist user message
+              await chatRepository.upsertMessage({
+                threadId: thread!.id,
+                role: message.role,
+                parts: message.parts.map(convertToSavePart),
+                id: message.id,
+              });
+              logger.info("✅ User message persisted", { id: message.id });
+
+              // Persist assistant message
+              await chatRepository.upsertMessage({
+                threadId: thread!.id,
+                role: responseMessage.role,
+                id: responseMessage.id,
+                parts: responseMessage.parts.map(convertToSavePart),
+                metadata,
+              });
+              logger.info("✅ Assistant message persisted", {
+                id: responseMessage.id,
+              });
+            }
+
+            // Update agent timestamp if applicable
+            if (agent) {
+              await agentRepository.updateAgent(agent.id, session.user.id, {
+                updatedAt: new Date(),
+              } as any);
+              logger.info("✅ Agent timestamp updated", { agentId: agent.id });
+            }
+
+            logger.info("✅ MESSAGE PERSISTENCE COMPLETE");
+          } catch (persistError) {
+            // CRITICAL: Log but don't throw - allow observability to continue
+            logger.error("🚨 CRITICAL: Message persistence failed", {
+              error:
+                persistError instanceof Error
+                  ? persistError.message
+                  : String(persistError),
+              stack:
+                persistError instanceof Error ? persistError.stack : undefined,
+              messageId: message.id,
+              threadId: thread!.id,
+              userId: session.user.id,
+            });
+
+            // Future enhancement: Add retry logic or dead letter queue
+            // For now, continue with observability updates
+          }
+
+          // ============================================
+          // PHASE 2: LANGFUSE OBSERVABILITY
+          // ============================================
+          logger.info("📊 Updating Langfuse trace metadata");
+
+          try {
+            // Comprehensive tool execution summary
+            // Safety check: result.steps might be undefined in error conditions
+            const toolExecutions =
+              result?.steps?.flatMap((s) => s?.toolCalls ?? []) ?? [];
+            const toolResults =
+              result?.steps?.flatMap((s) => s?.toolResults ?? []) ?? [];
+
+            const executionSummary = {
+              totalSteps: result?.steps?.length || 0,
+              totalToolCalls: toolExecutions?.length || 0,
+              totalToolResults: toolResults?.length || 0,
+              toolNames:
+                toolExecutions?.map((t) => t?.toolName).filter(Boolean) || [],
+              completionRate: toolExecutions?.length
+                ? (toolResults?.length || 0) / toolExecutions.length
+                : 0,
+            };
+
+            const mcpToolCount = Object.keys(MCP_TOOLS ?? {}).length;
+            const workflowToolCount = Object.keys(WORKFLOW_TOOLS ?? {}).length;
+            const appToolCount = Object.keys(APP_DEFAULT_TOOLS ?? {}).length;
+
+            // Update Langfuse trace with detailed tool metadata
+            updateActiveObservation({
+              output: result.content,
+              metadata: {
+                toolExecutionSummary: executionSummary,
+              },
+            });
+
+            updateActiveTrace({
+              output: result.content,
+              metadata: {
+                ...executionSummary,
+                mcpToolCount,
+                workflowToolCount,
+                appToolCount,
+                totalToolsAvailable:
+                  mcpToolCount + workflowToolCount + appToolCount,
+              },
+            });
+
+            logger.info("✅ Langfuse metadata updated successfully");
+          } catch (observabilityError) {
+            logger.error("⚠️ Langfuse metadata update failed (non-critical)", {
+              error:
+                observabilityError instanceof Error
+                  ? observabilityError.message
+                  : String(observabilityError),
+            });
+            // Continue - observability failure shouldn't block response
+          }
+
+          // ============================================
+          // PHASE 3: CLEANUP
+          // ============================================
+          logger.info("🏁 Ending OpenTelemetry span");
           trace.getActiveSpan()?.end();
+
+          logger.info(
+            "✅ onFinish COMPLETE - All phases executed successfully",
+          );
         },
         onError: async (error) => {
           // Enhanced error handling for Vercel AI SDK 5.0
@@ -408,36 +595,7 @@ const handler = async (request: Request) => {
     },
 
     generateId: generateUUID,
-    onFinish: async ({ responseMessage }) => {
-      if (responseMessage.id == message.id) {
-        await chatRepository.upsertMessage({
-          threadId: thread!.id,
-          ...responseMessage,
-          parts: responseMessage.parts.map(convertToSavePart),
-          metadata,
-        });
-      } else {
-        await chatRepository.upsertMessage({
-          threadId: thread!.id,
-          role: message.role,
-          parts: message.parts.map(convertToSavePart),
-          id: message.id,
-        });
-        await chatRepository.upsertMessage({
-          threadId: thread!.id,
-          role: responseMessage.role,
-          id: responseMessage.id,
-          parts: responseMessage.parts.map(convertToSavePart),
-          metadata,
-        });
-      }
-
-      if (agent) {
-        agentRepository.updateAgent(agent.id, session.user.id, {
-          updatedAt: new Date(),
-        } as any);
-      }
-    },
+    // onFinish removed - now handled in streamText.onFinish above
     onError: handleError,
     originalMessages: messages,
   });

@@ -17,7 +17,7 @@ export default async function AuthLayout({
             </div>
             <h1 className="text-xl font-semibold flex items-center gap-2 animate-in fade-in duration-1000">
               <Think />
-              <span>Samba Orion</span>
+              <span>Samba AI</span>
             </h1>
             <div className="flex-1" />
             <FlipWords

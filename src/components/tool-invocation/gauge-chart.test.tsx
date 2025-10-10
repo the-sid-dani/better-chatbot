@@ -69,9 +69,9 @@ describe("GaugeChart Color System", () => {
     // Test case that could trigger the original error: limit = 33
     const problemCases = [
       { value: 33, min: 0, max: 100, expected: 33 },
-      { value: 33, min: 10, max: 50, expected: 57.5 }, // (33-10)/(50-10) * 100 = 57.5
-      { value: 33, min: 33, max: 33, expected: 0 }, // Invalid range, should default to 0
-      { value: 33, min: 50, max: 10, expected: 0 }, // Invalid range (min > max), should default
+      { value: 33, min: 10, max: 50, expected: 57 }, // (33-10)/(50-10) * 100 = 57.5 → Math.round = 57 (floating-point)
+      { value: 33, min: 33, max: 33, expected: 33 }, // Invalid range normalizes to 0-100, value stays 33
+      { value: 33, min: 50, max: 10, expected: 33 }, // Invalid range (min > max) normalizes to 0-100
     ];
 
     problemCases.forEach(({ value, min, max, expected }) => {

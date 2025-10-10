@@ -4,6 +4,7 @@ import { TextPart, getToolName, isToolUIPart } from "ai";
 import { DEFAULT_VOICE_TOOLS, UIMessageWithCompleted } from "lib/ai/speech";
 import logger from "lib/logger";
 import { generateUUID } from "lib/utils";
+import { getAllChartToolNames } from "lib/ai/tools";
 
 import {
   OPENAI_VOICE,
@@ -62,6 +63,9 @@ import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "ui/dialog";
 import JsonView from "ui/json-view";
 import { useShallow } from "zustand/shallow";
 import { EnabledMcpToolsDropdown } from "./enabled-mcp-tools-dropdown";
+import { useGenerateThreadTitle } from "@/hooks/queries/use-generate-thread-title";
+import { truncateString } from "lib/utils";
+import { mutate } from "swr";
 
 const prependTools = [
   {
@@ -76,13 +80,25 @@ const prependTools = [
 
 export function ChatBotVoice() {
   const t = useTranslations("Chat");
-  const [appStoreMutate, voiceChat, model] = appStore(
-    useShallow((state) => [state.mutate, state.voiceChat, state.chatModel]),
-  );
+  const [appStoreMutate, voiceChat, model, currentThreadId, threadList] =
+    appStore(
+      useShallow((state) => [
+        state.mutate,
+        state.voiceChat,
+        state.chatModel,
+        state.currentThreadId,
+        state.threadList,
+      ]),
+    );
 
   const [isClosing, setIsClosing] = useState(false);
   const startAudio = useRef<HTMLAudioElement>(null);
   const [useCompactView, setUseCompactView] = useState(true);
+
+  // Thread title generation (same as text chat)
+  const generateTitle = useGenerateThreadTitle({
+    threadId: currentThreadId || "",
+  });
 
   // Canvas state management - CRITICAL missing feature from voice chat
   const {
@@ -132,6 +148,33 @@ export function ChatBotVoice() {
 
   const endVoiceChat = useCallback(async () => {
     setIsClosing(true);
+
+    // Generate title for new voice threads (same logic as text chat)
+    if (currentThreadId && messages.length > 0) {
+      const prevThread = threadList.find((v) => v.id === currentThreadId);
+      const isNewThread =
+        !prevThread?.title &&
+        messages.filter((v) => v.role === "user" || v.role === "assistant")
+          .length < 3;
+
+      if (isNewThread) {
+        const part = messages
+          .slice(0, 2)
+          .flatMap((m) =>
+            m.parts
+              .filter((v) => v.type === "text")
+              .map(
+                (p: any) => `${m.role}: ${truncateString(p.text || "", 500)}`,
+              ),
+          );
+        if (part.length > 0) {
+          generateTitle(part.join("\n\n"));
+        }
+      } else {
+        mutate("/api/thread");
+      }
+    }
+
     await safe(() => stop());
     setIsClosing(false);
     isInitializedRef.current = false;
@@ -142,7 +185,7 @@ export function ChatBotVoice() {
         isOpen: false,
       },
     });
-  }, [messages, model]);
+  }, [messages, model, currentThreadId, threadList, generateTitle]);
 
   // ONE-TIME: Process all historical messages on voice chat open to restore charts
   useEffect(() => {
@@ -159,25 +202,8 @@ export function ChatBotVoice() {
       messageCount: messages.length,
     });
 
-    // Chart tool names (same list as real-time processing)
-    const chartToolNames = [
-      "create_chart",
-      "create_area_chart",
-      "create_scatter_chart",
-      "create_radar_chart",
-      "create_funnel_chart",
-      "create_treemap_chart",
-      "create_sankey_chart",
-      "create_radial_bar_chart",
-      "create_composed_chart",
-      "create_geographic_chart",
-      "create_gauge_chart",
-      "create_calendar_heatmap",
-      "create_bar_chart",
-      "create_line_chart",
-      "create_pie_chart",
-      "create_table",
-    ];
+    // Chart tool names - dynamically loaded to prevent maintenance issues
+    const chartToolNames = getAllChartToolNames();
 
     // Process ALL assistant messages (not just last one)
     messages.forEach((message) => {
@@ -216,7 +242,7 @@ export function ChatBotVoice() {
 
         // Create artifact (simplified logic for voice chat)
         const toolName = getToolName(part);
-        const isTableTool = toolName === "create_table";
+        const isTableTool = toolName === "createTable";
         const chartData = result.chartData;
         const chartType = result.chartType;
         const title = result.title;
@@ -233,8 +259,12 @@ export function ChatBotVoice() {
           data: chartData,
           status: "completed" as const,
           metadata: {
-            chartType: chartType || "bar",
-            dataPoints: result.dataPoints || chartData?.data?.length || 0,
+            chartType: isTableTool ? "table" : chartType || "bar",
+            dataPoints:
+              result.dataPoints ||
+              chartData?.data?.length ||
+              chartData?.columns?.length ||
+              0,
             toolName,
             lastUpdated: new Date().toISOString(),
             isVoiceOriginated: true,
@@ -287,26 +317,8 @@ export function ChatBotVoice() {
         });
 
         // Look for all chart tools in any state (same as regular chat)
-        const chartToolNames = [
-          "create_chart",
-          "create_area_chart",
-          "create_scatter_chart",
-          "create_radar_chart",
-          "create_funnel_chart",
-          "create_treemap_chart",
-          "create_sankey_chart",
-          "create_radial_bar_chart",
-          "create_composed_chart",
-          "create_geographic_chart",
-          "create_gauge_chart",
-          "create_calendar_heatmap",
-          // Basic artifact tools
-          "create_bar_chart",
-          "create_line_chart",
-          "create_pie_chart",
-          // Table artifact tool
-          "create_table",
-        ];
+        // Dynamically loaded to prevent maintenance issues
+        const chartToolNames = getAllChartToolNames();
 
         const chartTools = lastMessage.parts.filter(
           (part) =>
@@ -395,8 +407,10 @@ export function ChatBotVoice() {
             (a) => a.id === artifactId || a.id === part.toolCallId,
           );
 
-          // Determine if this is a table tool
-          const isTableTool = toolName === "create_table";
+          // Determine if this is a table tool or special chart type
+          const isTableTool = toolName === "createTable";
+          const isBANChart = toolName === "create_ban_chart";
+          const isGaugeChart = toolName === "create_gauge_chart";
 
           if (!existingArtifact) {
             logger.info(
@@ -408,6 +422,7 @@ export function ChatBotVoice() {
                   result.artifact?.title ||
                   result.structuredContent?.result?.[0]?.artifact?.title,
                 toolName,
+                chartType: result.chartType,
               },
             );
 
@@ -439,41 +454,75 @@ export function ChatBotVoice() {
                   artifactContent.type.replace("-chart", "");
                 title = artifactData.title;
 
-                chartData = {
-                  chartType: chartType,
-                  title: artifactContent.title,
-                  data: artifactContent.data || [],
-                  description: artifactContent.description,
-                  yAxisLabel: artifactContent.yAxisLabel,
-                  xAxisLabel: artifactContent.xAxisLabel,
-                  // Add additional properties for special chart types
-                  areaType: artifactContent.areaType,
-                  showBubbles: artifactContent.showBubbles,
-                  geoType: artifactContent.geoType,
-                  colorScale: artifactContent.colorScale,
-                  value: artifactContent.value,
-                  minValue: artifactContent.minValue,
-                  maxValue: artifactContent.maxValue,
-                  gaugeType: artifactContent.gaugeType,
-                  unit: artifactContent.unit,
-                  thresholds: artifactContent.thresholds,
-                  nodes: artifactContent.nodes,
-                  links: artifactContent.links,
-                  innerRadius: artifactContent.innerRadius,
-                  outerRadius: artifactContent.outerRadius,
-                  startDate: artifactContent.startDate,
-                  endDate: artifactContent.endDate,
-                };
+                // Special handling for BAN and Gauge charts (no data array)
+                if (isBANChart || chartType === "ban") {
+                  chartData = {
+                    chartType: "ban",
+                    title: artifactContent.title,
+                    value: artifactContent.value,
+                    unit: artifactContent.unit,
+                    trend: artifactContent.trend,
+                    comparison: artifactContent.comparison,
+                    description: artifactContent.description,
+                  };
+                } else if (isGaugeChart || chartType === "gauge") {
+                  chartData = {
+                    chartType: "gauge",
+                    title: artifactContent.title,
+                    value: artifactContent.value,
+                    minValue: artifactContent.minValue,
+                    maxValue: artifactContent.maxValue,
+                    gaugeType: artifactContent.gaugeType,
+                    unit: artifactContent.unit,
+                    thresholds: artifactContent.thresholds,
+                    description: artifactContent.description,
+                  };
+                } else {
+                  // Standard charts with data arrays
+                  chartData = {
+                    chartType: chartType,
+                    title: artifactContent.title,
+                    data: artifactContent.data || [],
+                    description: artifactContent.description,
+                    yAxisLabel: artifactContent.yAxisLabel,
+                    xAxisLabel: artifactContent.xAxisLabel,
+                    // Add additional properties for special chart types
+                    areaType: artifactContent.areaType,
+                    showBubbles: artifactContent.showBubbles,
+                    geoType: artifactContent.geoType,
+                    colorScale: artifactContent.colorScale,
+                    nodes: artifactContent.nodes,
+                    links: artifactContent.links,
+                    innerRadius: artifactContent.innerRadius,
+                    outerRadius: artifactContent.outerRadius,
+                    startDate: artifactContent.startDate,
+                    endDate: artifactContent.endDate,
+                  };
+                }
               }
             } else {
-              // Handle original format
-              const structuredResult = result.structuredContent?.result?.[0];
-              chartData = result.chartData || structuredResult?.chartData;
-              chartType = result.chartType || structuredResult?.chartType;
-              title =
-                result.title ||
-                structuredResult?.title ||
-                structuredResult?.message;
+              // Handle original format (direct from tool result)
+              chartType = result.chartType;
+              title = result.title;
+
+              // CRITICAL: Set artifactType for tables
+              if (isTableTool) {
+                artifactType = "table";
+              }
+
+              // Use chartData directly for BAN/gauge charts (already in correct format)
+              if (
+                isBANChart ||
+                chartType === "ban" ||
+                isGaugeChart ||
+                chartType === "gauge"
+              ) {
+                chartData = result.chartData;
+              } else {
+                // For standard charts, use chartData or fallback
+                const structuredResult = result.structuredContent?.result?.[0];
+                chartData = result.chartData || structuredResult?.chartData;
+              }
             }
 
             const artifact = {
@@ -488,8 +537,12 @@ export function ChatBotVoice() {
               data: chartData,
               status: "completed" as const,
               metadata: {
-                chartType: chartType || "bar",
-                dataPoints: result.dataPoints || chartData?.data?.length || 0,
+                chartType: isTableTool ? "table" : chartType || "bar",
+                dataPoints:
+                  result.dataPoints ||
+                  chartData?.data?.length ||
+                  chartData?.columns?.length ||
+                  0,
                 toolName,
                 lastUpdated: new Date().toISOString(),
                 isVoiceOriginated: true, // Mark as voice-originated

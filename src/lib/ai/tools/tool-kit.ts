@@ -23,6 +23,8 @@ import { geographicChartArtifactTool } from "./artifacts/geographic-chart-tool";
 import { gaugeChartArtifactTool } from "./artifacts/gauge-chart-tool";
 import { calendarHeatmapArtifactTool } from "./artifacts/calendar-heatmap-tool";
 import { tableArtifactTool } from "./artifacts/table-artifact-tool";
+import { banChartArtifactTool } from "./artifacts/ban-chart-tool";
+import { aiInsightsArtifactTool } from "./artifacts/ai-insights-tool";
 import { barChartArtifactTool } from "./artifacts/bar-chart-tool";
 import { lineChartArtifactTool } from "./artifacts/line-chart-tool";
 import { pieChartArtifactTool } from "./artifacts/pie-chart-tool";
@@ -65,6 +67,9 @@ export const APP_DEFAULT_TOOL_KIT: Record<
     [DefaultToolName.CreateGeographicChart]: geographicChartArtifactTool,
     [DefaultToolName.CreateGaugeChart]: gaugeChartArtifactTool,
     [DefaultToolName.CreateCalendarHeatmap]: calendarHeatmapArtifactTool,
+    // Specialized display tools
+    [DefaultToolName.CreateBANChart]: banChartArtifactTool,
+    // [DefaultToolName.CreateAIInsights]: aiInsightsArtifactTool, // COMMENTED OUT - causing 70% pause issues
   },
 } as const;
 
@@ -199,6 +204,45 @@ const validateChartTools = () => {
   );
   return true;
 };
+
+/**
+ * List of all app default tool names for routing logic
+ * Used by voice chat to distinguish app tools from MCP tools
+ */
+export const APP_DEFAULT_TOOL_NAMES = [
+  // Chart tools (16 total - 15 active + 1 commented)
+  "create_bar_chart",
+  "create_line_chart",
+  "create_pie_chart",
+  "create_area_chart",
+  "create_scatter_chart",
+  "create_radar_chart",
+  "create_funnel_chart",
+  "create_treemap_chart",
+  "create_sankey_chart",
+  "create_radial_bar_chart",
+  "create_composed_chart",
+  "create_geographic_chart",
+  "create_gauge_chart",
+  "create_calendar_heatmap",
+  "create_ban_chart",
+  "createTable",
+  // Code execution tools
+  "mini-javascript-execution",
+  "python-execution",
+  // Web search tools
+  "webSearch",
+  "webContent",
+  // HTTP tool
+  "http",
+] as const;
+
+/**
+ * Check if tool name is an app default tool (vs MCP tool)
+ */
+export function isAppDefaultTool(toolName: string): boolean {
+  return APP_DEFAULT_TOOL_NAMES.includes(toolName as any);
+}
 
 // Development-only validation (non-blocking for production builds)
 if (process.env.NODE_ENV === "development") {

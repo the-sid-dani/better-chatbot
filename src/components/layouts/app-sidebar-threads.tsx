@@ -11,7 +11,13 @@ import {
 import { SidebarGroupContent, SidebarMenu, SidebarMenuItem } from "ui/sidebar";
 import { SidebarGroup } from "ui/sidebar";
 import { ThreadDropdown } from "../thread-dropdown";
-import { ChevronDown, ChevronUp, MoreHorizontal, Trash } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Mic,
+  MoreHorizontal,
+  Trash,
+} from "lucide-react";
 import { useMounted } from "@/hooks/use-mounted";
 import { appStore } from "@/app/store";
 import { Button } from "ui/button";
@@ -267,17 +273,22 @@ export function AppSidebarThreads() {
                                     href={`/chat/${thread.id}`}
                                     className="flex items-center"
                                   >
-                                    {generatingTitleThreadIds.includes(
-                                      thread.id,
-                                    ) ? (
-                                      <TextShimmer className="truncate min-w-0">
-                                        {thread.title || "New Chat"}
-                                      </TextShimmer>
-                                    ) : (
-                                      <p className="truncate min-w-0">
-                                        {thread.title || "New Chat"}
-                                      </p>
-                                    )}
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      {thread.isVoice && (
+                                        <Mic className="h-3 w-3 text-primary flex-shrink-0" />
+                                      )}
+                                      {generatingTitleThreadIds.includes(
+                                        thread.id,
+                                      ) ? (
+                                        <TextShimmer className="truncate min-w-0">
+                                          {thread.title || "New Chat"}
+                                        </TextShimmer>
+                                      ) : (
+                                        <p className="truncate min-w-0">
+                                          {thread.title || "New Chat"}
+                                        </p>
+                                      )}
+                                    </div>
                                   </Link>
                                 </SidebarMenuButton>
                               </TooltipTrigger>

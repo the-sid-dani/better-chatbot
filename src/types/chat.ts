@@ -22,6 +22,7 @@ export type ChatThread = {
   title: string;
   userId: string;
   createdAt: Date;
+  isVoice?: boolean;
 };
 
 export type ChatMessage = {

@@ -1,8 +1,8 @@
-# 🏗️ **Samba Orion: Vercel AI SDK-Centric Architecture**
+# 🏗️ **Samba AI: Vercel AI SDK-Centric Architecture**
 
 ## 📋 **Executive Summary**
 
-Samba Orion is built **entirely on Vercel AI SDK** as the foundational AI framework, providing a unified interface to multiple LLM providers with comprehensive observability through Langfuse SDK v4 integration. Every AI operation, tool execution, and streaming response leverages Vercel AI SDK abstractions.
+Samba AI is built **entirely on Vercel AI SDK** as the foundational AI framework, providing a unified interface to multiple LLM providers with comprehensive observability through Langfuse SDK v4 integration. Every AI operation, tool execution, and streaming response leverages Vercel AI SDK abstractions.
 
 ## 🎯 **Architectural Foundation**
 

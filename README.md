@@ -1,14 +1,16 @@
-# Samba Orion
+<img width="1184" height="576" alt="thumbnail" loading="lazy" src="https://github.com/user-attachments/assets/d6ba80ff-a62a-4920-b266-85c4a89d6076" />
+
+# Samba AI
 
 [![MCP Supported](https://img.shields.io/badge/MCP-Supported-00c853)](https://modelcontextprotocol.io/introduction)
 [![Local First](https://img.shields.io/badge/Local-First-blue)](https://localfirstweb.dev/)
 [![Built on Better-Chatbot](https://img.shields.io/badge/Built_on-Better--Chatbot-blue)](https://github.com/cgoinglove/better-chatbot)
 
-[![Deploy with Vercel](https://vercel.com/button)](<https://vercel.com/new/clone?repository-url=https://github.com/cgoinglove/better-chatbot&env=BETTER_AUTH_SECRET&env=OPENAI_API_KEY&env=GOOGLE_GENERATIVE_AI_API_KEY&env=ANTHROPIC_API_KEY&envDescription=BETTER_AUTH_SECRET+is+required+(enter+any+secret+value).+At+least+one+LLM+provider+API+key+(OpenAI,+Claude,+or+Google)+is+required,+but+you+can+add+all+of+them.+See+the+link+below+for+details.&envLink=https://github.com/cgoinglove/better-chatbot/blob/main/.env.example&demo-title=samba-orion&demo-description=A+comprehensive+AI+platform+built+with+Next.js+and+the+AI+SDK+by+Vercel.&products=[{"type":"integration","protocol":"storage","productSlug":"neon","integrationSlug":"neon"},{"type":"integration","protocol":"storage","productSlug":"upstash-kv","integrationSlug":"upstash"}]>)
+[![Deploy with Vercel](https://vercel.com/button)](<https://vercel.com/new/clone?repository-url=https://github.com/cgoinglove/better-chatbot&env=BETTER_AUTH_SECRET&env=OPENAI_API_KEY&env=GOOGLE_GENERATIVE_AI_API_KEY&env=ANTHROPIC_API_KEY&envDescription=BETTER_AUTH_SECRET+is+required+(enter+any+secret+value).+At+least+one+LLM+provider+API+key+(OpenAI,+Claude,+or+Google)+is+required,+but+you+can+add+all+of+them.+See+the+link+below+for+details.&envLink=https://github.com/cgoinglove/better-chatbot/blob/main/.env.example&demo-title=samba-ai&demo-description=A+comprehensive+AI+platform+built+with+Next.js+and+the+AI+SDK+by+Vercel.&products=[{"type":"integration","protocol":"storage","productSlug":"neon","integrationSlug":"neon"},{"type":"integration","protocol":"storage","productSlug":"upstash-kv","integrationSlug":"upstash"}]>)
 
-🚀 **[Live Demo](https://samba-orion.vercel.app/)** | Experience the future of AI assistance
+🚀 **[Live Demo](https://samba-ai.vercel.app/)** | Experience the future of AI assistance
 
-**Samba Orion** is a comprehensive AI platform where teams and individuals can harness the full power of artificial intelligence through advanced conversations, data visualization, workflow automation, and intelligent tooling. Built on cutting-edge technology to rival ChatGPT, Claude, and other leading AI assistants.
+**Samba AI** is a comprehensive AI platform where teams and individuals can harness the full power of artificial intelligence through advanced conversations, data visualization, workflow automation, and intelligent tooling. Built on cutting-edge technology to rival ChatGPT, Claude, and other leading AI assistants.
 
 ## ✨ Key Features
 
@@ -104,7 +106,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser to get start
 
 ## Preview
 
-Get a feel for the comprehensive capabilities — here's what makes Samba Orion unique.
+Get a feel for the comprehensive capabilities — here's what makes Samba AI unique.
 
 ### 📊 Canvas Workspace & Multi-Chart Dashboards
 
@@ -329,7 +331,7 @@ pnpm i
 # 2. Configure .env (auto-generated)
 # Add at least one LLM provider API key (OPENAI_API_KEY recommended)
 
-# 3. Deploy with Docker Compose (includes PostgreSQL, Redis, and Samba Orion)
+# 3. Deploy with Docker Compose (includes PostgreSQL, Redis, and Samba AI)
 pnpm docker-compose:up
 
 # View logs
@@ -424,7 +426,7 @@ BETTER_AUTH_URL=https://localhost:3000                # Set for HTTPS deployment
 
 ## 📘 Setup Guides
 
-Comprehensive guides for deploying and configuring Samba Orion in various environments.
+Comprehensive guides for deploying and configuring Samba AI in various environments.
 
 ### [🔌 MCP Server Setup & Tool Testing](./docs/tips-guides/mcp-server-setup-and-tool-testing.md)
 Complete guide to adding, configuring, and testing MCP servers for external tool integration.
@@ -479,7 +481,7 @@ Vote on features or suggest new ones in [GitHub Issues](https://github.com/cgoin
 
 ## 🙌 Contributing
 
-We welcome all contributions! From bug reports to feature improvements, everything helps make Samba Orion even better.
+We welcome all contributions! From bug reports to feature improvements, everything helps make Samba AI even better.
 
 > **⚠️ Please read our [Contributing Guide](./CONTRIBUTING.md) before submitting Pull Requests.** This ensures smooth collaboration and saves everyone time.
 
@@ -518,6 +520,6 @@ Join our Discord community for:
 
 ---
 
-**Samba Orion** - Empowering individuals and teams with production-ready AI conversations, advanced tooling, and comprehensive observability. Built with ❤️ on the foundation of the open-source [better-chatbot](https://github.com/cgoinglove/better-chatbot) project.
+**Samba AI** - Empowering individuals and teams with production-ready AI conversations, advanced tooling, and comprehensive observability. Built with ❤️ on the foundation of the open-source [better-chatbot](https://github.com/cgoinglove/better-chatbot) project.
 
 **[⭐ Star on GitHub](https://github.com/cgoinglove/better-chatbot)** | **[🚀 Deploy on Vercel](https://vercel.com/new/clone?repository-url=https://github.com/cgoinglove/better-chatbot)** | **[💬 Join Discord](https://discord.gg/gCRu69Upnp)**

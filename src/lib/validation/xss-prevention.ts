@@ -263,6 +263,29 @@ export function sanitizeStringArray(arr: unknown, maxLength = 100): string[] {
 }
 
 /**
+ * Sanitize long-form content (AI insights, descriptions, etc.)
+ * More permissive than labels - allows longer text but still prevents XSS
+ */
+export function sanitizeLongFormContent(content: unknown): string {
+  if (typeof content !== "string") {
+    throw new Error("Content must be a string");
+  }
+
+  if (content.length > 10000) {
+    throw new Error("Content too long (max 10000 characters)");
+  }
+
+  const sanitized = DOMPurify.sanitize(content, CHART_PURIFY_CONFIG);
+
+  // Check for XSS attempts
+  if (containsXSSPattern(sanitized)) {
+    throw new Error("Content contains potentially malicious patterns");
+  }
+
+  return sanitized;
+}
+
+/**
  * Comprehensive chart data sanitization
  * Sanitizes all string fields in chart data recursively
  */

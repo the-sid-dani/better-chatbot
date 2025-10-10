@@ -18,6 +18,13 @@ import { useShallow } from "zustand/shallow";
 import { useTheme } from "next-themes";
 import { extractMCPToolId } from "lib/ai/mcp/mcp-tool-id";
 import { callMcpToolByServerNameAction } from "@/app/api/mcp/actions";
+import { isAppDefaultTool } from "lib/ai/tools/tool-kit";
+import {
+  callAppDefaultToolAction,
+  persistVoiceMessageAction,
+  loadThreadMessagesAction,
+} from "@/app/api/chat/openai-realtime/actions";
+import logger from "lib/logger";
 
 export const OPENAI_VOICE = {
   Alloy: "alloy",
@@ -93,11 +100,17 @@ export function useOpenAIVoiceChat(
     agentId: propsAgentId,
   } = props || {};
 
-  const [storeAgentId, allowedAppDefaultToolkit, allowedMcpServers] = appStore(
+  const [
+    storeAgentId,
+    allowedAppDefaultToolkit,
+    allowedMcpServers,
+    currentThreadId,
+  ] = appStore(
     useShallow((state) => [
       state.voiceChat.agentId,
       state.allowedAppDefaultToolkit,
       state.allowedMcpServers,
+      state.currentThreadId,
     ]),
   );
 
@@ -117,6 +130,18 @@ export function useOpenAIVoiceChat(
 
   const { setTheme } = useTheme();
   const tracks = useRef<RTCRtpSender[]>([]);
+
+  // ThreadId state management for voice chat persistence
+  const [threadId, setThreadId] = useState<string>(currentThreadId || "");
+
+  // Initialize or reuse thread
+  useEffect(() => {
+    if (!threadId && currentThreadId) {
+      setThreadId(currentThreadId);
+    } else if (!threadId) {
+      setThreadId(generateUUID());
+    }
+  }, [currentThreadId, threadId]);
 
   const startListening = useCallback(async () => {
     try {
@@ -224,23 +249,53 @@ export function useOpenAIVoiceChat(
       let toolResult: any = "success";
       stopListening();
       const toolArgs = JSON.parse(args);
+
+      // 3-TIER ROUTING LOGIC
       if (DEFAULT_VOICE_TOOLS.some((t) => t.name === toolName)) {
+        // Tier 1: Voice-specific tools (changeBrowserTheme)
         switch (toolName) {
           case "changeBrowserTheme":
             setTheme(toolArgs?.theme);
             break;
         }
+      } else if (isAppDefaultTool(toolName)) {
+        // Tier 2: App default tools (charts, code, web search)
+        toolResult = await callAppDefaultToolAction(toolName, toolArgs);
       } else {
+        // Tier 3: MCP tools (has server prefix)
         const toolId = extractMCPToolId(toolName);
-
         toolResult = await callMcpToolByServerNameAction(
           toolId.serverName,
           toolId.toolName,
           toolArgs,
         );
       }
+
       startListening();
-      const resultText = JSON.stringify(toolResult).trim();
+
+      // Safe JSON truncation - preserve structure or use summary
+      let outputText: string;
+      try {
+        const resultText = JSON.stringify(toolResult);
+
+        // If result is small enough, use it directly
+        if (resultText.length <= 15000) {
+          outputText = resultText;
+        } else {
+          // For large results (charts with lots of data), send summary instead
+          const summary = {
+            status: toolResult.status || "success",
+            chartType: toolResult.chartType,
+            title: toolResult.title,
+            dataPointCount: toolResult.chartData?.data?.length || 0,
+            message: "Chart created successfully - full data in Canvas",
+          };
+          outputText = JSON.stringify(summary);
+        }
+      } catch (_err) {
+        // Fallback if JSON.stringify fails
+        outputText = "Tool executed successfully";
+      }
 
       const event = {
         type: "conversation.item.create",
@@ -248,7 +303,7 @@ export function useOpenAIVoiceChat(
         item: {
           type: "function_call_output",
           call_id: callId,
-          output: resultText.slice(0, 15000),
+          output: outputText,
         },
       };
       updateUIMessage(id, (prev) => {
@@ -265,16 +320,40 @@ export function useOpenAIVoiceChat(
           parts: [part],
         };
       });
+
+      // Persist tool call with result
+      if (threadId) {
+        try {
+          await persistVoiceMessageAction({
+            threadId,
+            id: id,
+            role: "assistant",
+            parts: [
+              {
+                type: `tool-${toolName}`,
+                toolCallId: callId,
+                input: toolArgs,
+                state: "output-available",
+                output: toolResult,
+              },
+            ],
+            metadata: { source: "voice" },
+          });
+        } catch (error) {
+          logger.error("Failed to persist voice tool call:", error);
+        }
+      }
+
       dataChannel.current?.send(JSON.stringify(event));
 
       dataChannel.current?.send(JSON.stringify({ type: "response.create" }));
       dataChannel.current?.send(JSON.stringify({ type: "response.create" }));
     },
-    [updateUIMessage],
+    [updateUIMessage, setTheme, startListening, stopListening, threadId, voice],
   );
 
   const handleServerEvent = useCallback(
-    (event: OpenAIRealtimeServerEvent) => {
+    async (event: OpenAIRealtimeServerEvent) => {
       // COMPREHENSIVE DEBUG LOGGING - Log ALL events to understand flow
       console.log("📡 OpenAI Event Received:", {
         type: event.type,
@@ -358,15 +437,31 @@ export function useOpenAIVoiceChat(
             transcript: (event as any).transcript,
             event: event,
           });
+          const transcript = (event as any).transcript || "...speaking";
           updateUIMessage(event.item_id, {
             parts: [
               {
                 type: "text",
-                text: (event as any).transcript || "...speaking",
+                text: transcript,
               },
             ],
             completed: true,
           });
+
+          // Persist user message
+          if (threadId) {
+            try {
+              await persistVoiceMessageAction({
+                threadId,
+                id: event.item_id,
+                role: "user",
+                parts: [{ type: "text", text: transcript }],
+                metadata: { voice, source: "voice" },
+              });
+            } catch (error) {
+              logger.error("Failed to persist user voice message:", error);
+            }
+          }
           break;
         }
         case "response.output_audio_transcript.delta": {
@@ -408,15 +503,31 @@ export function useOpenAIVoiceChat(
           break;
         }
         case "response.output_audio_transcript.done": {
+          const assistantTranscript = event.transcript || "";
           updateUIMessage(event.item_id, (prev) => {
             const textPart = prev.parts.find((p) => p.type == "text");
             if (!textPart) return prev;
-            textPart.text = event.transcript || "";
+            textPart.text = assistantTranscript;
             return {
               ...prev,
               completed: true,
             };
           });
+
+          // Persist assistant message
+          if (threadId) {
+            try {
+              await persistVoiceMessageAction({
+                threadId,
+                id: event.item_id,
+                role: "assistant",
+                parts: [{ type: "text", text: assistantTranscript }],
+                metadata: { source: "voice" },
+              });
+            } catch (error) {
+              logger.error("Failed to persist assistant voice message:", error);
+            }
+          }
           break;
         }
         case "response.function_call_arguments.done": {
@@ -472,7 +583,7 @@ export function useOpenAIVoiceChat(
         }
       }
     },
-    [clientFunctionCall, updateUIMessage],
+    [clientFunctionCall, updateUIMessage, threadId, voice],
   );
 
   const start = useCallback(async () => {
@@ -481,6 +592,38 @@ export function useOpenAIVoiceChat(
     setError(null);
     setMessages([]);
     try {
+      // Only load history if thread exists, don't create empty thread yet
+      let historyMessages: any[] = [];
+      if (threadId) {
+        // Try to load existing thread messages (read-only check)
+        // If thread doesn't exist, loadThreadMessagesAction will return empty array
+        // Thread will be created by persistVoiceMessageAction on first actual message
+        try {
+          historyMessages = await loadThreadMessagesAction(threadId, 20);
+          if (historyMessages.length > 0) {
+            setMessages(historyMessages);
+            logger.info(
+              `Loaded ${historyMessages.length} historical messages for existing thread`,
+            );
+          } else {
+            logger.info(`Thread ${threadId} exists but has no messages yet`);
+            setMessages([]);
+          }
+        } catch (_error) {
+          // Thread doesn't exist yet - this is fine
+          logger.info(
+            `Thread ${threadId} doesn't exist yet - will be created when user speaks`,
+          );
+          setMessages([]);
+        }
+      } else {
+        // New session - thread will be created on first message persistence
+        logger.info(
+          `New voice session - thread will be created on first message`,
+        );
+        setMessages([]);
+      }
+
       const session = await createSession();
       console.log({ session });
 
@@ -517,10 +660,20 @@ export function useOpenAIVoiceChat(
           const event = JSON.parse(e.data) as OpenAIRealtimeServerEvent;
           handleServerEvent(event);
         } catch (err) {
-          console.error({
-            data: e.data,
-            error: err,
-          });
+          // OpenAI sometimes sends malformed JSON for large tool outputs
+          // This is non-critical - the actual tool result is already persisted
+          if (err instanceof SyntaxError && err.message.includes("JSON")) {
+            logger.warn("OpenAI sent malformed JSON event (non-critical)", {
+              errorMessage: err.message,
+              dataPreview: e.data?.substring(0, 200),
+            });
+          } else {
+            // Unexpected error type - log it
+            console.error("WebRTC message parse error:", {
+              data: e.data,
+              error: err,
+            });
+          }
         }
       });
       dc.addEventListener("open", () => {
@@ -528,7 +681,40 @@ export function useOpenAIVoiceChat(
         // Reset session update tracking
         sessionUpdatedReceived.current = false;
 
-        // Send session configuration in sequential updates to avoid overwhelming OpenAI
+        // Send conversation history BEFORE session configuration
+        if (historyMessages.length > 0) {
+          console.log(
+            `📤 Sending ${historyMessages.length} historical messages to OpenAI`,
+          );
+
+          for (const msg of historyMessages) {
+            const textContent =
+              msg.parts.find((p) => p.type === "text")?.text || "";
+
+            // Skip empty messages
+            if (!textContent.trim()) continue;
+
+            const historyEvent = {
+              type: "conversation.item.create",
+              item: {
+                type: "message",
+                role: msg.role,
+                content: [
+                  {
+                    type: msg.role === "user" ? "input_text" : "text",
+                    text: textContent,
+                  },
+                ],
+              },
+            };
+
+            dc.send(JSON.stringify(historyEvent));
+          }
+
+          console.log("✅ Conversation history sent to OpenAI");
+        }
+
+        // THEN send session configuration in sequential updates to avoid overwhelming OpenAI
         if (session.sessionConfig) {
           console.log("📤 Starting split configuration updates:", {
             hasInstructions: !!session.sessionConfig.instructions,
@@ -687,7 +873,7 @@ export function useOpenAIVoiceChat(
       setIsListening(false);
       setIsLoading(false);
     }
-  }, [isActive, isLoading, createSession, handleServerEvent, voice]);
+  }, [isActive, isLoading, createSession, handleServerEvent, voice, threadId]);
 
   const stop = useCallback(async () => {
     try {

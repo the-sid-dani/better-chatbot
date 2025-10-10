@@ -13,6 +13,8 @@ The AI agent only gets the context you are appending to the PRP and training dat
 
 **CRITICAL: Web search and Serena MCP server exploration are your best friends. Use them extensively throughout this process.**
 
+ 
+
 ## Research Process
 
 1. **Codebase Analysis Using Serena MCP Server (CRITICAL)**
@@ -80,6 +82,7 @@ Using PRPs/templates/prp_base.md as template:
 - Reference real files for patterns
 - Include error handling strategy
 - list tasks to be completed to fullfill the PRP in the order they should be completed
+- MAKE SURE TO CREATE A NEW PROJECT(IF NEEDED) AND ALL THE TASKS IN ARCHON AS WELL.
 
 ### Validation Gates (Must be Executable - Better-Chatbot Specific)
 ```bash
@@ -119,6 +122,7 @@ Save as: `PRPs/cc-prp-plans/prp-{feature-name}.md` (following naming conventions
 - [ ] Validation gates are executable and project-specific
 - [ ] References existing project patterns and conventions via Serena
 - [ ] Clear implementation path with step-by-step tasks
+- [ ] New project(if needed) and tasks created in Archon as well.
 - [ ] Error handling and edge cases documented
 - [ ] Integration points with Canvas/MCP/Observability identified (if relevant)
 - [ ] Code examples extracted from codebase using Serena tools

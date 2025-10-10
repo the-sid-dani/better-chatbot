@@ -181,7 +181,24 @@ export const POST = observe(handler, {
 
 ## 📊 **What You'll See in Langfuse**
 
-### **Trace Structure**
+### **IMPORTANT: Understanding Traces vs Sessions**
+
+**Each message = One trace** (this is expected behavior):
+- Every POST to `/api/chat` creates a new trace via the `observe()` wrapper
+- All messages with the same `sessionId` are linked together
+- **View conversations in the "Sessions" tab in Langfuse**, not the "Traces" tab
+
+**Why this architecture?**
+- Serverless functions are stateless - each API call is independent
+- The `observe()` wrapper creates one trace per function invocation
+- `sessionId` links all traces in a conversation for analysis
+
+**How to view grouped conversations:**
+1. Go to **Sessions tab** in Langfuse dashboard
+2. Filter by `sessionId` (your chat thread ID)
+3. See all messages in that conversation grouped together
+
+### **Trace Structure (Per Message)**
 ```
 agent-CodeAssistant-chat (or samba-orion-chat)
 ├── chat-api-handler (observe wrapper)
@@ -190,7 +207,7 @@ agent-CodeAssistant-chat (or samba-orion-chat)
 │       ├── ai.toolCall.mcp__tool_name (automatic for each MCP tool)
 │       ├── ai.toolCall.workflow__tool_name (automatic for each workflow tool)
 │       └── ai.streamText.doStream.finishStep (automatic)
-└── metadata: userId, sessionId, agent, environment, tools, execution counts
+└── metadata: userId, sessionId, threadId, messageId, agent, environment, tools, execution counts
 ```
 
 ### **Captured Metrics**
@@ -246,8 +263,64 @@ module.exports = {
 2. **Start development server**: `pnpm dev`
 3. **Send a chat message** through your app
 4. **Check Langfuse dashboard** - traces should appear within 30 seconds
-5. **Verify metadata** - Check for userId, agent names, tool counts, environment tags
-6. **Test health endpoint**: `curl http://localhost:3000/api/health/langfuse/traces`
+5. **Verify metadata** - Check for userId, agent names, tool counts, environment tags, threadId, messageId
+6. **Check Sessions view** - Go to Sessions tab and filter by sessionId to see grouped conversations
+7. **Test health endpoint**: `curl http://localhost:3000/api/health/langfuse/traces`
+
+## 🐛 **Troubleshooting**
+
+### **Issue: Empty/Ghost Traces**
+
+**Symptom:** Traces with `null` input/output and empty metadata
+
+**Cause:** The `observe()` wrapper creates a trace immediately, but if the request fails early (auth errors, validation errors), metadata isn't set.
+
+**Fix Applied:**
+- Trace metadata is now set immediately at handler start (before any early returns)
+- Early returns (401, 403) now include error metadata
+- Every trace will have at minimum: userId, environment, and error info if applicable
+
+**Verification:**
+```bash
+# Check traces - should have metadata even for errors
+# No more empty traces with null input/output
+```
+
+### **Issue: Each Message is a Separate Trace**
+
+**Symptom:** Conversation with 3 messages shows as 3 separate traces
+
+**This is EXPECTED behavior:**
+- Each POST request = one trace (by design)
+- Messages are linked via `sessionId` metadata
+- **Solution:** Use the **Sessions tab** in Langfuse to view grouped conversations
+
+**How to view conversations:**
+1. Open Langfuse dashboard
+2. Click "Sessions" tab (not "Traces")
+3. Find your session by ID or filter by user
+4. All traces for that conversation will be grouped together
+
+### **Issue: Traces Not Appearing in Langfuse**
+
+**Possible causes:**
+1. Missing environment variables (check startup logs)
+2. Flush not completing in serverless (already handled via `forceFlush()` + `after()`)
+3. Network connectivity to Langfuse cloud/self-hosted instance
+
+**Debug steps:**
+```bash
+# 1. Check environment variables
+echo $LANGFUSE_PUBLIC_KEY
+echo $LANGFUSE_SECRET_KEY
+echo $LANGFUSE_BASE_URL
+
+# 2. Check health endpoint
+curl http://localhost:3000/api/health/langfuse/traces
+
+# 3. Check server logs for Langfuse errors
+pnpm dev | grep -i langfuse
+```
 
 ## 🔍 **Health Monitoring**
 

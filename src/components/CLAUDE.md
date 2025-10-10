@@ -42,6 +42,14 @@ Complete UI component library with design system primitives, AI-focused componen
 - Use CSS variables for colors: `var(--chart-1)`, `var(--chart-2)`, etc.
 - Return `shouldCreateArtifact: true` for Canvas processing
 
+**BAN Chart Standards** (Updated October 2025):
+- **Padding**: CardHeader `pb-1`, CardContent `pb-0 pt-2` (matches all charts)
+- **Centering**: Both horizontal (`items-center`) and vertical (`justify-center`) required
+- **Typography**: Main value `text-3xl` (30px), unit `text-lg` (18px), title `text-sm`
+- **Spacing**: Value/unit gap `gap-1.5`, trend row `gap-2`, bottom margin `mb-4`
+- **Canvas Sizing**: `minHeight: 180px`, `maxHeight: 280px` (compact for single metrics)
+- **Use Case**: Glanceable KPIs, compact dashboard cards, 4-6 charts in 2x3 grids
+
 **Performance:**
 - Large components use `React.memo` and `useMemo`
 - Dynamic imports for heavy features (charts, workflow editor)

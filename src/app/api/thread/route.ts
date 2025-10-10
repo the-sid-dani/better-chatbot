@@ -9,5 +9,6 @@ export async function GET() {
   }
 
   const threads = await chatRepository.selectThreadsByUserId(session.user.id);
+
   return Response.json(threads);
 }

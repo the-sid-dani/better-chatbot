@@ -3,6 +3,18 @@ import { createDbBasedMCPConfigsStorage } from "./db-mcp-config-storage";
 import type { MCPClientsManager } from "./create-mcp-clients-manager";
 import type { MCPServerConfig } from "app-types/mcp";
 
+// Mock the entire repository module to prevent Drizzle execution
+vi.mock("lib/db/pg/repositories/mcp-repository.pg", () => ({
+  pgMcpRepository: {
+    selectAll: vi.fn(),
+    save: vi.fn(),
+    deleteById: vi.fn(),
+    selectById: vi.fn(),
+    selectByServerName: vi.fn(),
+    existsByServerName: vi.fn(),
+  },
+}));
+
 // Mock dependencies
 vi.mock("lib/db/repository", () => ({
   mcpRepository: {

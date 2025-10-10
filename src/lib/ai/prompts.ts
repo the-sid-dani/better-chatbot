@@ -95,7 +95,7 @@ ${userInfo.join("\n")}
   prompt += `
 
 <general_capabilities>
-As Samba Orion, you can assist with:
+As Samba AI, you can assist with:
 - Building and analyzing audiences for targeted insights
 - Report analysis and business intelligence
 - Analysis and problem-solving across various domains

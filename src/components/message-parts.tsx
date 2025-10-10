@@ -636,7 +636,7 @@ const loading = memo(function Loading() {
   );
 });
 
-const InteractiveTable = dynamic(
+const _InteractiveTable = dynamic(
   () =>
     import("./tool-invocation/interactive-table").then(
       (mod) => mod.InteractiveTable,
@@ -842,17 +842,8 @@ export const ToolMessagePart = memo(
         );
       }
 
-      if (state === "output-available") {
-        switch (toolName) {
-          case DefaultToolName.CreateTable:
-            return (
-              <InteractiveTable
-                key={`${toolCallId}-${toolName}`}
-                {...(input as any)}
-              />
-            );
-        }
-      }
+      // Tables now render ONLY in Canvas (removed inline rendering)
+      // All chart and table artifacts go to Canvas workspace
       return null;
     }, [toolName, state, onToolCallDirect, result, input]);
 
@@ -1010,6 +1001,9 @@ export const ToolMessagePart = memo(
                           "create_bar_chart",
                           "create_line_chart",
                           "create_pie_chart",
+                          // Special artifact tools
+                          "create_ban_chart",
+                          "createTable", // FIXED: Use camelCase to match enum
                         ];
 
                         const isChartTool = chartToolNames.includes(toolName);
@@ -1140,6 +1134,11 @@ export const ToolMessagePart = memo(
                             "create_geographic_chart",
                             "create_gauge_chart",
                             "create_calendar_heatmap",
+                            "create_bar_chart",
+                            "create_line_chart",
+                            "create_pie_chart",
+                            "create_ban_chart",
+                            "createTable", // FIXED: Use camelCase to match enum
                           ];
 
                           const isChartTool = chartToolNames.includes(toolName);

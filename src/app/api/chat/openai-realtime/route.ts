@@ -6,6 +6,7 @@ import {
   filterMcpServerCustomizations,
   filterMCPToolsByAllowedMCPServers,
   mergeSystemPrompt,
+  loadAppDefaultTools,
 } from "../shared.chat";
 import {
   buildMcpServerCustomizationsSystemPrompt,
@@ -20,6 +21,7 @@ import {
 } from "../actions";
 import globalLogger from "lib/logger";
 import { colorize } from "consola/utils";
+import { zodSchema } from "ai";
 
 const logger = globalLogger.withDefaults({
   message: colorize("blackBright", `OpenAI Realtime API: `),
@@ -42,12 +44,14 @@ export async function POST(request: NextRequest) {
       return new Response("Unauthorized", { status: 401 });
     }
 
-    const { voice, allowedMcpServers, agentId } = (await request.json()) as {
-      model: string;
-      voice: string;
-      agentId?: string;
-      allowedMcpServers: Record<string, AllowedMCPServer>;
-    };
+    const { voice, allowedMcpServers, agentId, allowedAppDefaultToolkit } =
+      (await request.json()) as {
+        model: string;
+        voice: string;
+        agentId?: string;
+        allowedMcpServers: Record<string, AllowedMCPServer>;
+        allowedAppDefaultToolkit?: string[];
+      };
 
     const mcpTools = await mcpClientsManager.tools();
 
@@ -97,7 +101,28 @@ export async function POST(request: NextRequest) {
       buildMcpServerCustomizationsSystemPrompt(mcpServerCustomizations),
     );
 
-    const bindingTools = [...openAITools, ...DEFAULT_VOICE_TOOLS];
+    // Load app default tools (web search, charts, etc.)
+    const appDefaultTools = await loadAppDefaultTools({
+      allowedAppDefaultToolkit,
+    });
+
+    const appToolsForOpenAI = Object.entries(appDefaultTools).map(
+      ([name, tool]) => {
+        return vercelAIToolToOpenAITool(tool, name);
+      },
+    );
+
+    if (Object.keys(appDefaultTools).length > 0) {
+      logger.info(
+        `${Object.keys(appDefaultTools).length} app default tools loaded`,
+      );
+    }
+
+    const bindingTools = [
+      ...openAITools,
+      ...appToolsForOpenAI,
+      ...DEFAULT_VOICE_TOOLS,
+    ];
 
     const r = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
       method: "POST",
@@ -167,14 +192,41 @@ export async function POST(request: NextRequest) {
 }
 
 function vercelAIToolToOpenAITool(tool: VercelAIMcpTool, name: string) {
+  // Convert Zod schema to JSON Schema format for OpenAI
+  let parameters;
+
+  try {
+    // Check if inputSchema exists and is a Zod schema
+    if (tool.inputSchema && typeof tool.inputSchema === "object") {
+      // If already has jsonSchema property (MCP tools), use it
+      if ("jsonSchema" in tool.inputSchema) {
+        parameters = (tool.inputSchema as any).jsonSchema;
+      } else {
+        // Convert Zod schema to JSON Schema (app default tools)
+        const schema = zodSchema(tool.inputSchema);
+        parameters = schema.jsonSchema;
+      }
+    } else {
+      // Fallback for tools without schema
+      parameters = {
+        type: "object",
+        properties: {},
+        required: [],
+      };
+    }
+  } catch (error) {
+    logger.error(`Failed to convert schema for tool ${name}:`, error);
+    parameters = {
+      type: "object",
+      properties: {},
+      required: [],
+    };
+  }
+
   return {
     name,
     type: "function",
     description: tool.description,
-    parameters: (tool.inputSchema as any).jsonSchema ?? {
-      type: "object",
-      properties: {},
-      required: [],
-    },
+    parameters,
   };
 }

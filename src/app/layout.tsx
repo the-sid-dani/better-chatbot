@@ -19,9 +19,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "samba-orion",
+  title: "samba-ai",
   description:
-    "Samba-Orion is an AI chatbot platform that uses advanced tools to answer questions.",
+    "Samba-AI is an AI chatbot platform that uses advanced tools to answer questions.",
 };
 
 // const themes = BASE_THEMES.flatMap((t) => [t, `${t}-dark`]);

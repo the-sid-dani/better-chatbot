@@ -77,13 +77,13 @@ export function AppSidebar({
                   <div className="h-6 w-6 flex items-center justify-center">
                     <Image
                       src="/samba-resources/logos/samba-logo-2024.png"
-                      alt="Samba Orion Logo"
+                      alt="Samba AI Logo"
                       width={24}
                       height={24}
                       className="object-contain"
                     />
                   </div>
-                  <h4 className="font-bold">Samba Orion</h4>
+                  <h4 className="font-bold">Samba AI</h4>
                 </div>
                 <div
                   className="ml-auto block sm:hidden"

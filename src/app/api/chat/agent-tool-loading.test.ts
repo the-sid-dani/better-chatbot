@@ -94,7 +94,7 @@ describe("Agent Tool Loading Diagnostics", () => {
       expect(Object.keys(result)).toHaveLength(8); // webSearch(2) + artifacts(4) + http(1) + code(1) tools
       expect(result["create_bar_chart"]).toBeDefined();
       expect(result["create_line_chart"]).toBeDefined();
-      expect(result["create_table"]).toBeDefined();
+      expect(result["createTable"]).toBeDefined();
       expect(result["webSearch"]).toBeDefined();
     });
 
@@ -224,7 +224,7 @@ describe("Agent Tool Loading Diagnostics", () => {
 
       // Should detect missing chart tools
       expect(Object.keys(result)).toHaveLength(5); // webSearch(2) + table(1) + http(1) + code(1)
-      expect(result["create_table"]).toBeDefined(); // Table works
+      expect(result["createTable"]).toBeDefined(); // Table works
       expect(result["create_bar_chart"]).toBeUndefined(); // Chart tools missing
       expect(result["create_line_chart"]).toBeUndefined();
 
@@ -255,7 +255,7 @@ describe("Agent Tool Loading Diagnostics", () => {
         "create_bar_chart",
         "create_line_chart",
         "create_pie_chart",
-        "create_table",
+        "createTable",
       ];
 
       chartToolNames.forEach((toolName) => {

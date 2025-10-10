@@ -21,6 +21,8 @@ import {
   funnelChartDataSchema,
   tableDataSchema,
   gaugeChartDataSchema,
+  banChartDataSchema,
+  aiInsightsDataSchema,
   validateChartData as validateWithSchema,
 } from "./validation-schemas";
 import {
@@ -31,6 +33,7 @@ import {
   sanitizeDate,
   sanitizeStringArray,
   sanitizeChartData,
+  sanitizeLongFormContent,
   auditChartSecurity,
   containsXSSPattern,
 } from "./xss-prevention";
@@ -48,6 +51,8 @@ export type ChartType =
   | "funnel"
   | "table"
   | "gauge"
+  | "ban"
+  | "insights"
   | "composed"
   | "sankey"
   | "treemap"
@@ -153,6 +158,8 @@ function getChartSchema(chartType: ChartType): z.ZodSchema<any> | null {
     funnel: funnelChartDataSchema,
     table: tableDataSchema,
     gauge: gaugeChartDataSchema,
+    ban: banChartDataSchema,
+    insights: aiInsightsDataSchema,
     // For chart types without specific schemas, use a generic one
     composed: null,
     sankey: null,
@@ -180,6 +187,9 @@ function sanitizeDataByChartType<T>(chartType: ChartType, data: T): T {
 
     case "table":
       return sanitizeTableData(sanitized as any) as T;
+
+    case "insights":
+      return sanitizeInsightsData(sanitized as any) as T;
 
     default:
       return sanitized as T;
@@ -280,6 +290,38 @@ function sanitizeTableData(data: any): any {
         return cell;
       });
     });
+  }
+
+  return sanitized;
+}
+
+/**
+ * AI Insights specific sanitization
+ * Uses long-form content sanitization for insights field
+ */
+function sanitizeInsightsData(data: any): any {
+  if (!data || typeof data !== "object") return data;
+
+  const sanitized = { ...data };
+
+  // Sanitize title
+  if (sanitized.title) {
+    sanitized.title = sanitizeChartTitle(sanitized.title);
+  }
+
+  // Sanitize description (short form)
+  if (sanitized.description) {
+    sanitized.description = sanitizeChartDescription(sanitized.description);
+  }
+
+  // Sanitize prompt (medium length)
+  if (sanitized.prompt) {
+    sanitized.prompt = sanitizeLongFormContent(sanitized.prompt);
+  }
+
+  // Sanitize insights (long-form content - NOT a label!)
+  if (sanitized.insights) {
+    sanitized.insights = sanitizeLongFormContent(sanitized.insights);
   }
 
   return sanitized;
@@ -444,4 +486,7 @@ export const CHART_VALIDATORS = {
   funnel: createChartValidator<z.infer<typeof funnelChartDataSchema>>("funnel"),
   table: createChartValidator<z.infer<typeof tableDataSchema>>("table"),
   gauge: createChartValidator<z.infer<typeof gaugeChartDataSchema>>("gauge"),
+  ban: createChartValidator<z.infer<typeof banChartDataSchema>>("ban"),
+  insights:
+    createChartValidator<z.infer<typeof aiInsightsDataSchema>>("insights"),
 };

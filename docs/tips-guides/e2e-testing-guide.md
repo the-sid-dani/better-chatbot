@@ -1,6 +1,6 @@
 # 🧪 End-to-End Testing Guide
 
-Comprehensive guide for running and developing end-to-end tests for Samba Orion using Playwright.
+Comprehensive guide for running and developing end-to-end tests for Samba AI using Playwright.
 
 ## Quick Start
 

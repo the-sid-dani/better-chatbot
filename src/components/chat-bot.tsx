@@ -27,6 +27,7 @@ import { ChatApiSchemaRequestBody, ChatModel } from "app-types/chat";
 import { AnimatePresence, motion } from "framer-motion";
 import { getStorageManager } from "lib/browser-stroage";
 import { Shortcuts, isShortcutEvent } from "lib/keyboard-shortcuts";
+import { isVoiceThread } from "lib/utils/voice-thread-detector";
 import { ArrowDown, Loader } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
@@ -287,34 +288,7 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
   const renderCountRef = useRef(0);
   renderCountRef.current += 1;
 
-  useEffect(() => {
-    console.log(
-      "🧼 ChatBot Debug: Thread changed - clearing processed tools cache",
-    );
-    processedToolsRef.current.clear();
-    isInitializedRef.current = false;
-  }, [threadId]);
-
-  // Debug canvas state changes with enhanced logging
-  useEffect(() => {
-    console.log("🔍 ChatBot Canvas Debug: Canvas state changed", {
-      isVisible: isCanvasVisible,
-      artifactCount: canvasArtifacts.length,
-      userManuallyClosed,
-      activeArtifactId,
-      canvasName,
-      timestamp: new Date().toISOString(),
-    });
-  }, [
-    isCanvasVisible,
-    canvasArtifacts.length,
-    userManuallyClosed,
-    activeArtifactId,
-    canvasName,
-  ]);
-
-  // MOVED AFTER useChat hook to fix initialization error
-
+  // CRITICAL: Get appStoreMutate FIRST before any effects that use it
   const [
     appStoreMutate,
     model,
@@ -336,6 +310,50 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
       state.pendingThreadMention,
     ]),
   );
+
+  useEffect(() => {
+    console.log(
+      "🧼 ChatBot Debug: Thread changed - clearing processed tools cache",
+    );
+    processedToolsRef.current.clear();
+    isInitializedRef.current = false;
+  }, [threadId]);
+
+  // Voice thread auto-detection - open voice dialog if thread contains voice messages
+  useEffect(() => {
+    if (initialMessages.length > 0 && isVoiceThread(initialMessages)) {
+      console.log("🎤 Voice thread detected - auto-opening voice chat dialog", {
+        threadId,
+        messageCount: initialMessages.length,
+      });
+
+      // Trigger voice chat dialog to open
+      appStoreMutate({
+        voiceChat: {
+          ...appStore.getState().voiceChat,
+          isOpen: true,
+        },
+      });
+    }
+  }, [initialMessages.length, threadId, appStoreMutate]);
+
+  // Debug canvas state changes with enhanced logging
+  useEffect(() => {
+    console.log("🔍 ChatBot Canvas Debug: Canvas state changed", {
+      isVisible: isCanvasVisible,
+      artifactCount: canvasArtifacts.length,
+      userManuallyClosed,
+      activeArtifactId,
+      canvasName,
+      timestamp: new Date().toISOString(),
+    });
+  }, [
+    isCanvasVisible,
+    canvasArtifacts.length,
+    userManuallyClosed,
+    activeArtifactId,
+    canvasName,
+  ]);
 
   const generateTitle = useGenerateThreadTitle({
     threadId,
@@ -407,11 +425,76 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     generateId: generateUUID,
     experimental_throttle: 100,
     onFinish,
-    // Clean implementation without complex onData handling
+    // NEW: Process streaming tool results (PRIMARY FIX for Canvas chart rendering)
     onData: (data: any) => {
-      // Simple logging for debugging
-      if (data?.type) {
-        console.log("AI SDK onData:", data.type);
+      console.log("🔧 ChatBot onData:", data?.type);
+
+      // Process tool-result events from stream
+      if (data?.type === "tool-result") {
+        const { toolName, result, toolCallId } = data;
+
+        console.log("📊 Tool result received:", {
+          toolName,
+          toolCallId,
+          hasResult: !!result,
+          shouldCreate: result?.shouldCreateArtifact,
+        });
+
+        // Chart tool names (same list as existing code)
+        const chartToolNames = [
+          "create_chart",
+          "create_area_chart",
+          "create_scatter_chart",
+          "create_radar_chart",
+          "create_funnel_chart",
+          "create_treemap_chart",
+          "create_sankey_chart",
+          "create_radial_bar_chart",
+          "create_composed_chart",
+          "create_geographic_chart",
+          "create_gauge_chart",
+          "create_calendar_heatmap",
+          "create_bar_chart",
+          "create_line_chart",
+          "create_pie_chart",
+          "createTable", // FIXED: camelCase
+          "create_ban_chart",
+        ];
+
+        // Check if it's a chart tool with completion flag
+        if (
+          chartToolNames.includes(toolName) &&
+          result?.shouldCreateArtifact &&
+          result?.status === "success"
+        ) {
+          console.log("✨ Creating Canvas artifact from streaming result");
+
+          // Create Canvas artifact immediately
+          const artifactId =
+            result.chartId || result.artifactId || generateUUID();
+          const isTableTool = toolName === "createTable";
+
+          addCanvasArtifact({
+            id: artifactId,
+            type: isTableTool ? "table" : "chart",
+            title: result.title || `${result.chartType} Chart`,
+            canvasName: result.canvasName || "Data Visualization",
+            data: result.chartData,
+            status: "completed" as const,
+            metadata: {
+              chartType: isTableTool ? "table" : result.chartType || "bar",
+              dataPoints:
+                result.dataPoints ||
+                result.chartData?.data?.length ||
+                result.chartData?.columns?.length ||
+                0,
+              toolName,
+              lastUpdated: new Date().toISOString(),
+            },
+          });
+
+          console.log("✅ Canvas artifact created:", artifactId);
+        }
       }
     },
   });
@@ -467,7 +550,9 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
       "create_bar_chart",
       "create_line_chart",
       "create_pie_chart",
-      "create_table",
+      "createTable", // FIXED: camelCase
+      "create_ban_chart",
+      // "create_ai_insights", // COMMENTED OUT - causing 70% pause issues
     ];
 
     // Process ALL assistant messages (not just last one)
@@ -507,7 +592,7 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
 
         // Create artifact (reuse existing logic)
         const toolName = getToolName(part);
-        const isTableTool = toolName === "create_table";
+        const isTableTool = toolName === "createTable";
         const chartData = result.chartData;
         const chartType = result.chartType;
         const title = result.title;
@@ -524,8 +609,12 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
           data: chartData,
           status: "completed" as const,
           metadata: {
-            chartType: chartType || "bar",
-            dataPoints: result.dataPoints || chartData?.data?.length || 0,
+            chartType: isTableTool ? "table" : chartType || "bar",
+            dataPoints:
+              result.dataPoints ||
+              chartData?.data?.length ||
+              chartData?.columns?.length ||
+              0,
             toolName,
             lastUpdated: new Date().toISOString(),
           },
@@ -740,7 +829,10 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
           "create_line_chart",
           "create_pie_chart",
           // Table artifact tool
-          "create_table",
+          "createTable", // FIXED: camelCase
+          // Specialized display tools
+          "create_ban_chart",
+          // "create_ai_insights", // COMMENTED OUT - causing 70% pause issues
         ];
 
         const chartTools = lastMessage.parts.filter(
@@ -846,7 +938,7 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
           );
 
           // Determine if this is a table tool
-          const isTableTool = toolName === "create_table";
+          const isTableTool = toolName === "createTable";
 
           if (!existingArtifact) {
             console.log(
@@ -881,8 +973,12 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
               data: chartData,
               status: "completed" as const,
               metadata: {
-                chartType: chartType || "bar",
-                dataPoints: result.dataPoints || chartData?.data?.length || 0,
+                chartType: isTableTool ? "table" : chartType || "bar",
+                dataPoints:
+                  result.dataPoints ||
+                  chartData?.data?.length ||
+                  chartData?.columns?.length ||
+                  0,
                 toolName,
                 lastUpdated: new Date().toISOString(),
               },
