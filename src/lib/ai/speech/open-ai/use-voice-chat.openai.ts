@@ -346,7 +346,8 @@ export function useOpenAIVoiceChat(
 
       dataChannel.current?.send(JSON.stringify(event));
 
-      dataChannel.current?.send(JSON.stringify({ type: "response.create" }));
+      // CRITICAL FIX: Single response.create to prevent infinite tool calling loop
+      // Previous duplicate line was causing tools to execute repeatedly, burning API costs
       dataChannel.current?.send(JSON.stringify({ type: "response.create" }));
     },
     [updateUIMessage, setTheme, startListening, stopListening, threadId, voice],
