@@ -128,28 +128,41 @@ const handler = async (request: Request) => {
       id: m.id,
       role: m.role,
       parts: m.parts.filter((part: any) => {
-        // CLEANUP: Filter out ALL tool parts with empty input
+        // CLEANUP: Filter out ALL tool parts with invalid input
         // These cause Anthropic API "tool_use.input: Field required" errors
-        // Empty input is invalid regardless of whether the tool executed
-        if (
-          part.type?.startsWith("tool-") &&
-          part.input !== undefined &&
-          part.input !== null &&
-          typeof part.input === "object" &&
-          !Array.isArray(part.input) &&
-          Object.keys(part.input).length === 0
-        ) {
-          logger.warn(
-            "Filtering out tool part with empty input from database",
-            {
-              messageId: m.id,
-              toolType: part.type,
-              toolCallId: part.toolCallId,
-              hasOutput: !!part.output,
-              reason: "Empty input causes Anthropic API validation errors",
-            },
-          );
-          return false; // Remove this part - Anthropic rejects empty input
+        if (part.type?.startsWith("tool-")) {
+          // Case 1: input is completely missing
+          if (part.input === undefined || part.input === null) {
+            logger.warn(
+              "Filtering out tool part with missing input from database",
+              {
+                messageId: m.id,
+                toolType: part.type,
+                toolCallId: part.toolCallId,
+                inputValue: part.input,
+                reason: "Missing input causes Anthropic API validation errors",
+              },
+            );
+            return false;
+          }
+
+          // Case 2: input is empty object {}
+          if (
+            typeof part.input === "object" &&
+            !Array.isArray(part.input) &&
+            Object.keys(part.input).length === 0
+          ) {
+            logger.warn(
+              "Filtering out tool part with empty input from database",
+              {
+                messageId: m.id,
+                toolType: part.type,
+                toolCallId: part.toolCallId,
+                reason: "Empty input {} causes Anthropic API validation errors",
+              },
+            );
+            return false;
+          }
         }
         return true; // Keep valid parts with non-empty input
       }),
