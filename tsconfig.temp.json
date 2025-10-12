@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": {
+      "lib/*": ["src/lib/*"],
+      "app-types/*": ["src/types/*"],
+      "@/*": ["src/*"]
+    }
+  },
+  "files": ["src/lib/ai/artifacts/chart-artifact.ts"]
+}

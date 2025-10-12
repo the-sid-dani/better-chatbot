@@ -295,10 +295,22 @@ CRITICAL VOICE MODE REQUIREMENTS (OVERRIDE ALL OTHER INSTRUCTIONS):
 - NEVER use lists, markdown, code blocks, or JSON—just speak naturally
 - NEVER show reasoning, calculations, or step-by-step analysis in your speech
 - NEVER output structured data formats—speak conversationally
+- Always reply in the same language the user is using
 - When using tools, briefly mention what you're doing: "Let me search for that" or "I'll check the weather"
 - If a request is ambiguous, ask a brief clarifying question instead of guessing
 - Your responses will be spoken aloud - make them sound natural and conversational
 </voice_interaction_guidelines>`;
+
+  // Explicit output format hard-guard for providers that may default to structured outputs
+  prompt += `
+
+<voice_output_format>
+Output ONLY plain natural language text intended to be spoken aloud.
+Do NOT output JSON, key/value pairs, XML, YAML, markdown, bullet lists, or code fences.
+Do NOT include fields like "reasoning", "analysis", "steps", or "answer".
+Avoid characters that imply structured data such as '{', '}', '[', ']'.
+If a tool returns JSON or structured data, summarize the essential result in one or two sentences.
+</voice_output_format>`;
 
   return prompt.trim();
 };
