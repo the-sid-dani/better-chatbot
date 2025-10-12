@@ -468,7 +468,7 @@ export const loadWorkFlowTools = (opt: {
 
 export const loadAppDefaultTools = (opt?: {
   mentions?: ChatMention[];
-  allowedAppDefaultToolkit?: string[];
+  allowedAppDefaultToolkit?: AppDefaultToolkit[];
 }) => {
   console.log("🔍 loadAppDefaultTools called with:", {
     mentionsLength: opt?.mentions?.length,
@@ -542,11 +542,13 @@ export const loadAppDefaultTools = (opt?: {
         name.includes("chart"),
       );
       const missingChartTools = expectedChartTools.filter(
-        (expected) => !Object.keys(finalTools).includes(expected),
+        (expected) =>
+          !Object.prototype.hasOwnProperty.call(finalTools, expected),
       );
       const extraChartTools = Object.keys(finalTools).filter(
         (actual) =>
-          actual.includes("chart") && !expectedChartTools.includes(actual),
+          actual.includes("chart") &&
+          !expectedChartTools.includes(actual as DefaultToolName),
       );
 
       if (missingChartTools.length > 0) {
@@ -653,6 +655,24 @@ export function buildResponseMessageFromStreamResult(
       // Process tool calls
       if (step.toolCalls && Array.isArray(step.toolCalls)) {
         for (const toolCall of step.toolCalls) {
+          // CRITICAL FIX: Skip tool calls with empty/undefined args
+          // Anthropic API rejects tool_use content blocks with missing or empty input
+          if (
+            !toolCall.args ||
+            (typeof toolCall.args === "object" &&
+              Object.keys(toolCall.args).length === 0)
+          ) {
+            logger.warn(
+              `Skipping tool call with empty args: ${toolCall.toolName}`,
+              {
+                toolCallId: toolCall.toolCallId,
+                args: toolCall.args,
+                reason: "Empty args cause Anthropic API validation errors",
+              },
+            );
+            continue; // Skip this tool call entirely
+          }
+
           const toolPart: any = {
             type: `tool-${toolCall.toolName}`,
             toolCallId: toolCall.toolCallId,
@@ -669,7 +689,9 @@ export function buildResponseMessageFromStreamResult(
           // Find the corresponding call part
           const callPart = parts.find(
             (p) =>
-              typeof p === "object" && p.toolCallId === toolResult.toolCallId,
+              typeof p === "object" &&
+              p.toolCallId && // FIX: Check toolCallId exists before comparing
+              p.toolCallId === toolResult.toolCallId,
           );
 
           if (callPart) {
@@ -677,14 +699,17 @@ export function buildResponseMessageFromStreamResult(
             callPart.state = "output-available";
             callPart.output = toolResult.result;
           } else {
-            // No call part found - create result part directly
-            parts.push({
-              type: `tool-${toolResult.toolName}`,
-              toolCallId: toolResult.toolCallId,
-              input: {}, // No input available if call wasn't found
-              state: "output-available",
-              output: toolResult.result,
-            });
+            // FIXED: Don't create parts with empty input
+            // Anthropic API requires valid input field for tool_use content
+            // If we don't have the original tool call args, skip the part entirely
+            logger.warn(
+              `Skipping tool result without matching call: ${toolResult.toolName}`,
+              {
+                toolCallId: toolResult.toolCallId,
+                reason: "No original input available",
+              },
+            );
+            // Part intentionally omitted - prevents API validation errors
           }
         }
       }

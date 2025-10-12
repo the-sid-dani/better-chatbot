@@ -17,7 +17,6 @@ import { trace } from "@opentelemetry/api";
 import { after } from "next/server";
 
 import { langfuseSpanProcessor } from "@/instrumentation";
-import { langfuse } from "@/lib/observability/langfuse-client";
 
 import { customModelProvider, isToolCallUnsupportedModel } from "lib/ai/models";
 
@@ -31,6 +30,7 @@ import {
   buildToolCallUnsupportedModelSystemPrompt,
 } from "lib/ai/prompts";
 import { chatApiSchemaRequestBodySchema, ChatMetadata } from "app-types/chat";
+import { AppDefaultToolkit } from "lib/ai/tools";
 
 import { errorIf, safe } from "ts-safe";
 
@@ -96,6 +96,11 @@ const handler = async (request: Request) => {
     mentions = [],
   } = chatApiSchemaRequestBodySchema.parse(json);
 
+  const normalizedAllowedAppToolkit = allowedAppDefaultToolkit?.filter(
+    (toolkit): toolkit is AppDefaultToolkit =>
+      Object.values(AppDefaultToolkit).includes(toolkit as AppDefaultToolkit),
+  );
+
   const model = customModelProvider.getModel(chatModel);
 
   let thread = await chatRepository.selectThreadDetails(id);
@@ -122,7 +127,32 @@ const handler = async (request: Request) => {
     return {
       id: m.id,
       role: m.role,
-      parts: m.parts,
+      parts: m.parts.filter((part: any) => {
+        // CLEANUP: Filter out ALL tool parts with empty input
+        // These cause Anthropic API "tool_use.input: Field required" errors
+        // Empty input is invalid regardless of whether the tool executed
+        if (
+          part.type?.startsWith("tool-") &&
+          part.input !== undefined &&
+          part.input !== null &&
+          typeof part.input === "object" &&
+          !Array.isArray(part.input) &&
+          Object.keys(part.input).length === 0
+        ) {
+          logger.warn(
+            "Filtering out tool part with empty input from database",
+            {
+              messageId: m.id,
+              toolType: part.type,
+              toolCallId: part.toolCallId,
+              hasOutput: !!part.output,
+              reason: "Empty input causes Anthropic API validation errors",
+            },
+          );
+          return false; // Remove this part - Anthropic rejects empty input
+        }
+        return true; // Keep valid parts with non-empty input
+      }),
       metadata: m.metadata,
     };
   });
@@ -149,7 +179,9 @@ const handler = async (request: Request) => {
 
   // Get MCP server list for metadata
   const mcpClients = await mcpClientsManager.getClients();
-  const mcpServerList = mcpClients.map((client) => client.serverName);
+  const mcpServerList = mcpClients.map(
+    (client) => client.client.getInfo().name,
+  );
 
   // Update trace with full context and USE LANGFUSE SESSION for grouping
   updateActiveTrace({
@@ -225,7 +257,7 @@ const handler = async (request: Request) => {
         .map(() =>
           loadAppDefaultTools({
             mentions,
-            allowedAppDefaultToolkit,
+            allowedAppDefaultToolkit: normalizedAllowedAppToolkit,
           }),
         )
         .orElse({});
@@ -290,7 +322,7 @@ const handler = async (request: Request) => {
       );
 
       logger.info(
-        `allowedMcpTools: ${allowedMcpTools.length ?? 0}, allowedAppDefaultToolkit: ${allowedAppDefaultToolkit?.length ?? 0}`,
+        `allowedMcpTools: ${allowedMcpTools.length ?? 0}, allowedAppDefaultToolkit: ${normalizedAllowedAppToolkit?.length ?? 0}`,
       );
       logger.info(
         `binding tool count APP_DEFAULT: ${Object.keys(APP_DEFAULT_TOOLS ?? {}).length}, MCP: ${Object.keys(MCP_TOOLS ?? {}).length}, Workflow: ${Object.keys(WORKFLOW_TOOLS ?? {}).length}`,
@@ -305,13 +337,6 @@ const handler = async (request: Request) => {
         // Following the exact pattern from docs/langfuse-vercel-ai-sdk.md
         experimental_telemetry: {
           isEnabled: true,
-          // Enhanced function ID generation for detailed tracking
-          functionId: ({ type, toolName, toolCallId }) => {
-            if (type === "tool-call") {
-              return `tool-${toolName}-${toolCallId}-${Date.now()}`;
-            }
-            return undefined;
-          },
         },
         maxRetries: 2,
         tools: vercelAITooles,
@@ -320,7 +345,21 @@ const handler = async (request: Request) => {
         abortSignal: request.signal,
 
         // NEW: Capture tool results as they complete (PRIMARY FIX for Canvas chart rendering)
-        onStepFinish: async ({ stepResult, finishReason }) => {
+        onStepFinish: async (payload) => {
+          const { stepResult, finishReason } = payload as {
+            stepResult?: {
+              toolCalls?: Array<{
+                toolName?: string;
+                toolCallId?: string;
+              }>;
+              toolResults?: Array<{
+                toolName?: string;
+                toolCallId?: string;
+                result?: unknown;
+              }>;
+            };
+            finishReason?: unknown;
+          };
           logger.info("🔧 Step finished:", {
             finishReason,
             toolCallCount: stepResult?.toolCalls?.length || 0,
@@ -343,7 +382,7 @@ const handler = async (request: Request) => {
                 toolName: toolResult.toolName,
                 result: toolResult.result,
                 timestamp: new Date().toISOString(),
-              });
+              } as any);
             }
           }
         },
