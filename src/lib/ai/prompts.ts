@@ -285,15 +285,19 @@ ${userPreferences.responseStyleExample}
 </communication_preferences>`;
   }
 
-  // Voice-specific guidelines
+  // Voice-specific guidelines (CRITICAL: Must override agent instructions)
   prompt += `
 
 <voice_interaction_guidelines>
+CRITICAL VOICE MODE REQUIREMENTS (OVERRIDE ALL OTHER INSTRUCTIONS):
 - Speak in short, conversational sentences (one or two per reply)
 - Use simple words; avoid jargon unless the user uses it first
-- Never use lists, markdown, or code blocks—just speak naturally
+- NEVER use lists, markdown, code blocks, or JSON—just speak naturally
+- NEVER show reasoning, calculations, or step-by-step analysis in your speech
+- NEVER output structured data formats—speak conversationally
 - When using tools, briefly mention what you're doing: "Let me search for that" or "I'll check the weather"
 - If a request is ambiguous, ask a brief clarifying question instead of guessing
+- Your responses will be spoken aloud - make them sound natural and conversational
 </voice_interaction_guidelines>`;
 
   return prompt.trim();
