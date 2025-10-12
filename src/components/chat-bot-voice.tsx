@@ -321,7 +321,7 @@ export function ChatBotVoice() {
         const chartToolNames = getAllChartToolNames();
 
         const chartTools = lastMessage.parts.filter(
-          (part) =>
+          (part): part is any =>
             isToolUIPart(part) && chartToolNames.includes(getToolName(part)),
         );
 
@@ -1217,31 +1217,80 @@ function CompactMessageView({
 }: {
   messages: UIMessageWithCompleted[];
 }) {
-  const { toolParts, textPart, userTextPart } = useMemo(() => {
-    const toolParts = messages
-      .filter((msg) => msg.parts.some(isToolUIPart))
-      .map((msg) => msg.parts.find(isToolUIPart));
+  // Track dismissed tool IDs and auto-dismiss interval
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const AUTO_DISMISS_MS = 5000;
 
-    const textPart = messages.findLast((msg) => msg.role === "assistant")
-      ?.parts[0] as TextPart;
+  const { visibleTools, textPart, userTextPart, lastCompleted, completedIds } =
+    useMemo(() => {
+      const all = messages
+        .filter((m) => m.parts.some(isToolUIPart))
+        .flatMap((m) =>
+          m.parts.filter(isToolUIPart).map((part) => {
+            const rawId = (part as any).toolCallId as string | undefined;
+            const fallbackId = `${m.id}-${getToolName(part as any)}`;
+            const toolId = rawId || fallbackId;
+            return {
+              part,
+              toolId,
+              isExecuting: part.state.startsWith("input"),
+            };
+          }),
+        );
 
-    // Also get the latest user message to show transcription
-    const userTextPart = messages.findLast((msg) => msg.role === "user")
-      ?.parts[0] as TextPart;
+      const notDismissed = all.filter((t) => !dismissed.has(t.toolId));
+      const executing = notDismissed.filter((t) => t.isExecuting);
+      const completedAll = all.filter(
+        (t) => !t.isExecuting && t.part.state.startsWith("output"),
+      );
+      const completed = notDismissed.filter(
+        (t) => !t.isExecuting && t.part.state.startsWith("output"),
+      );
+      const lastCompleted = completed.at(-1);
+      const visibleTools = lastCompleted
+        ? [...executing, lastCompleted]
+        : executing;
+      const completedIds = completedAll.map((t) => t.toolId);
 
-    return { toolParts, textPart, userTextPart };
-  }, [messages]);
+      const textPart = messages.findLast((m) => m.role === "assistant")
+        ?.parts[0] as TextPart;
+      const userTextPart = messages.findLast((m) => m.role === "user")
+        ?.parts[0] as TextPart;
+
+      return {
+        visibleTools,
+        textPart,
+        userTextPart,
+        lastCompleted,
+        completedIds,
+      };
+    }, [messages, dismissed]);
+
+  // Auto-dismiss the latest completed tool after a delay
+  useEffect(() => {
+    if (!lastCompleted) return;
+    const t = setTimeout(() => {
+      // Dismiss ALL completed tool IDs observed at this moment to avoid older cards reappearing
+      setDismissed((prev) => {
+        const next = new Set(prev);
+        // Include the lastCompleted and any older completed items atomically
+        completedIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }, AUTO_DISMISS_MS);
+    return () => clearTimeout(t);
+  }, [lastCompleted?.toolId]);
 
   return (
     <div className="relative w-full h-full overflow-hidden">
       <div className="absolute bottom-6 max-h-[80vh] overflow-y-auto left-6 z-10 flex-col gap-2 hidden md:flex">
-        {toolParts.map((toolPart, index) => {
+        {visibleTools.map(({ part: toolPart, toolId }) => {
           const isExecuting = toolPart?.state.startsWith("input");
           if (!toolPart) return null;
           return (
-            <Dialog key={index}>
+            <Dialog key={toolId}>
               <DialogTrigger asChild>
-                <div className="animate-in slide-in-from-bottom-2 fade-in duration-3000 max-w-xs w-full">
+                <div className="transition-opacity max-w-xs w-full">
                   <Button
                     variant={"outline"}
                     size={"icon"}

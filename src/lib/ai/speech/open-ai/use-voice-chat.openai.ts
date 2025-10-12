@@ -262,13 +262,39 @@ export function useOpenAIVoiceChat(
         // Tier 2: App default tools (charts, code, web search)
         toolResult = await callAppDefaultToolAction(toolName, toolArgs);
       } else {
-        // Tier 3: MCP tools (has server prefix)
-        const toolId = extractMCPToolId(toolName);
-        toolResult = await callMcpToolByServerNameAction(
-          toolId.serverName,
-          toolId.toolName,
-          toolArgs,
-        );
+        // Tier 3: MCP tools. Names can be in two formats depending on registry:
+        // 1) "server_tool" (underscore) from createMCPToolId()
+        // 2) "server/tool" (slash) for legacy/alt encodings
+        const hasUnderscore = toolName.includes("_");
+        const hasSlash = toolName.includes("/");
+
+        if (!hasUnderscore && !hasSlash) {
+          logger.warn("Voice chat encountered unknown tool name", {
+            toolName,
+            callId,
+          });
+          toolResult = {
+            status: "unsupported",
+            message: `Voice session received unknown tool "${toolName}"`,
+          };
+        } else {
+          let serverName: string;
+          let simpleToolName: string;
+          if (hasSlash) {
+            const [server, ...rest] = toolName.split("/");
+            serverName = server;
+            simpleToolName = rest.join("/");
+          } else {
+            const toolId = extractMCPToolId(toolName);
+            serverName = toolId.serverName;
+            simpleToolName = toolId.toolName;
+          }
+          toolResult = await callMcpToolByServerNameAction(
+            serverName,
+            simpleToolName,
+            toolArgs,
+          );
+        }
       }
 
       startListening();
@@ -717,13 +743,14 @@ export function useOpenAIVoiceChat(
 
         // THEN send session configuration in sequential updates to avoid overwhelming OpenAI
         if (session.sessionConfig) {
+          const sessionConfig = session.sessionConfig;
           console.log("📤 Starting split configuration updates:", {
-            hasInstructions: !!session.sessionConfig.instructions,
-            instructionsLength: session.sessionConfig.instructions?.length,
-            toolCount: session.sessionConfig.tools?.length,
-            voice: session.sessionConfig.audio?.output?.voice,
+            hasInstructions: !!sessionConfig.instructions,
+            instructionsLength: sessionConfig.instructions?.length,
+            toolCount: sessionConfig.tools?.length,
+            voice: sessionConfig.audio?.output?.voice,
             instructionsPreview:
-              session.sessionConfig.instructions?.substring(0, 200) + "...",
+              sessionConfig.instructions?.substring(0, 200) + "...",
           });
 
           // Step 1: Send instructions update (agent system prompt)
@@ -732,8 +759,8 @@ export function useOpenAIVoiceChat(
             session: {
               type: "realtime",
               model: "gpt-realtime",
-              instructions: session.sessionConfig.instructions,
-              output_modalities: session.sessionConfig.output_modalities,
+              instructions: sessionConfig.instructions,
+              output_modalities: sessionConfig.output_modalities,
             },
           };
 
@@ -747,7 +774,7 @@ export function useOpenAIVoiceChat(
               session: {
                 type: "realtime",
                 model: "gpt-realtime",
-                tools: session.sessionConfig.tools,
+                tools: sessionConfig.tools,
               },
             };
 
@@ -761,7 +788,7 @@ export function useOpenAIVoiceChat(
                 session: {
                   type: "realtime",
                   model: "gpt-realtime",
-                  audio: session.sessionConfig.audio,
+                  audio: sessionConfig.audio,
                 },
               };
 
@@ -786,7 +813,7 @@ export function useOpenAIVoiceChat(
                 session: {
                   type: "realtime",
                   model: "gpt-realtime",
-                  ...session.sessionConfig,
+                  ...sessionConfig,
                 },
               };
               dc.send(JSON.stringify(fallbackUpdate));
