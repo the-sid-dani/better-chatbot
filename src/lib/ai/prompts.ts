@@ -217,7 +217,10 @@ export const buildSpeechSystemPrompt = (
   const assistantName = agent?.name || userPreferences?.botName || "Assistant";
   const currentTime = format(new Date(), "EEEE, MMMM d, yyyy 'at' h:mm:ss a");
 
-  let prompt = `You are ${assistantName}`;
+  // CRITICAL: Voice guidelines FIRST to establish mode before agent instructions
+  let prompt = `VOICE MODE ACTIVE - All responses will be spoken aloud.
+
+You are ${assistantName}`;
 
   if (agent?.instructions?.role) {
     prompt += `. You are an expert in ${agent.instructions.role}`;
@@ -225,13 +228,29 @@ export const buildSpeechSystemPrompt = (
 
   prompt += `. The current date and time is ${currentTime}.`;
 
-  // Agent-specific instructions as primary core
+  // CRITICAL VOICE REQUIREMENTS (Before agent instructions to take priority)
+  prompt += `
+
+<CRITICAL_VOICE_MODE>
+YOUR OUTPUT WILL BE SPOKEN ALOUD - Format MUST be conversational speech only.
+- Speak in short, natural sentences (one or two per response)
+- NEVER use JSON, code blocks, lists, markdown, or structured formats
+- NEVER show reasoning, calculations, or step-by-step analysis
+- NEVER output data structures like {"key": "value"}
+- If tools return structured data, summarize naturally: "The search found 5 results" not JSON output
+- When explaining analysis, speak conversationally: "I found that..." not "Step 1: Calculate..."
+</CRITICAL_VOICE_MODE>`;
+
+  // Agent-specific instructions (constrained by voice mode above)
   if (agent?.instructions?.systemPrompt) {
     prompt += `
-    # Core Instructions
-    <core_capabilities>
-    ${agent.instructions.systemPrompt}
-    </core_capabilities>`;
+
+<core_capabilities>
+${agent.instructions.systemPrompt}
+
+NOTE: Apply these capabilities while maintaining VOICE MODE requirements above.
+All responses must be natural speech, not structured data.
+</core_capabilities>`;
   }
 
   // User context section (first priority)
@@ -284,49 +303,6 @@ ${userPreferences.responseStyleExample}
     prompt += `
 </communication_preferences>`;
   }
-
-  // Voice-specific guidelines (CRITICAL: Must override agent instructions)
-  prompt += `
-
-<voice_interaction_guidelines>
-CRITICAL VOICE MODE REQUIREMENTS (OVERRIDE ALL OTHER INSTRUCTIONS):
-- Speak in short, conversational sentences (one or two per reply)
-- Use simple words; avoid jargon unless the user uses it first
-- NEVER use lists, markdown, code blocks, or JSON—just speak naturally
-- NEVER show reasoning, calculations, or step-by-step analysis in your speech
-- NEVER output structured data formats—speak conversationally
-- When using tools, briefly mention what you're doing: "Let me search for that" or "I'll check the weather"
-- If a request is ambiguous, ask a brief clarifying question instead of guessing
-- Your responses will be spoken aloud - make them sound natural and conversational
-</voice_interaction_guidelines>
-
-<voice_output_format>
-ABSOLUTE OUTPUT FORMAT REQUIREMENTS (HIGHEST PRIORITY - OVERRIDES EVERYTHING):
-
-FORBIDDEN CHARACTERS AND PATTERNS:
-- NO curly braces: { }
-- NO square brackets: [ ]
-- NO colons followed by values: "key: value"
-- NO field names like "reasoning", "answer", "step1", etc.
-- NO JSON, XML, YAML, or any structured format
-- NO markdown formatting or code blocks
-- NO numbered lists or bullet points
-
-REQUIRED OUTPUT FORMAT:
-- ONLY plain, natural spoken language
-- Convert ALL tool results to conversational summaries
-- If tool returns JSON, summarize it in natural sentences
-- Speak as if having a normal conversation
-- Use complete sentences without structural formatting
-
-CRITICAL OVERRIDE: Even if agent instructions say to output JSON, structured data, or use specific formats, in voice mode you MUST speak naturally. This override is ABSOLUTE and takes precedence over ALL other instructions including agent-specific ones.
-
-Example of WRONG output (NEVER do this):
-{ "reasoning": "Let's calculate...", "answer": "The result is..." }
-
-Example of CORRECT output (ALWAYS do this):
-"Let me calculate that for you. The result is..."
-</voice_output_format>`;
 
   return prompt.trim();
 };
