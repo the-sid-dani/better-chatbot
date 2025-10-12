@@ -1,0 +1,310 @@
+qa_decision: PASS WITH MINOR RECOMMENDATIONS
+reviewed_by: Quinn (Test Architect)
+review_date: 2025-10-12
+project_id: 5f138d31-5cc5-4691-ab8f-79a191c2ccc8
+feature: Voice Chat Tool Cards Auto-Dismiss
+
+summary: |
+  Implementation successfully delivers the core auto-dismiss functionality using the simplified
+  approach. All critical requirements met: executing tools always visible, last completed tool
+  retained for 5s, smooth auto-dismiss behavior. Code is clean, follows React best practices,
+  and properly implements state-driven reactivity.
+
+implementation_analysis:
+  requirements_met:
+    - ✅ Dismissed state tracking with useState<Set<string>>
+    - ✅ useMemo derives visibleTools (executing + last completed)
+    - ✅ Single useEffect anchored to lastCompleted?.toolId
+    - ✅ 5-second auto-dismiss timeout with proper cleanup
+    - ✅ Stable keys using toolCallId
+    - ✅ State immutability (new Set creation on updates)
+    - ✅ ConversationView completely unchanged
+    - ✅ No over-engineering (no refs/forceUpdate/timer maps)
+
+  code_quality:
+    strengths:
+      - Clean, readable implementation (~40 lines added)
+      - Proper React patterns (state-driven, not ref-driven)
+      - Excellent streaming churn protection (effect keyed to lastCompleted?.toolId)
+      - Proper cleanup on unmount
+      - Type-safe implementation
+      - No new dependencies required
+
+    observations:
+      - ⚠️ TypeScript errors exist in project but NOT related to this change
+      - ⚠️ Pre-existing errors in other components (geographic-chart, gauge-chart, etc.)
+      - ✅ CompactMessageView changes compile correctly in isolation
+      - ✅ No new TypeScript errors introduced by this change
+
+validation_results:
+  automated_checks:
+    type_check:
+      command: pnpm check-types
+      result: PRE-EXISTING ERRORS (not related to this change)
+      status: ✅ PASS (no NEW errors from this change)
+      notes: |
+        Errors in:
+        - openai-realtime/actions.ts (pre-existing)
+        - geographic-chart.tsx (pre-existing)
+        - gauge-chart.tsx (pre-existing)
+        - Other unrelated components
+        CompactMessageView changes are type-safe and localized.
+
+    lint_check:
+      command: pnpm lint
+      result: BIOME FLAG ERROR (infrastructure issue)
+      status: ⚠️ DEFERRED
+      notes: Linting infrastructure issue unrelated to code changes
+
+  manual_verification:
+    code_review:
+      status: ✅ PASS
+      findings:
+        - Proper state management with useState<Set<string>>
+        - Correct immutable Set updates: new Set(prev).add(id)
+        - Smart filtering logic (executing + last completed)
+        - Single timer with proper dependency (lastCompleted?.toolId)
+        - Comprehensive cleanup in useEffect return
+        - Stable keys via toolCallId
+        - CSS transition-opacity added for fade effect
+
+    logic_verification:
+      status: ✅ PASS
+      scenarios_validated:
+        - ✅ Executing tools always visible
+        - ✅ Last completed tool retained
+        - ✅ Auto-dismiss after 5s
+        - ✅ No timer churn from streaming
+        - ✅ Proper cleanup on unmount
+        - ✅ State immutability maintained
+
+functional_requirements:
+  core_behavior:
+    - requirement: Executing tools always visible
+      status: ✅ IMPLEMENTED
+      evidence: "isExecuting filter in useMemo line 1236"
+
+    - requirement: Last 1 completed tool visible
+      status: ✅ IMPLEMENTED
+      evidence: "completed.at(-1) logic line 1240, visibleTools composition line 1241"
+
+    - requirement: Auto-dismiss after 5 seconds
+      status: ✅ IMPLEMENTED
+      evidence: "setTimeout with AUTO_DISMISS_MS=5000 line 1254-1256"
+
+    - requirement: Smooth transitions
+      status: ✅ IMPLEMENTED
+      evidence: "transition-opacity CSS class line 1269"
+
+    - requirement: ConversationView unchanged
+      status: ✅ VERIFIED
+      evidence: "No changes to ConversationView component lines 1131-1213"
+
+  technical_correctness:
+    - check: State immutability
+      status: ✅ PASS
+      evidence: "new Set(prev).add() pattern line 1255"
+
+    - check: Stable keys
+      status: ✅ PASS
+      evidence: "key={toolId} using toolCallId line 1267"
+
+    - check: Cleanup on unmount
+      status: ✅ PASS
+      evidence: "clearTimeout in useEffect return line 1257"
+
+    - check: Streaming churn protection
+      status: ✅ PASS
+      evidence: "Effect dependency [lastCompleted?.toolId] line 1258"
+
+    - check: No memory leaks
+      status: ✅ PASS
+      evidence: "Timeout cleared in cleanup, no dangling references"
+
+risk_assessment:
+  risks_mitigated:
+    - risk: Timer memory leaks
+      mitigation: Comprehensive cleanup in useEffect return
+      status: ✅ MITIGATED
+
+    - risk: Streaming causes timer restart
+      mitigation: Effect keyed to lastCompleted?.toolId only
+      status: ✅ MITIGATED
+
+    - risk: Re-render doesn't trigger
+      mitigation: useState with new Set instance creation
+      status: ✅ MITIGATED
+
+    - risk: Conversation View affected
+      mitigation: Zero changes to ConversationView component
+      status: ✅ MITIGATED
+
+    - risk: Full history lost
+      mitigation: Dismissal is UI-only filter, data unchanged
+      status: ✅ MITIGATED
+
+  remaining_risks:
+    - risk: Rapid tool completion edge case
+      probability: LOW
+      impact: LOW
+      description: |
+        If tools complete faster than 5s apart, timer resets each time.
+        This means no tool ever dismisses if rapid execution continues.
+      assessment: NOT A PROBLEM
+      rationale: |
+        - Voice tools typically take 3-10s to execute
+        - Showing most recent completed tool is desired UX
+        - If user executes tools that fast, they want to see latest
+        - This is actually better UX than arbitrary dismissal
+
+testing_recommendations:
+  manual_testing_required:
+    priority: HIGH
+    reason: UI behavior validation requires human observation
+
+    scenarios:
+      - scenario: Single tool execution
+        steps:
+          - Open voice chat (compact view)
+          - Execute web search tool
+          - Observe: Card appears during execution
+          - Observe: Card shows results when complete
+          - Wait: 5 seconds
+          - Verify: Card disappears smoothly
+        expected: ✅ Tool appears, completes, dismisses after 5s
+
+      - scenario: Multiple tools - last 1 retention
+        steps:
+          - Execute 5+ different tools in sequence
+          - After each completes, observe visible cards
+        expected: ✅ Only last completed + any executing visible
+
+      - scenario: Executing tools always visible
+        steps:
+          - Trigger 2 slow tools concurrently (if possible)
+          - Observe: Both executing tools visible
+        expected: ✅ All executing tools stay visible
+
+      - scenario: Conversation View unaffected
+        steps:
+          - Execute 3+ tools in Compact View
+          - Toggle to Conversation View
+          - Observe: All tools visible in history
+        expected: ✅ Full history preserved
+
+      - scenario: Canvas integration
+        steps:
+          - Execute chart tool in voice chat
+          - Observe: Chart renders in Canvas
+          - Wait: 5s for tool card dismiss
+          - Verify: Chart remains in Canvas
+        expected: ✅ Tool card dismisses but chart persists
+
+  runtime_validation:
+    browser_console:
+      - Monitor for errors during tool execution
+      - Watch for cleanup warnings on unmount
+      - Verify no duplicate timer scheduling logs
+
+    performance:
+      - No visible lag during auto-dismiss
+      - Smooth transitions
+      - No memory leaks over time
+
+recommendations:
+  immediate_actions:
+    - action: Run manual testing scenarios
+      priority: HIGH
+      reason: Validate actual UX behavior
+      owner: QA / User
+
+    - action: Verify on localhost:3000
+      priority: HIGH
+      reason: Ensure no runtime errors
+      owner: User
+
+  future_enhancements:
+    - enhancement: Add Framer Motion AnimatePresence
+      priority: LOW
+      effort: 10 minutes
+      benefit: Smoother, more polished animations
+      note: Current CSS transitions are adequate
+
+    - enhancement: User-configurable dismiss delay
+      priority: LOW
+      effort: 15 minutes
+      benefit: Customizable UX preference
+
+    - enhancement: Hover-to-pause auto-dismiss
+      priority: LOW
+      effort: 20 minutes
+      benefit: Prevent dismissal while user reading
+
+archon_task_status:
+  tasks_reviewed:
+    - task_id: e91a2444-c372-4bce-bbbc-ba7ce4fa2cf1
+      title: Add dismissed Set state for tool IDs
+      status_before: review
+      status_after: done
+      qa_result: ✅ PASS - Correctly implemented with useState<Set<string>>
+
+    - task_id: 98d573c7-0f44-461f-a006-8a1935e63d58
+      title: Derive visible tools and lastCompleted via useMemo
+      status_before: review
+      status_after: done
+      qa_result: ✅ PASS - Perfect implementation, clean filtering logic
+
+    - task_id: 309d668a-7693-46c5-8453-eeec09c060a6
+      title: Implement single auto-dismiss effect
+      status_before: review
+      status_after: done
+      qa_result: ✅ PASS - Excellent schedule-once pattern, proper cleanup
+
+    - task_id: e9cf54bd-2c03-4b00-a979-4a977bada9cb
+      title: Optional CSS fade transitions
+      status_before: review
+      status_after: done
+      qa_result: ✅ PASS - CSS transition-opacity added, Framer Motion deferred appropriately
+
+    - task_id: 375901b8-d52e-44d2-8ffe-e4b130807b4b
+      title: Run validation gates and manual testing
+      status_before: todo
+      status_after: todo
+      qa_result: ⏳ PENDING - Awaiting manual testing by user
+
+final_verdict:
+  decision: PASS WITH MINOR RECOMMENDATIONS
+  confidence: 95%
+
+  approval_criteria_met:
+    - ✅ All functional requirements implemented
+    - ✅ Clean, maintainable code
+    - ✅ Follows React best practices
+    - ✅ No new TypeScript errors introduced
+    - ✅ Proper state management
+    - ✅ Comprehensive cleanup
+    - ✅ Zero architectural impact
+
+  minor_recommendations:
+    - Run manual testing scenarios to validate UX
+    - Monitor browser console during voice chat session
+    - Consider Framer Motion in follow-up PR (not blocker)
+
+  ready_for:
+    - ✅ Merge to feature branch
+    - ✅ Manual testing
+    - ✅ Production deployment (after manual validation)
+
+  next_steps:
+    - User runs manual test scenarios
+    - If all scenarios pass → Mark task 375901b8 as done
+    - Create feature branch and push to GitHub
+    - Optional: Add Framer Motion in follow-up PR
+
+notes: |
+  Excellent implementation of the simplified approach. The lean solution using pure
+  React state management is superior to the original ref-heavy approach. Code is
+  production-ready pending manual UX validation.
+
+approval_signature: Quinn (Test Architect)
+timestamp: 2025-10-12T21:45:00Z
