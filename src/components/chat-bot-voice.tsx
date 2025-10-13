@@ -436,7 +436,18 @@ export function ChatBotVoice() {
               result.artifact ||
               result.structuredContent?.result?.[0]?.artifact;
             if (artifactData) {
-              const artifactContent = JSON.parse(artifactData.content);
+              let artifactContent;
+              try {
+                artifactContent = JSON.parse(artifactData.content);
+              } catch (parseError) {
+                logger.error("Voice Chat: Failed to parse artifact content", {
+                  error: parseError,
+                  artifactId,
+                  toolName,
+                  contentPreview: artifactData.content?.substring(0, 100),
+                });
+                return; // Skip this artifact if JSON is malformed
+              }
 
               if (isTableTool) {
                 artifactType = "table";
@@ -568,7 +579,21 @@ export function ChatBotVoice() {
               result.artifact ||
               result.structuredContent?.result?.[0]?.artifact;
             if (artifactData) {
-              const artifactContent = JSON.parse(artifactData.content);
+              let artifactContent;
+              try {
+                artifactContent = JSON.parse(artifactData.content);
+              } catch (parseError) {
+                logger.error(
+                  "Voice Chat: Failed to parse artifact update content",
+                  {
+                    error: parseError,
+                    existingArtifactId: existingArtifact.id,
+                    toolName,
+                    contentPreview: artifactData.content?.substring(0, 100),
+                  },
+                );
+                return; // Skip update if JSON is malformed
+              }
 
               if (isTableTool) {
                 chartType = "table";
