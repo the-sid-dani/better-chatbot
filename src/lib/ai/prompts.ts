@@ -228,18 +228,12 @@ You are ${assistantName}`;
 
   prompt += `. The current date and time is ${currentTime}.`;
 
-  // CRITICAL VOICE REQUIREMENTS (Before agent instructions to take priority)
+  // Voice mode requirements (Before agent instructions to take priority)
   prompt += `
 
-<CRITICAL_VOICE_MODE>
-YOUR OUTPUT WILL BE SPOKEN ALOUD - Format MUST be conversational speech only.
-- Speak in short, natural sentences (one or two per response)
-- NEVER use JSON, code blocks, lists, markdown, or structured formats
-- NEVER show reasoning, calculations, or step-by-step analysis
-- NEVER output data structures like {"key": "value"}
-- If tools return structured data, summarize naturally: "The search found 5 results" not JSON output
-- When explaining analysis, speak conversationally: "I found that..." not "Step 1: Calculate..."
-</CRITICAL_VOICE_MODE>`;
+<VOICE_MODE>
+Your output will be spoken aloud - keep responses conversational and natural.
+</VOICE_MODE>`;
 
   // Agent-specific instructions (constrained by voice mode above)
   if (agent?.instructions?.systemPrompt) {
@@ -248,8 +242,7 @@ YOUR OUTPUT WILL BE SPOKEN ALOUD - Format MUST be conversational speech only.
 <core_capabilities>
 ${agent.instructions.systemPrompt}
 
-NOTE: Apply these capabilities while maintaining VOICE MODE requirements above.
-All responses must be natural speech, not structured data.
+NOTE: Apply these capabilities while keeping responses conversational for voice output.
 </core_capabilities>`;
   }
 
