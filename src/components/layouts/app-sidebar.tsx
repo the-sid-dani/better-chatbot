@@ -22,7 +22,6 @@ import { AppSidebarUser } from "./app-sidebar-user";
 import { PanelLeft } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Session, User } from "better-auth";
-import Image from "next/image";
 
 export function AppSidebar({
   session,
@@ -73,18 +72,15 @@ export function AppSidebar({
                   router.refresh();
                 }}
               >
-                <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 flex items-center justify-center">
-                    <Image
-                      src="/samba-resources/logos/samba-logo-2024.png"
-                      alt="Samba AI Logo"
-                      width={24}
-                      height={24}
-                      className="object-contain"
-                    />
-                  </div>
-                  <h4 className="font-bold">Samba AI</h4>
-                </div>
+                <h4
+                  className="text-xl font-light tracking-wide"
+                  style={{
+                    fontFamily: "var(--font-montserrat)",
+                    fontWeight: 400,
+                  }}
+                >
+                  Samba AI
+                </h4>
                 <div
                   className="ml-auto block sm:hidden"
                   onClick={(e) => {

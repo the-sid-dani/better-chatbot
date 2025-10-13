@@ -1,8 +1,6 @@
-import { Think } from "ui/think";
 import { getTranslations } from "next-intl/server";
 import { FlipWords } from "ui/flip-words";
 import { BackgroundPaths } from "ui/background-paths";
-import Image from "next/image";
 
 export default async function AuthLayout({
   children,
@@ -16,15 +14,11 @@ export default async function AuthLayout({
             <div className="absolute inset-0 w-full h-full">
               <BackgroundPaths />
             </div>
-            <h1 className="text-xl font-semibold flex items-center gap-2 animate-in fade-in duration-1000">
-              <Image
-                src="/samba-resources/logos/samba-logo-2024.png"
-                alt="Samba AI Logo"
-                width={32}
-                height={32}
-                className="h-8 w-auto"
-              />
-              <span>Samba AI</span>
+            <h1
+              className="text-3xl font-light tracking-wide animate-in fade-in duration-1000"
+              style={{ fontFamily: "var(--font-montserrat)", fontWeight: 300 }}
+            >
+              Samba AI
             </h1>
             <div className="flex-1" />
             <FlipWords
