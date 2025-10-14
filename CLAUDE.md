@@ -15,6 +15,7 @@
 - **Backend:** Next.js 15.3.2, PostgreSQL, Drizzle ORM 0.41.0
 - **Auth:** Better-Auth 1.3.7
 - **Frontend:** React 19.1.1, Tailwind CSS, Radix UI
+- **Typography:** Geist (sans), Geist Mono (code), Montserrat (branding, weights 300-600)
 - **Tools:** TypeScript 5.9.2, Biome 1.9.4, Vitest, Playwright
 
 ## Essential Commands
@@ -69,6 +70,11 @@ pnpm docker-compose:up     # Full stack
 
 **Workflow Engine:** Visual workflow builder using XYFlow
 
+**Branding System:** Clean, typography-focused design
+- Text-only "Samba AI" branding (no logo images in UI)
+- Montserrat font for brand identity (light weights: 300-400)
+- Elegant, minimalist aesthetic with focus on content
+
 ## Observability
 
 **Langfuse Integration:** Automatic tracing of all AI operations via `experimental_telemetry`
@@ -86,7 +92,7 @@ src/
 └── hooks/                 # Custom React hooks
 
 Key files:
-├── instrumentation.ts     # Langfuse observability setup
+├── src/instrumentation.ts # Langfuse observability setup (Next.js 15)
 ├── app-types/            # Shared TypeScript interfaces
 └── docker/               # Docker configuration
 ```
@@ -131,7 +137,7 @@ EXA_API_KEY=****  # Web search
 ## Key Files
 
 **Core Architecture:**
-- `instrumentation.ts` - Langfuse observability setup
+- `src/instrumentation.ts` - Langfuse observability setup (Next.js 15 register() hook)
 - `src/app/api/chat/route.ts` - Main chat API with streaming
 - `src/lib/ai/models.ts` - AI provider configuration
 - `src/components/chat-bot.tsx` - Main chat interface with Canvas
@@ -142,12 +148,26 @@ EXA_API_KEY=****  # Web search
 - `src/lib/ai/tools/artifacts/` - 17 specialized chart tools
 - `src/lib/db/pg/schema.pg.ts` - Database schema
 
+**Branding & UI:**
+- `src/app/layout.tsx` - Font configuration (Geist, Geist Mono, Montserrat)
+- `src/app/(auth)/layout.tsx` - Auth page branding (text-only, Montserrat 300)
+- `src/components/layouts/app-sidebar.tsx` - Sidebar branding (text-only, Montserrat 400)
+- `src/components/layouts/app-sidebar-user.tsx` - User dropdown menu
+
 ## Important Notes
 
 **CRITICAL PORT REQUIREMENT:** This project ONLY works on `localhost:3000` - no other ports supported due to auth/observability constraints.
 
+**CRITICAL INSTRUMENTATION REQUIREMENTS (Next.js 15):**
+- ⚠️ Only ONE `instrumentation.ts` file must exist: `/src/instrumentation.ts`
+- ✅ Must include `register()` function for Next.js 15
+- ✅ Must validate environment variables with error handling
+- ✅ Must have explicit LangfuseSpanProcessor configuration
+- ❌ NEVER create duplicate instrumentation files (see `docs/incidents/2025-10-14-duplicate-instrumentation.md`)
+
 **Debugging:**
 - Use `/mcp` page to check MCP server connections
 - Use `pnpm db:studio` to inspect database
-- Check `instrumentation.ts` loading for observability
+- Check `src/instrumentation.ts` loading for observability
+- See `docs/incidents/` for historical issues and resolutions
 
