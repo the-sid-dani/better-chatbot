@@ -304,9 +304,13 @@ export function useOpenAIVoiceChat(
       try {
         const { formatToolResult } = await import("lib/ai/tools/formatters");
         const formatted = formatToolResult(toolName, toolResult);
-        outputText = formatted.summaryForModel || "Tool executed successfully";
-        // Ensure UI still receives structured data
-        toolResult = formatted.structuredForUI ?? toolResult;
+        const structured = formatted.structuredForUI ?? toolResult;
+        const payload = {
+          summary: formatted.summaryForModel || "",
+          data: structured,
+        };
+        outputText = JSON.stringify(payload);
+        toolResult = structured;
       } catch (_err) {
         // Conservative fallback
         outputText = "Tool executed successfully";
