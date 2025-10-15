@@ -755,12 +755,11 @@ export function buildResponseMessageFromStreamResult(
       if (step.toolResults && Array.isArray(step.toolResults)) {
         for (const toolResult of step.toolResults) {
           // Find the corresponding call part
-          const callPart = parts.find(
-            (p) =>
-              typeof p === "object" &&
-              p.toolCallId && // FIX: Check toolCallId exists before comparing
-              p.toolCallId === toolResult.toolCallId,
-          );
+          const callPart = parts.find((part): part is ToolUIPart => {
+            return (
+              isToolUIPart(part) && part.toolCallId === toolResult.toolCallId
+            );
+          });
 
           if (callPart) {
             // Update the existing part with result
@@ -774,6 +773,10 @@ export function buildResponseMessageFromStreamResult(
               if (resolvedInput !== null) {
                 callPart.input = resolvedInput;
               }
+            }
+
+            if (!callPart.toolCallId) {
+              callPart.toolCallId = toolResult.toolCallId ?? generateUUID();
             }
           } else {
             const synthesizedInput = resolveToolInput(
