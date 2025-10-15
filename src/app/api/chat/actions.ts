@@ -80,8 +80,28 @@ export async function selectThreadWithMessagesAction(threadId: string) {
   if (thread.userId !== session?.user.id) {
     return null;
   }
-  const messages = await chatRepository.selectMessagesByThreadId(threadId);
-  return { ...thread, messages: messages ?? [] };
+  let messages =
+    (await chatRepository.selectMessagesByThreadId(threadId)) ?? [];
+
+  // UI SAFETY PATCH: Some historical rows may have persisted assistant messages
+  // with an empty parts array (from a prior regression). Patch them at read time
+  // so the thread renders instead of disappearing. This does not mutate DB.
+  messages = messages.map((m) => {
+    if (m.role === "assistant" && (!m.parts || m.parts.length === 0)) {
+      return {
+        ...m,
+        parts: [
+          {
+            type: "text" as const,
+            text: "(previous assistant message contained no renderable content)",
+          },
+        ],
+      } as any;
+    }
+    return m;
+  });
+
+  return { ...thread, messages };
 }
 
 export async function deleteMessageAction(messageId: string) {
