@@ -45,6 +45,7 @@ import {
   loadWorkFlowTools,
   loadAppDefaultTools,
   convertToSavePart,
+  buildResponseMessageFromStreamResult,
 } from "./shared.chat";
 import {
   rememberAgentAction,
@@ -405,18 +406,25 @@ const handler = async (request: Request) => {
 
             // Build assistant response message from captured UI stream parts
             // CRITICAL: Use the SAME data source the client received (single source of truth)
-            const responseMessage: UIMessage = {
-              id: (result as any).id || generateUUID(),
-              role: "assistant" as const,
-              parts: [
-                // Add text content if present
-                ...(result.text && result.text.trim()
-                  ? [{ type: "text" as const, text: result.text }]
-                  : []),
-                // Add captured tool parts (guaranteed complete from UI stream)
-                ...capturedToolParts,
-              ],
-            };
+            const parts = [
+              // Add text content if present
+              ...(result.text && result.text.trim()
+                ? [{ type: "text" as const, text: result.text }]
+                : []),
+              // Add captured tool parts (guaranteed complete from UI stream)
+              ...capturedToolParts,
+            ];
+
+            // SAFETY: If stream capture produced no parts, fallback to original method
+            // This prevents messages with empty parts arrays from being saved
+            const responseMessage: UIMessage =
+              parts.length > 0
+                ? {
+                    id: (result as any).id || generateUUID(),
+                    role: "assistant" as const,
+                    parts,
+                  }
+                : buildResponseMessageFromStreamResult(result, message);
 
             logger.info("💾 Response message built from UI stream", {
               totalParts: responseMessage.parts.length,
