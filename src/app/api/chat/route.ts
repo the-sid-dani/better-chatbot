@@ -431,14 +431,38 @@ const handler = async (request: Request) => {
 
             // Persist using existing logic from outer onFinish
             if (responseMessage.id == message.id) {
-              // Single message case (response merged with user message)
+              // If the assistant response reused the user message ID, persist both messages separately
+              logger.warn(
+                "Assistant response reused user message ID. Generating new assistant ID to preserve history.",
+                {
+                  threadId: thread!.id,
+                  messageId: message.id,
+                },
+              );
+
               await chatRepository.upsertMessage({
                 threadId: thread!.id,
-                ...responseMessage,
+                role: message.role,
+                parts: message.parts.map(convertToSavePart),
+                id: message.id,
+              });
+              logger.info("✅ User message persisted", { id: message.id });
+
+              const regeneratedAssistantId = generateUUID();
+
+              await chatRepository.upsertMessage({
+                threadId: thread!.id,
+                role: responseMessage.role,
+                id: regeneratedAssistantId,
                 parts: responseMessage.parts.map(convertToSavePart),
                 metadata,
               });
-              logger.info("✅ Single merged message persisted");
+              logger.info(
+                "✅ Assistant message persisted with regenerated ID",
+                {
+                  id: regeneratedAssistantId,
+                },
+              );
             } else {
               // Separate messages case (user + assistant)
 

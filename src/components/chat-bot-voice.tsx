@@ -55,6 +55,12 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "ui/tooltip";
 import { CanvasPanel, useCanvas } from "./canvas-panel";
 import { ToolMessagePart } from "./message-parts";
+import {
+  VOICE_TOOL_AUTO_DISMISS_MS,
+  VOICE_TOOL_DISMISSED_MAX,
+  addCompletedToolIdsToDismissed,
+  isVoiceToolExecutingState,
+} from "./chat-bot-voice.helpers";
 
 import { appStore } from "@/app/store";
 import { Shortcuts, isShortcutEvent } from "lib/keyboard-shortcuts";
@@ -1244,67 +1250,74 @@ function CompactMessageView({
 }) {
   // Track dismissed tool IDs and auto-dismiss interval
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  const AUTO_DISMISS_MS = 5000;
 
-  const { visibleTools, textPart, userTextPart, lastCompleted, completedIds } =
-    useMemo(() => {
-      const all = messages
-        .filter((m) => m.parts.some(isToolUIPart))
-        .flatMap((m) =>
-          m.parts.filter(isToolUIPart).map((part) => {
-            const rawId = (part as any).toolCallId as string | undefined;
-            const fallbackId = `${m.id}-${getToolName(part as any)}`;
-            const toolId = rawId || fallbackId;
-            return {
-              part,
-              toolId,
-              isExecuting: part.state.startsWith("input"),
-            };
-          }),
-        );
-
-      const notDismissed = all.filter((t) => !dismissed.has(t.toolId));
-      const executing = notDismissed.filter((t) => t.isExecuting);
-      const completedAll = all.filter(
-        (t) => !t.isExecuting && t.part.state.startsWith("output"),
+  const {
+    visibleTools,
+    textPart,
+    userTextPart,
+    lastCompleted,
+    completedIds,
+    completedIdsKey,
+  } = useMemo(() => {
+    const all = messages
+      .filter((m) => m.parts.some(isToolUIPart))
+      .flatMap((m) =>
+        m.parts.filter(isToolUIPart).map((part) => {
+          const rawId = (part as any).toolCallId as string | undefined;
+          const fallbackId = `${m.id}-${getToolName(part as any)}`;
+          const toolId = rawId || fallbackId;
+          return {
+            part,
+            toolId,
+            isExecuting: isVoiceToolExecutingState(part.state),
+          };
+        }),
       );
-      const completed = notDismissed.filter(
-        (t) => !t.isExecuting && t.part.state.startsWith("output"),
-      );
-      const lastCompleted = completed.at(-1);
-      const visibleTools = lastCompleted
-        ? [...executing, lastCompleted]
-        : executing;
-      const completedIds = completedAll.map((t) => t.toolId);
 
-      const textPart = messages.findLast((m) => m.role === "assistant")
-        ?.parts[0] as TextPart;
-      const userTextPart = messages.findLast((m) => m.role === "user")
-        ?.parts[0] as TextPart;
+    const notDismissed = all.filter((t) => !dismissed.has(t.toolId));
+    const executing = notDismissed.filter((t) => t.isExecuting);
+    const completedAll = all.filter(
+      (t) => !t.isExecuting && t.part.state.startsWith("output"),
+    );
+    const completed = notDismissed.filter(
+      (t) => !t.isExecuting && t.part.state.startsWith("output"),
+    );
+    const lastCompleted = completed.at(-1);
+    const visibleTools = lastCompleted
+      ? [...executing, lastCompleted]
+      : executing;
+    const completedIds = completedAll.map((t) => t.toolId);
 
-      return {
-        visibleTools,
-        textPart,
-        userTextPart,
-        lastCompleted,
-        completedIds,
-      };
-    }, [messages, dismissed]);
+    const textPart = messages.findLast((m) => m.role === "assistant")
+      ?.parts[0] as TextPart;
+    const userTextPart = messages.findLast((m) => m.role === "user")
+      ?.parts[0] as TextPart;
+
+    return {
+      visibleTools,
+      textPart,
+      userTextPart,
+      lastCompleted,
+      completedIds,
+      completedIdsKey: completedIds.join("|"),
+    };
+  }, [messages, dismissed]);
 
   // Auto-dismiss the latest completed tool after a delay
   useEffect(() => {
     if (!lastCompleted) return;
     const t = setTimeout(() => {
-      // Dismiss ALL completed tool IDs observed at this moment to avoid older cards reappearing
-      setDismissed((prev) => {
-        const next = new Set(prev);
-        // Include the lastCompleted and any older completed items atomically
-        completedIds.forEach((id) => next.add(id));
-        return next;
-      });
-    }, AUTO_DISMISS_MS);
+      setDismissed((prev) =>
+        addCompletedToolIdsToDismissed(
+          prev,
+          completedIds,
+          lastCompleted.toolId,
+          VOICE_TOOL_DISMISSED_MAX,
+        ),
+      );
+    }, VOICE_TOOL_AUTO_DISMISS_MS);
     return () => clearTimeout(t);
-  }, [lastCompleted?.toolId]);
+  }, [lastCompleted?.toolId, completedIdsKey]);
 
   return (
     <div className="relative w-full h-full overflow-hidden">
