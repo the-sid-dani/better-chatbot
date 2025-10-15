@@ -299,27 +299,16 @@ export function useOpenAIVoiceChat(
 
       startListening();
 
-      // Safe JSON truncation - preserve structure or use summary
+      // Use shared formatter registry to provide model-friendly summaries
       let outputText: string;
       try {
-        const resultText = JSON.stringify(toolResult);
-
-        // If result is small enough, use it directly
-        if (resultText.length <= 15000) {
-          outputText = resultText;
-        } else {
-          // For large results (charts with lots of data), send summary instead
-          const summary = {
-            status: toolResult.status || "success",
-            chartType: toolResult.chartType,
-            title: toolResult.title,
-            dataPointCount: toolResult.chartData?.data?.length || 0,
-            message: "Chart created successfully - full data in Canvas",
-          };
-          outputText = JSON.stringify(summary);
-        }
+        const { formatToolResult } = await import("lib/ai/tools/formatters");
+        const formatted = formatToolResult(toolName, toolResult);
+        outputText = formatted.summaryForModel || "Tool executed successfully";
+        // Ensure UI still receives structured data
+        toolResult = formatted.structuredForUI ?? toolResult;
       } catch (_err) {
-        // Fallback if JSON.stringify fails
+        // Conservative fallback
         outputText = "Tool executed successfully";
       }
 
