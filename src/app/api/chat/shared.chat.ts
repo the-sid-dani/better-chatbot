@@ -726,13 +726,15 @@ export function buildResponseMessageFromStreamResult(
   originalMessage: UIMessage,
 ): UIMessage {
   const parts: any[] = [];
+  let textPart: UIMessagePart | null = null;
 
-  // Extract text content from result
+  // Extract text content from result (append after processing tool events to
+  // maintain original streaming order)
   if (result.text && result.text.trim()) {
-    parts.push({
+    textPart = {
       type: "text",
       text: result.text,
-    });
+    } as UIMessagePart;
   }
 
   // Extract tool calls and results from steps
@@ -806,6 +808,10 @@ export function buildResponseMessageFromStreamResult(
         }
       }
     }
+  }
+
+  if (textPart) {
+    parts.push(textPart);
   }
 
   // Build the response message
