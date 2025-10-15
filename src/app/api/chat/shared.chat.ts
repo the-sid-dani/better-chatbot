@@ -17,7 +17,7 @@ import {
   ChatMetadata,
   ManualToolConfirmTag,
 } from "app-types/chat";
-import { errorToString, exclude, objectFlow } from "lib/utils";
+import { errorToString, exclude, objectFlow, generateUUID } from "lib/utils";
 import logger from "logger";
 import {
   AllowedMCPServer,
@@ -627,6 +627,92 @@ export const convertToSavePart = <T extends UIMessagePart<any, any>>(
     .unwrap();
 };
 
+const hasStructuredContent = (value: unknown): boolean => {
+  if (value === null || value === undefined) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (typeof value === "number" || typeof value === "boolean") return true;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "object") {
+    return Object.keys(value as Record<string, unknown>).length > 0;
+  }
+  return false;
+};
+
+const extractCandidateFromResult = (result: unknown): unknown => {
+  if (!result || typeof result !== "object") return null;
+
+  const payload = result as Record<string, unknown>;
+  const candidateKeys = [
+    "input",
+    "request",
+    "arguments",
+    "args",
+    "parameters",
+    "params",
+    "payload",
+  ] as const;
+
+  for (const key of candidateKeys) {
+    const candidate = payload[key];
+    if (key === "payload" && candidate && typeof candidate === "object") {
+      const payloadInput = (candidate as Record<string, unknown>).input;
+      if (hasStructuredContent(payloadInput)) {
+        return payloadInput;
+      }
+      continue;
+    }
+    if (hasStructuredContent(candidate)) return candidate;
+  }
+
+  const structured = payload.structuredContent as
+    | Record<string, unknown>
+    | undefined;
+  if (structured) {
+    const structuredKeys = ["request", "input", "args", "parameters"] as const;
+    for (const key of structuredKeys) {
+      const candidate = structured[key];
+      if (hasStructuredContent(candidate)) return candidate;
+    }
+
+    const structuredResult = structured.result;
+    if (Array.isArray(structuredResult)) {
+      for (const entry of structuredResult) {
+        if (!entry || typeof entry !== "object") continue;
+        for (const key of [...candidateKeys, "result", "payload"]) {
+          const candidate = (entry as Record<string, unknown>)[key];
+          if (hasStructuredContent(candidate)) {
+            return candidate;
+          }
+          if (
+            key === "payload" &&
+            candidate &&
+            typeof candidate === "object" &&
+            hasStructuredContent((candidate as Record<string, unknown>).input)
+          ) {
+            return (candidate as Record<string, unknown>).input;
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+};
+
+const resolveToolInput = (
+  initialInput: unknown,
+  toolResult?: unknown,
+): unknown => {
+  if (hasStructuredContent(initialInput)) {
+    return initialInput;
+  }
+  const fallback = extractCandidateFromResult(toolResult);
+  if (hasStructuredContent(fallback)) {
+    return fallback;
+  }
+  return null;
+};
+
 /**
  * Build UIMessage from streamText result for database persistence
  * Extracts text and tool parts from completed stream
@@ -655,28 +741,10 @@ export function buildResponseMessageFromStreamResult(
       // Process tool calls
       if (step.toolCalls && Array.isArray(step.toolCalls)) {
         for (const toolCall of step.toolCalls) {
-          // CRITICAL FIX: Skip tool calls with empty/undefined args
-          // Anthropic API rejects tool_use content blocks with missing or empty input
-          if (
-            !toolCall.args ||
-            (typeof toolCall.args === "object" &&
-              Object.keys(toolCall.args).length === 0)
-          ) {
-            logger.warn(
-              `Skipping tool call with empty args: ${toolCall.toolName}`,
-              {
-                toolCallId: toolCall.toolCallId,
-                args: toolCall.args,
-                reason: "Empty args cause Anthropic API validation errors",
-              },
-            );
-            continue; // Skip this tool call entirely
-          }
-
           const toolPart: any = {
-            type: `tool-${toolCall.toolName}`,
+            type: `tool-${toolCall.toolName ?? "unknown"}`,
             toolCallId: toolCall.toolCallId,
-            input: toolCall.args,
+            input: resolveToolInput(toolCall.args),
             state: "call",
           };
           parts.push(toolPart);
@@ -698,18 +766,39 @@ export function buildResponseMessageFromStreamResult(
             // Update the existing part with result
             callPart.state = "output-available";
             callPart.output = toolResult.result;
+            if (!hasStructuredContent(callPart.input)) {
+              const resolvedInput = resolveToolInput(
+                callPart.input,
+                toolResult.result,
+              );
+              if (resolvedInput !== null) {
+                callPart.input = resolvedInput;
+              }
+            }
           } else {
-            // FIXED: Don't create parts with empty input
-            // Anthropic API requires valid input field for tool_use content
-            // If we don't have the original tool call args, skip the part entirely
-            logger.warn(
-              `Skipping tool result without matching call: ${toolResult.toolName}`,
-              {
-                toolCallId: toolResult.toolCallId,
-                reason: "No original input available",
-              },
+            const synthesizedInput = resolveToolInput(
+              undefined,
+              toolResult.result,
             );
-            // Part intentionally omitted - prevents API validation errors
+
+            if (!hasStructuredContent(synthesizedInput)) {
+              logger.warn(
+                `Skipping tool result without matching call: ${toolResult.toolName}`,
+                {
+                  toolCallId: toolResult.toolCallId,
+                  reason: "Unable to synthesize structured input",
+                },
+              );
+              continue;
+            }
+
+            parts.push({
+              type: `tool-${toolResult.toolName ?? "unknown"}`,
+              toolCallId: toolResult.toolCallId ?? generateUUID(),
+              input: synthesizedInput,
+              state: "output-available",
+              output: toolResult.result,
+            });
           }
         }
       }
