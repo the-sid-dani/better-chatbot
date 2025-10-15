@@ -227,8 +227,14 @@ export function formatToolResult(toolName: string, result: any): FormatResult {
       summaryForModel: clamp(JSON.stringify(result ?? "")),
       structuredForUI: result,
     };
-  const fn = registry[toolName] ?? genericFormatter;
-  const out = safe(() => fn(result)).orElseGet(() => genericFormatter(result));
-  out.summaryForModel = clamp(stripHtml(out.summaryForModel ?? ""));
-  return out;
+  try {
+    const fn = registry[toolName] ?? genericFormatter;
+    const out = fn(result);
+    out.summaryForModel = clamp(stripHtml(out.summaryForModel ?? ""));
+    return out;
+  } catch {
+    const out = genericFormatter(result);
+    out.summaryForModel = clamp(stripHtml(out.summaryForModel ?? ""));
+    return out;
+  }
 }
