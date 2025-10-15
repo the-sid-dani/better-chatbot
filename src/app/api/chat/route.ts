@@ -45,7 +45,6 @@ import {
   loadWorkFlowTools,
   loadAppDefaultTools,
   convertToSavePart,
-  buildResponseMessageFromStreamResult,
 } from "./shared.chat";
 import {
   rememberAgentAction,
@@ -326,6 +325,10 @@ const handler = async (request: Request) => {
       );
       logger.info(`model: ${chatModel?.provider}/${chatModel?.model}`);
 
+      // CRITICAL: Capture tool parts from UI stream for database persistence
+      // This ensures we store the SAME data the client receives (single source of truth)
+      const capturedToolParts: any[] = [];
+
       const result = streamText({
         model,
         system: systemPrompt,
@@ -400,17 +403,54 @@ const handler = async (request: Request) => {
           try {
             logger.info("💾 Building response message from stream result");
 
-            // Build assistant response message from streaming result
-            const responseMessage = buildResponseMessageFromStreamResult(
-              result,
-              message,
-            );
+            // Build assistant response message from captured UI stream parts
+            // CRITICAL: Use the SAME data source the client received (single source of truth)
+            const responseMessage: UIMessage = {
+              id: message.id,
+              role: "assistant" as const,
+              parts: [
+                // Add text content if present
+                ...(result.text && result.text.trim()
+                  ? [{ type: "text" as const, text: result.text }]
+                  : []),
+                // Add captured tool parts (guaranteed complete from UI stream)
+                ...capturedToolParts,
+              ],
+            };
+
+            logger.info("💾 Response message built from UI stream", {
+              totalParts: responseMessage.parts.length,
+              textParts: responseMessage.parts.filter((p) => p.type === "text")
+                .length,
+              toolParts: capturedToolParts.length,
+              toolTypes: capturedToolParts.map((p) => p.type),
+            });
 
             logger.info("💾 Persisting messages to database", {
               userMessageId: message.id,
               assistantMessageId: responseMessage.id,
               threadId: thread!.id,
               partCount: responseMessage.parts.length,
+              // NEW: Detailed part breakdown for validation
+              partBreakdown: {
+                textParts: responseMessage.parts.filter(
+                  (p) => p.type === "text",
+                ).length,
+                toolParts: responseMessage.parts.filter((p) =>
+                  p.type?.startsWith("tool-"),
+                ).length,
+                toolStates: responseMessage.parts
+                  .filter((p) => p.type?.startsWith("tool-"))
+                  .map((p) => ({
+                    type: p.type,
+                    state: (p as any).state,
+                  })),
+              },
+              // NEW: Validation flags
+              hasToolCalls: capturedToolParts.length > 0,
+              allToolPartsHaveInput: capturedToolParts.every(
+                (p) => p.input !== undefined,
+              ),
             });
 
             // Persist using existing logic from outer onFinish
@@ -642,16 +682,35 @@ const handler = async (request: Request) => {
         },
       });
       result.consumeStream();
-      dataStream.merge(
-        result.toUIMessageStream({
-          messageMetadata: ({ part }) => {
-            if (part.type == "finish") {
-              metadata.usage = part.totalUsage;
-              return metadata;
-            }
-          },
-        }),
-      );
+
+      // Create UI message stream with part interception
+      const uiMessageStream = result.toUIMessageStream({
+        messageMetadata: ({ part }) => {
+          // CRITICAL: Capture tool parts as they stream to client
+          // This is the SDK's public API - guaranteed complete data
+          if (part.type?.startsWith("tool-")) {
+            // Clone part to avoid reference issues during streaming
+            capturedToolParts.push({ ...part });
+
+            logger.info("🔧 Tool part captured from stream", {
+              type: part.type,
+              toolCallId: (part as any).toolCallId,
+              state: (part as any).state,
+              hasInput: !!(part as any).input,
+              hasOutput: !!(part as any).output,
+            });
+          }
+
+          // Preserve existing metadata logic
+          if (part.type == "finish") {
+            metadata.usage = part.totalUsage;
+            return metadata;
+          }
+        },
+      });
+
+      // Merge to client (same as before)
+      dataStream.merge(uiMessageStream);
     },
 
     generateId: generateUUID,
