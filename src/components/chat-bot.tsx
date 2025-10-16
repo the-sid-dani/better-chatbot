@@ -306,6 +306,7 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     threadList,
     threadMentions,
     pendingThreadMention,
+    agentList,
   ] = appStore(
     useShallow((state) => [
       state.mutate,
@@ -316,6 +317,7 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
       state.threadList,
       state.threadMentions,
       state.pendingThreadMention,
+      state.agentList,
     ]),
   );
 
@@ -784,6 +786,39 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
       }));
     }
   }, [pendingThreadMention, threadId, appStoreMutate]);
+
+  // Rehydrate agent mention from last assistant message metadata when empty (after refresh)
+  useEffect(() => {
+    if (!threadId) return;
+    const hasMentions = (threadMentions[threadId] ?? []).length > 0;
+    if (hasMentions) return;
+
+    const lastAssistantWithAgent = [...initialMessages]
+      .reverse()
+      .find((m) => m.role === "assistant" && (m.metadata as any)?.agentId);
+    const agentId = (lastAssistantWithAgent?.metadata as any)?.agentId as
+      | string
+      | undefined;
+    if (!agentId) return;
+
+    const agent = agentList.find((a) => a.id === agentId);
+    if (!agent) return;
+
+    appStoreMutate((prev) => ({
+      threadMentions: {
+        ...prev.threadMentions,
+        [threadId]: [
+          {
+            type: "agent",
+            name: agent.name,
+            icon: agent.icon,
+            description: agent.description,
+            agentId: agent.id,
+          },
+        ],
+      },
+    }));
+  }, [threadId, initialMessages, agentList, threadMentions, appStoreMutate]);
 
   useEffect(() => {
     if (isInitialThreadEntry)

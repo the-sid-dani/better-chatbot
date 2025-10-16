@@ -106,6 +106,8 @@ export const appStore = create<AppState & AppDispatch>()(
           state.allowedAppDefaultToolkit ??
           initialState.allowedAppDefaultToolkit
         )?.filter((v) => Object.values(AppDefaultToolkit).includes(v)),
+        // Persist thread-specific mentions so Agent mode survives refresh
+        threadMentions: state.threadMentions,
         temporaryChat: {
           ...initialState.temporaryChat,
           ...state.temporaryChat,
