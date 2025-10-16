@@ -236,510 +236,343 @@ const handler = async (request: Request) => {
 
   const stream = createUIMessageStream({
     execute: async ({ writer: dataStream }) => {
-      const mcpClients = await mcpClientsManager.getClients();
-      const mcpTools = await mcpClientsManager.tools();
-      logger.info(
-        `mcp-server count: ${mcpClients.length}, mcp-tools count :${Object.keys(mcpTools).length}`,
-      );
-      const MCP_TOOLS = await safe()
-        .map(errorIf(() => !isToolCallAllowed && "Not allowed"))
-        .map(() =>
-          loadMcpTools({
-            mentions,
-            allowedMcpServers,
-          }),
-        )
-        .orElse({});
-
-      const WORKFLOW_TOOLS = await safe()
-        .map(errorIf(() => !isToolCallAllowed && "Not allowed"))
-        .map(() =>
-          loadWorkFlowTools({
-            mentions,
-            dataStream,
-          }),
-        )
-        .orElse({});
-
-      const APP_DEFAULT_TOOLS = await safe()
-        .map(errorIf(() => !isToolCallAllowed && "Not allowed"))
-        .map(() =>
-          loadAppDefaultTools({
-            mentions,
-            allowedAppDefaultToolkit: normalizedAllowedAppToolkit,
-          }),
-        )
-        .orElse({});
-      const inProgressToolParts = extractInProgressToolPart(message);
-      if (inProgressToolParts.length) {
-        await Promise.all(
-          inProgressToolParts.map(async (part) => {
-            const output = await manualToolExecuteByLastMessage(
-              part,
-              { ...MCP_TOOLS, ...WORKFLOW_TOOLS, ...APP_DEFAULT_TOOLS },
-              request.signal,
-            );
-            part.output = output;
-
-            dataStream.write({
-              type: "tool-output-available",
-              toolCallId: part.toolCallId,
-              output,
-            });
-          }),
+      try {
+        const mcpClients = await mcpClientsManager.getClients();
+        const mcpTools = await mcpClientsManager.tools();
+        logger.info(
+          `mcp-server count: ${mcpClients.length}, mcp-tools count :${Object.keys(mcpTools).length}`,
         );
-      }
+        const MCP_TOOLS = await safe()
+          .map(errorIf(() => !isToolCallAllowed && "Not allowed"))
+          .map(() =>
+            loadMcpTools({
+              mentions,
+              allowedMcpServers,
+            }),
+          )
+          .orElse({});
 
-      const userPreferences = thread?.userPreferences || undefined;
+        const WORKFLOW_TOOLS = await safe()
+          .map(errorIf(() => !isToolCallAllowed && "Not allowed"))
+          .map(() =>
+            loadWorkFlowTools({
+              mentions,
+              dataStream,
+            }),
+          )
+          .orElse({});
 
-      const mcpServerCustomizations = await safe()
-        .map(() => {
-          if (Object.keys(MCP_TOOLS ?? {}).length === 0)
-            throw new Error("No tools found");
-          return rememberMcpServerCustomizationsAction(session.user.id);
-        })
-        .map((v) => filterMcpServerCustomizations(MCP_TOOLS!, v))
-        .orElse({});
-
-      const systemPrompt = mergeSystemPrompt(
-        buildUserSystemPrompt(session.user, userPreferences, agent),
-        buildMcpServerCustomizationsSystemPrompt(mcpServerCustomizations),
-        !supportToolCall && buildToolCallUnsupportedModelSystemPrompt,
-      );
-
-      const vercelAITooles = safe({ ...MCP_TOOLS, ...WORKFLOW_TOOLS })
-        .map((t) => {
-          const bindingTools =
-            toolChoice === "manual" ||
-            (message.metadata as ChatMetadata)?.toolChoice === "manual"
-              ? excludeToolExecution(t)
-              : t;
-          return {
-            ...bindingTools,
-            ...APP_DEFAULT_TOOLS, // APP_DEFAULT_TOOLS Not Supported Manual
-          };
-        })
-        .unwrap();
-      metadata.toolCount = Object.keys(vercelAITooles).length;
-
-      const allowedMcpTools = Object.values(allowedMcpServers ?? {})
-        .map((t) => t.tools)
-        .flat();
-
-      logger.info(
-        `${agent ? `agent: ${agent.name}, ` : ""}tool mode: ${toolChoice}, mentions: ${mentions.length}`,
-      );
-
-      logger.info(
-        `allowedMcpTools: ${allowedMcpTools.length ?? 0}, allowedAppDefaultToolkit: ${normalizedAllowedAppToolkit?.length ?? 0}`,
-      );
-      logger.info(
-        `binding tool count APP_DEFAULT: ${Object.keys(APP_DEFAULT_TOOLS ?? {}).length}, MCP: ${Object.keys(MCP_TOOLS ?? {}).length}, Workflow: ${Object.keys(WORKFLOW_TOOLS ?? {}).length}`,
-      );
-      logger.info(`model: ${chatModel?.provider}/${chatModel?.model}`);
-
-      // CRITICAL: Capture tool parts from UI stream for database persistence
-      // This ensures we store the SAME data the client receives (single source of truth)
-      const capturedToolParts: any[] = [];
-
-      const result = streamText({
-        model,
-        system: systemPrompt,
-        messages: convertToModelMessages(messages),
-        experimental_transform: smoothStream({ chunking: "word" }),
-        // Following the exact pattern from docs/langfuse-vercel-ai-sdk.md
-        experimental_telemetry: {
-          isEnabled: true,
-        },
-        maxRetries: 2,
-        tools: vercelAITooles,
-        stopWhen: stepCountIs(10),
-        toolChoice: "auto",
-        abortSignal: request.signal,
-
-        // NEW: Capture tool results as they complete (PRIMARY FIX for Canvas chart rendering)
-        onStepFinish: async (payload) => {
-          const { stepResult, finishReason } = payload as {
-            stepResult?: {
-              toolCalls?: Array<{
-                toolName?: string;
-                toolCallId?: string;
-              }>;
-              toolResults?: Array<{
-                toolName?: string;
-                toolCallId?: string;
-                result?: unknown;
-              }>;
-            };
-            finishReason?: unknown;
-          };
-          logger.info("🔧 Step finished:", {
-            finishReason,
-            toolCallCount: stepResult?.toolCalls?.length || 0,
-            toolResultCount: stepResult?.toolResults?.length || 0,
-          });
-
-          // Process tool results
-          if (stepResult?.toolResults && stepResult.toolResults.length > 0) {
-            for (const toolResult of stepResult.toolResults) {
-              logger.info("📊 Tool result captured:", {
-                toolName: toolResult.toolName,
-                toolCallId: toolResult.toolCallId,
-                hasResult: !!toolResult.result,
-              });
-
-              // Write tool result to stream for client processing
-              dataStream.write({
-                type: "tool-result",
-                toolCallId: toolResult.toolCallId,
-                toolName: toolResult.toolName,
-                result: toolResult.result,
-                timestamp: new Date().toISOString(),
-              } as any);
-            }
-          }
-        },
-
-        onFinish: async (result) => {
-          logger.info(
-            "🎯 onFinish START: Processing message persistence + observability",
-            {
-              threadId: thread!.id,
-              messageId: message.id,
-              timestamp: new Date().toISOString(),
-            },
-          );
-
-          // ============================================
-          // PHASE 1: MESSAGE PERSISTENCE (CRITICAL)
-          // ============================================
-          try {
-            logger.info("💾 Building response message from stream result");
-
-            // Build assistant response message from captured UI stream parts
-            // CRITICAL: Use the SAME data source the client received (single source of truth)
-            const parts = [
-              // Add text content if present
-              ...(result.text && result.text.trim()
-                ? [{ type: "text" as const, text: result.text }]
-                : []),
-              // Add captured tool parts (guaranteed complete from UI stream)
-              ...capturedToolParts,
-            ];
-
-            // SAFETY: If stream capture produced no parts, fallback to original method
-            // This prevents messages with empty parts arrays from being saved
-            const responseMessage: UIMessage =
-              parts.length > 0
-                ? {
-                    id: (result as any).id || generateUUID(),
-                    role: "assistant" as const,
-                    parts,
-                  }
-                : buildResponseMessageFromStreamResult(result, message);
-
-            // FINAL DEFENSE: Guarantee at least one renderable part before persistence.
-            const { message: finalResponseMessage, fallbackApplied } =
-              ensureAssistantMessageHasRenderableParts(
-                responseMessage,
-                EMPTY_ASSISTANT_FALLBACK_TEXT,
+        const APP_DEFAULT_TOOLS = await safe()
+          .map(errorIf(() => !isToolCallAllowed && "Not allowed"))
+          .map(() =>
+            loadAppDefaultTools({
+              mentions,
+              allowedAppDefaultToolkit: normalizedAllowedAppToolkit,
+            }),
+          )
+          .orElse({});
+        const inProgressToolParts = extractInProgressToolPart(message);
+        if (inProgressToolParts.length) {
+          await Promise.all(
+            inProgressToolParts.map(async (part) => {
+              const output = await manualToolExecuteByLastMessage(
+                part,
+                { ...MCP_TOOLS, ...WORKFLOW_TOOLS, ...APP_DEFAULT_TOOLS },
+                request.signal,
               );
+              part.output = output;
 
-            logger.info("💾 Response message built from UI stream", {
-              totalParts: responseMessage.parts.length,
-              textParts: responseMessage.parts.filter((p) => p.type === "text")
-                .length,
-              toolParts: capturedToolParts.length,
-              toolTypes: capturedToolParts.map((p) => p.type),
+              dataStream.write({
+                type: "tool-output-available",
+                toolCallId: part.toolCallId,
+                output,
+              });
+            }),
+          );
+        }
+
+        const userPreferences = thread?.userPreferences || undefined;
+
+        const mcpServerCustomizations = await safe()
+          .map(() => {
+            if (Object.keys(MCP_TOOLS ?? {}).length === 0)
+              throw new Error("No tools found");
+            return rememberMcpServerCustomizationsAction(session.user.id);
+          })
+          .map((v) => filterMcpServerCustomizations(MCP_TOOLS!, v))
+          .orElse({});
+
+        const systemPrompt = mergeSystemPrompt(
+          buildUserSystemPrompt(session.user, userPreferences, agent),
+          buildMcpServerCustomizationsSystemPrompt(mcpServerCustomizations),
+          !supportToolCall && buildToolCallUnsupportedModelSystemPrompt,
+        );
+
+        const vercelAITooles = safe({ ...MCP_TOOLS, ...WORKFLOW_TOOLS })
+          .map((t) => {
+            const bindingTools =
+              toolChoice === "manual" ||
+              (message.metadata as ChatMetadata)?.toolChoice === "manual"
+                ? excludeToolExecution(t)
+                : t;
+            return {
+              ...bindingTools,
+              ...APP_DEFAULT_TOOLS, // APP_DEFAULT_TOOLS Not Supported Manual
+            };
+          })
+          .unwrap();
+        metadata.toolCount = Object.keys(vercelAITooles).length;
+
+        const allowedMcpTools = Object.values(allowedMcpServers ?? {})
+          .map((t) => t.tools)
+          .flat();
+
+        logger.info(
+          `${agent ? `agent: ${agent.name}, ` : ""}tool mode: ${toolChoice}, mentions: ${mentions.length}`,
+        );
+
+        logger.info(
+          `allowedMcpTools: ${allowedMcpTools.length ?? 0}, allowedAppDefaultToolkit: ${normalizedAllowedAppToolkit?.length ?? 0}`,
+        );
+        logger.info(
+          `binding tool count APP_DEFAULT: ${Object.keys(APP_DEFAULT_TOOLS ?? {}).length}, MCP: ${Object.keys(MCP_TOOLS ?? {}).length}, Workflow: ${Object.keys(WORKFLOW_TOOLS ?? {}).length}`,
+        );
+        logger.info(`model: ${chatModel?.provider}/${chatModel?.model}`);
+
+        // CRITICAL: Capture tool parts from UI stream for database persistence
+        // This ensures we store the SAME data the client receives (single source of truth)
+        const capturedToolParts: any[] = [];
+
+        const result = streamText({
+          model,
+          system: systemPrompt,
+          messages: convertToModelMessages(messages),
+          experimental_transform: smoothStream({ chunking: "word" }),
+          // Following the exact pattern from docs/langfuse-vercel-ai-sdk.md
+          experimental_telemetry: {
+            isEnabled: true,
+          },
+          maxRetries: 2,
+          tools: vercelAITooles,
+          stopWhen: stepCountIs(10),
+          toolChoice: "auto",
+          abortSignal: request.signal,
+
+          // NEW: Capture tool results as they complete (PRIMARY FIX for Canvas chart rendering)
+          onStepFinish: async (payload) => {
+            const { stepResult, finishReason } = payload as {
+              stepResult?: {
+                toolCalls?: Array<{
+                  toolName?: string;
+                  toolCallId?: string;
+                }>;
+                toolResults?: Array<{
+                  toolName?: string;
+                  toolCallId?: string;
+                  result?: unknown;
+                }>;
+              };
+              finishReason?: unknown;
+            };
+            logger.info("🔧 Step finished:", {
+              finishReason,
+              toolCallCount: stepResult?.toolCalls?.length || 0,
+              toolResultCount: stepResult?.toolResults?.length || 0,
             });
 
-            logger.info("💾 Persisting messages to database", {
-              userMessageId: message.id,
-              assistantMessageId: finalResponseMessage.id,
-              threadId: thread!.id,
-              partCount: finalResponseMessage.parts.length,
-              // NEW: Detailed part breakdown for validation
-              partBreakdown: {
-                textParts: finalResponseMessage.parts.filter(
+            // Process tool results
+            if (stepResult?.toolResults && stepResult.toolResults.length > 0) {
+              for (const toolResult of stepResult.toolResults) {
+                logger.info("📊 Tool result captured:", {
+                  toolName: toolResult.toolName,
+                  toolCallId: toolResult.toolCallId,
+                  hasResult: !!toolResult.result,
+                });
+
+                // Write tool result to stream for client processing
+                dataStream.write({
+                  type: "tool-result",
+                  toolCallId: toolResult.toolCallId,
+                  toolName: toolResult.toolName,
+                  result: toolResult.result,
+                  timestamp: new Date().toISOString(),
+                } as any);
+              }
+            }
+          },
+
+          onFinish: async (result) => {
+            logger.info(
+              "🎯 onFinish START: Processing message persistence + observability",
+              {
+                threadId: thread!.id,
+                messageId: message.id,
+                timestamp: new Date().toISOString(),
+              },
+            );
+
+            // ============================================
+            // PHASE 1: MESSAGE PERSISTENCE (CRITICAL)
+            // ============================================
+            try {
+              logger.info("💾 Building response message from stream result");
+
+              // Build assistant response message from captured UI stream parts
+              // CRITICAL: Use the SAME data source the client received (single source of truth)
+              const parts = [
+                // Add text content if present
+                ...(result.text && result.text.trim()
+                  ? [{ type: "text" as const, text: result.text }]
+                  : []),
+                // Add captured tool parts (guaranteed complete from UI stream)
+                ...capturedToolParts,
+              ];
+
+              // SAFETY: If stream capture produced no parts, fallback to original method
+              // This prevents messages with empty parts arrays from being saved
+              const responseMessage: UIMessage =
+                parts.length > 0
+                  ? {
+                      id: (result as any).id || generateUUID(),
+                      role: "assistant" as const,
+                      parts,
+                    }
+                  : buildResponseMessageFromStreamResult(result, message);
+
+              // FINAL DEFENSE: Guarantee at least one renderable part before persistence.
+              const { message: finalResponseMessage, fallbackApplied } =
+                ensureAssistantMessageHasRenderableParts(
+                  responseMessage,
+                  EMPTY_ASSISTANT_FALLBACK_TEXT,
+                );
+
+              logger.info("💾 Response message built from UI stream", {
+                totalParts: responseMessage.parts.length,
+                textParts: responseMessage.parts.filter(
                   (p) => p.type === "text",
                 ).length,
-                toolParts: finalResponseMessage.parts.filter((p) =>
-                  p.type?.startsWith("tool-"),
-                ).length,
-                toolStates: finalResponseMessage.parts
-                  .filter((p) => p.type?.startsWith("tool-"))
-                  .map((p) => ({
-                    type: p.type,
-                    state: (p as any).state,
-                  })),
-              },
-              // NEW: Validation flags
-              hasToolCalls: capturedToolParts.length > 0,
-              allToolPartsHaveInput: capturedToolParts.every(
-                (p) => p.input !== undefined,
-              ),
-            });
+                toolParts: capturedToolParts.length,
+                toolTypes: capturedToolParts.map((p) => p.type),
+              });
 
-            if (fallbackApplied) {
-              logger.warn(
-                "🛡️ Persistence fallback activated: synthesizing text part to avoid empty assistant message",
-                {
+              logger.info("💾 Persisting messages to database", {
+                userMessageId: message.id,
+                assistantMessageId: finalResponseMessage.id,
+                threadId: thread!.id,
+                partCount: finalResponseMessage.parts.length,
+                // NEW: Detailed part breakdown for validation
+                partBreakdown: {
+                  textParts: finalResponseMessage.parts.filter(
+                    (p) => p.type === "text",
+                  ).length,
+                  toolParts: finalResponseMessage.parts.filter((p) =>
+                    p.type?.startsWith("tool-"),
+                  ).length,
+                  toolStates: finalResponseMessage.parts
+                    .filter((p) => p.type?.startsWith("tool-"))
+                    .map((p) => ({
+                      type: p.type,
+                      state: (p as any).state,
+                    })),
+                },
+                // NEW: Validation flags
+                hasToolCalls: capturedToolParts.length > 0,
+                allToolPartsHaveInput: capturedToolParts.every(
+                  (p) => p.input !== undefined,
+                ),
+              });
+
+              if (fallbackApplied) {
+                logger.warn(
+                  "🛡️ Persistence fallback activated: synthesizing text part to avoid empty assistant message",
+                  {
+                    threadId: thread!.id,
+                    userMessageId: message.id,
+                    assistantMessageId: finalResponseMessage.id,
+                  },
+                );
+
+                logger.info("assistant_empty_parts_prevented", {
+                  counter: "assistant_empty_parts_prevented",
                   threadId: thread!.id,
                   userMessageId: message.id,
                   assistantMessageId: finalResponseMessage.id,
-                },
-              );
+                });
+              }
 
-              logger.info("assistant_empty_parts_prevented", {
-                counter: "assistant_empty_parts_prevented",
-                threadId: thread!.id,
-                userMessageId: message.id,
-                assistantMessageId: finalResponseMessage.id,
-              });
-            }
+              // Persist using existing logic from outer onFinish
+              if (responseMessage.id == message.id) {
+                // If the assistant response reused the user message ID, persist both messages separately
+                logger.warn(
+                  "Assistant response reused user message ID. Generating new assistant ID to preserve history.",
+                  {
+                    threadId: thread!.id,
+                    messageId: message.id,
+                  },
+                );
 
-            // Persist using existing logic from outer onFinish
-            if (responseMessage.id == message.id) {
-              // If the assistant response reused the user message ID, persist both messages separately
-              logger.warn(
-                "Assistant response reused user message ID. Generating new assistant ID to preserve history.",
-                {
+                await chatRepository.upsertMessage({
                   threadId: thread!.id,
-                  messageId: message.id,
-                },
-              );
+                  role: message.role,
+                  parts: message.parts.map(convertToSavePart),
+                  id: message.id,
+                });
+                logger.info("✅ User message persisted", { id: message.id });
 
-              await chatRepository.upsertMessage({
-                threadId: thread!.id,
-                role: message.role,
-                parts: message.parts.map(convertToSavePart),
-                id: message.id,
-              });
-              logger.info("✅ User message persisted", { id: message.id });
+                const regeneratedAssistantId = generateUUID();
 
-              const regeneratedAssistantId = generateUUID();
-
-              await chatRepository.upsertMessage({
-                threadId: thread!.id,
-                role: responseMessage.role,
-                id: regeneratedAssistantId,
-                parts: finalResponseMessage.parts.map(convertToSavePart),
-                metadata,
-              });
-              logger.info(
-                "✅ Assistant message persisted with regenerated ID",
-                {
+                await chatRepository.upsertMessage({
+                  threadId: thread!.id,
+                  role: responseMessage.role,
                   id: regeneratedAssistantId,
-                },
-              );
-            } else {
-              // Separate messages case (user + assistant)
+                  parts: finalResponseMessage.parts.map(convertToSavePart),
+                  metadata,
+                });
+                logger.info(
+                  "✅ Assistant message persisted with regenerated ID",
+                  {
+                    id: regeneratedAssistantId,
+                  },
+                );
+              } else {
+                // Separate messages case (user + assistant)
 
-              // Persist user message
-              await chatRepository.upsertMessage({
-                threadId: thread!.id,
-                role: message.role,
-                parts: message.parts.map(convertToSavePart),
-                id: message.id,
-              });
-              logger.info("✅ User message persisted", { id: message.id });
+                // Persist user message
+                await chatRepository.upsertMessage({
+                  threadId: thread!.id,
+                  role: message.role,
+                  parts: message.parts.map(convertToSavePart),
+                  id: message.id,
+                });
+                logger.info("✅ User message persisted", { id: message.id });
 
-              // Persist assistant message
-              await chatRepository.upsertMessage({
-                threadId: thread!.id,
-                role: responseMessage.role,
-                id: finalResponseMessage.id,
-                parts: finalResponseMessage.parts.map(convertToSavePart),
-                metadata,
-              });
-              logger.info("✅ Assistant message persisted", {
-                id: finalResponseMessage.id,
-              });
-            }
+                // Persist assistant message
+                await chatRepository.upsertMessage({
+                  threadId: thread!.id,
+                  role: responseMessage.role,
+                  id: finalResponseMessage.id,
+                  parts: finalResponseMessage.parts.map(convertToSavePart),
+                  metadata,
+                });
+                logger.info("✅ Assistant message persisted", {
+                  id: finalResponseMessage.id,
+                });
+              }
 
-            // Update agent timestamp if applicable
-            if (agent) {
-              await agentRepository.updateAgent(agent.id, session.user.id, {
-                updatedAt: new Date(),
-              } as any);
-              logger.info("✅ Agent timestamp updated", { agentId: agent.id });
-            }
+              // Update agent timestamp if applicable
+              if (agent) {
+                await agentRepository.updateAgent(agent.id, session.user.id, {
+                  updatedAt: new Date(),
+                } as any);
+                logger.info("✅ Agent timestamp updated", {
+                  agentId: agent.id,
+                });
+              }
 
-            logger.info("✅ MESSAGE PERSISTENCE COMPLETE");
-          } catch (persistError) {
-            // CRITICAL: Log but don't throw - allow observability to continue
-            logger.error("🚨 CRITICAL: Message persistence failed", {
-              error:
-                persistError instanceof Error
-                  ? persistError.message
-                  : String(persistError),
-              stack:
-                persistError instanceof Error ? persistError.stack : undefined,
-              messageId: message.id,
-              threadId: thread!.id,
-              userId: session.user.id,
-            });
-
-            // Future enhancement: Add retry logic or dead letter queue
-            // For now, continue with observability updates
-          }
-
-          // ============================================
-          // PHASE 2: LANGFUSE OBSERVABILITY
-          // ============================================
-          logger.info("📊 Updating Langfuse trace metadata");
-
-          try {
-            // Comprehensive tool execution summary
-            // Safety check: result.steps might be undefined in error conditions
-            const toolExecutions =
-              result?.steps?.flatMap((s) => s?.toolCalls ?? []) ?? [];
-            const toolResults =
-              result?.steps?.flatMap((s) => s?.toolResults ?? []) ?? [];
-
-            const executionSummary = {
-              totalSteps: result?.steps?.length || 0,
-              totalToolCalls: toolExecutions?.length || 0,
-              totalToolResults: toolResults?.length || 0,
-              toolNames:
-                toolExecutions?.map((t) => t?.toolName).filter(Boolean) || [],
-              completionRate: toolExecutions?.length
-                ? (toolResults?.length || 0) / toolExecutions.length
-                : 0,
-            };
-
-            const mcpToolCount = Object.keys(MCP_TOOLS ?? {}).length;
-            const workflowToolCount = Object.keys(WORKFLOW_TOOLS ?? {}).length;
-            const appToolCount = Object.keys(APP_DEFAULT_TOOLS ?? {}).length;
-
-            // Update Langfuse trace with detailed tool metadata
-            updateActiveObservation({
-              output: result.content,
-              metadata: {
-                toolExecutionSummary: executionSummary,
-              },
-            });
-
-            updateActiveTrace({
-              output: result.content,
-              metadata: {
-                ...executionSummary,
-                mcpToolCount,
-                workflowToolCount,
-                appToolCount,
-                totalToolsAvailable:
-                  mcpToolCount + workflowToolCount + appToolCount,
-              },
-            });
-
-            logger.info("✅ Langfuse metadata updated successfully");
-          } catch (observabilityError) {
-            logger.error("⚠️ Langfuse metadata update failed (non-critical)", {
-              error:
-                observabilityError instanceof Error
-                  ? observabilityError.message
-                  : String(observabilityError),
-            });
-            // Continue - observability failure shouldn't block response
-          }
-
-          // ============================================
-          // PHASE 3: CLEANUP
-          // ============================================
-          logger.info("🏁 Ending OpenTelemetry span");
-          trace.getActiveSpan()?.end();
-
-          logger.info(
-            "✅ onFinish COMPLETE - All phases executed successfully",
-          );
-        },
-        onError: async (error) => {
-          // Enhanced error handling for Vercel AI SDK 5.0
-          let errorMessage = "Unknown error occurred";
-          let errorType = "general";
-          let errorDetails: any = {};
-
-          // Handle specific AI SDK 5.0 error types
-          if (NoSuchToolError.isInstance(error)) {
-            errorType = "no_such_tool";
-            errorMessage = `Tool not found: ${error.toolName}`;
-            errorDetails = {
-              toolName: error.toolName,
-              availableTools: Object.keys(vercelAITooles),
-              suggestion:
-                "Check if tool is properly registered in APP_DEFAULT_TOOL_KIT",
-            };
-            logger.error("🚨 NoSuchToolError:", {
-              toolName: error.toolName,
-              availableTools: Object.keys(vercelAITooles),
-              message: error.message,
-            });
-          } else if (
-            error instanceof Error &&
-            error.message.includes("tool") &&
-            error.message.includes("argument")
-          ) {
-            // Handle tool argument errors generically (AI SDK version compatibility)
-            errorType = "invalid_tool_arguments";
-            errorMessage = `Invalid tool arguments: ${error.message}`;
-            errorDetails = {
-              error: error.message,
-              suggestion: "Check tool input schema and provided arguments",
-            };
-            logger.error("🚨 Tool Arguments Error:", {
-              message: error.message,
-              stack: error.stack,
-            });
-          } else if (error instanceof Error) {
-            errorMessage = error.message;
-            errorDetails = {
-              name: error.name,
-              stack: error.stack,
-            };
-            logger.error("🚨 General Error:", {
-              name: error.name,
-              message: error.message,
-              stack: error.stack,
-            });
-          } else {
-            logger.error("🚨 Unknown Error Type:", error);
-          }
-
-          if (thread) {
-            try {
-              await chatRepository.upsertMessage({
-                threadId: thread.id,
-                role: message.role,
-                parts: message.parts.map(convertToSavePart),
-                id: message.id,
-              });
-
-              const {
-                message: errorAssistantMessage,
-                metadata: errorMetadata,
-              } = buildAssistantErrorStub(metadata, {
-                type: errorType,
-                message: errorMessage,
-                details: errorDetails,
-              });
-
-              await chatRepository.upsertMessage({
-                threadId: thread.id,
-                role: "assistant",
-                id: errorAssistantMessage.id,
-                parts: errorAssistantMessage.parts.map(convertToSavePart),
-                metadata: errorMetadata,
-              });
-
-              logger.info("onerror_persisted_stub", {
-                counter: "onerror_persisted_stub",
-                threadId: thread.id,
-                userMessageId: message.id,
-                assistantMessageId: errorAssistantMessage.id,
-                errorType,
-              });
+              logger.info("✅ MESSAGE PERSISTENCE COMPLETE");
             } catch (persistError) {
-              logger.error("🚨 Failed to persist conversation after error", {
+              // CRITICAL: Log but don't throw - allow observability to continue
+              logger.error("🚨 CRITICAL: Message persistence failed", {
                 error:
                   persistError instanceof Error
                     ? persistError.message
@@ -748,63 +581,302 @@ const handler = async (request: Request) => {
                   persistError instanceof Error
                     ? persistError.stack
                     : undefined,
-                threadId: thread.id,
                 messageId: message.id,
+                threadId: thread!.id,
+                userId: session.user.id,
+              });
+
+              // Future enhancement: Add retry logic or dead letter queue
+              // For now, continue with observability updates
+            }
+
+            // ============================================
+            // PHASE 2: LANGFUSE OBSERVABILITY
+            // ============================================
+            logger.info("📊 Updating Langfuse trace metadata");
+
+            try {
+              // Comprehensive tool execution summary
+              // Safety check: result.steps might be undefined in error conditions
+              const toolExecutions =
+                result?.steps?.flatMap((s) => s?.toolCalls ?? []) ?? [];
+              const toolResults =
+                result?.steps?.flatMap((s) => s?.toolResults ?? []) ?? [];
+
+              const executionSummary = {
+                totalSteps: result?.steps?.length || 0,
+                totalToolCalls: toolExecutions?.length || 0,
+                totalToolResults: toolResults?.length || 0,
+                toolNames:
+                  toolExecutions?.map((t) => t?.toolName).filter(Boolean) || [],
+                completionRate: toolExecutions?.length
+                  ? (toolResults?.length || 0) / toolExecutions.length
+                  : 0,
+              };
+
+              const mcpToolCount = Object.keys(MCP_TOOLS ?? {}).length;
+              const workflowToolCount = Object.keys(
+                WORKFLOW_TOOLS ?? {},
+              ).length;
+              const appToolCount = Object.keys(APP_DEFAULT_TOOLS ?? {}).length;
+
+              // Update Langfuse trace with detailed tool metadata
+              updateActiveObservation({
+                output: result.content,
+                metadata: {
+                  toolExecutionSummary: executionSummary,
+                },
+              });
+
+              updateActiveTrace({
+                output: result.content,
+                metadata: {
+                  ...executionSummary,
+                  mcpToolCount,
+                  workflowToolCount,
+                  appToolCount,
+                  totalToolsAvailable:
+                    mcpToolCount + workflowToolCount + appToolCount,
+                },
+              });
+
+              logger.info("✅ Langfuse metadata updated successfully");
+            } catch (observabilityError) {
+              logger.error("⚠️ Langfuse metadata update failed (non-critical)", {
+                error:
+                  observabilityError instanceof Error
+                    ? observabilityError.message
+                    : String(observabilityError),
+              });
+              // Continue - observability failure shouldn't block response
+            }
+
+            // ============================================
+            // PHASE 3: CLEANUP
+            // ============================================
+            logger.info("🏁 Ending OpenTelemetry span");
+            trace.getActiveSpan()?.end();
+
+            logger.info(
+              "✅ onFinish COMPLETE - All phases executed successfully",
+            );
+          },
+          onError: async (error) => {
+            // Enhanced error handling for Vercel AI SDK 5.0
+            let errorMessage = "Unknown error occurred";
+            let errorType = "general";
+            let errorDetails: any = {};
+
+            // Handle specific AI SDK 5.0 error types
+            if (NoSuchToolError.isInstance(error)) {
+              errorType = "no_such_tool";
+              errorMessage = `Tool not found: ${error.toolName}`;
+              errorDetails = {
+                toolName: error.toolName,
+                availableTools: Object.keys(vercelAITooles),
+                suggestion:
+                  "Check if tool is properly registered in APP_DEFAULT_TOOL_KIT",
+              };
+              logger.error("🚨 NoSuchToolError:", {
+                toolName: error.toolName,
+                availableTools: Object.keys(vercelAITooles),
+                message: error.message,
+              });
+            } else if (
+              error instanceof Error &&
+              error.message.includes("tool") &&
+              error.message.includes("argument")
+            ) {
+              // Handle tool argument errors generically (AI SDK version compatibility)
+              errorType = "invalid_tool_arguments";
+              errorMessage = `Invalid tool arguments: ${error.message}`;
+              errorDetails = {
+                error: error.message,
+                suggestion: "Check tool input schema and provided arguments",
+              };
+              logger.error("🚨 Tool Arguments Error:", {
+                message: error.message,
+                stack: error.stack,
+              });
+            } else if (error instanceof Error) {
+              errorMessage = error.message;
+              errorDetails = {
+                name: error.name,
+                stack: error.stack,
+              };
+              logger.error("🚨 General Error:", {
+                name: error.name,
+                message: error.message,
+                stack: error.stack,
+              });
+            } else {
+              logger.error("🚨 Unknown Error Type:", error);
+            }
+
+            if (thread) {
+              try {
+                await chatRepository.upsertMessage({
+                  threadId: thread.id,
+                  role: message.role,
+                  parts: message.parts.map(convertToSavePart),
+                  id: message.id,
+                });
+
+                const {
+                  message: errorAssistantMessage,
+                  metadata: errorMetadata,
+                } = buildAssistantErrorStub(metadata, {
+                  type: errorType,
+                  message: errorMessage,
+                  details: errorDetails,
+                });
+
+                await chatRepository.upsertMessage({
+                  threadId: thread.id,
+                  role: "assistant",
+                  id: errorAssistantMessage.id,
+                  parts: errorAssistantMessage.parts.map(convertToSavePart),
+                  metadata: errorMetadata,
+                });
+
+                logger.info("onerror_persisted_stub", {
+                  counter: "onerror_persisted_stub",
+                  threadId: thread.id,
+                  userMessageId: message.id,
+                  assistantMessageId: errorAssistantMessage.id,
+                  errorType,
+                });
+              } catch (persistError) {
+                logger.error("🚨 Failed to persist conversation after error", {
+                  error:
+                    persistError instanceof Error
+                      ? persistError.message
+                      : String(persistError),
+                  stack:
+                    persistError instanceof Error
+                      ? persistError.stack
+                      : undefined,
+                  threadId: thread.id,
+                  messageId: message.id,
+                });
+              }
+            }
+
+            updateActiveObservation({
+              output: {
+                error: errorMessage,
+                errorType,
+                errorDetails,
+                timestamp: new Date().toISOString(),
+              },
+              level: "ERROR",
+            });
+            updateActiveTrace({
+              output: {
+                error: errorMessage,
+                errorType,
+                errorDetails,
+              },
+            });
+
+            // End span manually after stream has finished
+            trace.getActiveSpan()?.end();
+          },
+        });
+        result.consumeStream();
+
+        // Create UI message stream with part interception
+        const uiMessageStream = result.toUIMessageStream({
+          messageMetadata: ({ part }) => {
+            // CRITICAL: Capture tool parts as they stream to client
+            // This is the SDK's public API - guaranteed complete data
+            if (part.type?.startsWith("tool-")) {
+              // Clone part to avoid reference issues during streaming
+              capturedToolParts.push({ ...part });
+
+              logger.info("🔧 Tool part captured from stream", {
+                type: part.type,
+                toolCallId: (part as any).toolCallId,
+                state: (part as any).state,
+                hasInput: !!(part as any).input,
+                hasOutput: !!(part as any).output,
               });
             }
-          }
 
-          updateActiveObservation({
-            output: {
-              error: errorMessage,
-              errorType,
-              errorDetails,
-              timestamp: new Date().toISOString(),
-            },
-            level: "ERROR",
+            // Preserve existing metadata logic
+            if (part.type == "finish") {
+              metadata.usage = part.totalUsage;
+              return metadata;
+            }
+          },
+        });
+
+        // Merge to client (same as before)
+        dataStream.merge(uiMessageStream);
+      } catch (error) {
+        // Global execute-level error (before streamText hooks). Persist user + assistant stub.
+        let errorType = "general";
+        let errorMessage = "Unknown error occurred";
+        let errorDetails: any = {};
+        if (NoSuchToolError.isInstance(error as any)) {
+          errorType = "no_such_tool";
+          const e = error as any;
+          errorMessage = `Tool not found: ${e.toolName}`;
+          errorDetails = { toolName: e.toolName };
+        } else if (error instanceof Error) {
+          errorMessage = error.message;
+          errorDetails = { name: error.name, stack: error.stack };
+        }
+
+        try {
+          await chatRepository.upsertMessage({
+            threadId: thread!.id,
+            role: message.role,
+            parts: message.parts.map(convertToSavePart),
+            id: message.id,
           });
-          updateActiveTrace({
-            output: {
-              error: errorMessage,
-              errorType,
-              errorDetails,
-            },
-          });
 
-          // End span manually after stream has finished
-          trace.getActiveSpan()?.end();
-        },
-      });
-      result.consumeStream();
-
-      // Create UI message stream with part interception
-      const uiMessageStream = result.toUIMessageStream({
-        messageMetadata: ({ part }) => {
-          // CRITICAL: Capture tool parts as they stream to client
-          // This is the SDK's public API - guaranteed complete data
-          if (part.type?.startsWith("tool-")) {
-            // Clone part to avoid reference issues during streaming
-            capturedToolParts.push({ ...part });
-
-            logger.info("🔧 Tool part captured from stream", {
-              type: part.type,
-              toolCallId: (part as any).toolCallId,
-              state: (part as any).state,
-              hasInput: !!(part as any).input,
-              hasOutput: !!(part as any).output,
+          const { message: errorAssistantMessage, metadata: errorMetadata } =
+            buildAssistantErrorStub(metadata, {
+              type: errorType,
+              message: errorMessage,
+              details: errorDetails,
             });
-          }
 
-          // Preserve existing metadata logic
-          if (part.type == "finish") {
-            metadata.usage = part.totalUsage;
-            return metadata;
-          }
-        },
-      });
+          await chatRepository.upsertMessage({
+            threadId: thread!.id,
+            role: "assistant",
+            id: errorAssistantMessage.id,
+            parts: errorAssistantMessage.parts.map(convertToSavePart),
+            metadata: errorMetadata,
+          });
 
-      // Merge to client (same as before)
-      dataStream.merge(uiMessageStream);
+          logger.info("pre_stream_onerror_persisted_stub", {
+            counter: "pre_stream_onerror_persisted_stub",
+            threadId: thread!.id,
+            userMessageId: message.id,
+            assistantMessageId: errorAssistantMessage.id,
+            errorType,
+          });
+        } catch (persistError) {
+          logger.error(
+            "🚨 Failed to persist conversation in pre-stream error",
+            {
+              error:
+                persistError instanceof Error
+                  ? persistError.message
+                  : String(persistError),
+              stack:
+                persistError instanceof Error ? persistError.stack : undefined,
+              threadId: thread?.id,
+              messageId: message.id,
+            },
+          );
+        }
+
+        // Re-throw to allow UI stream to signal error
+        throw error;
+      }
     },
 
     generateId: generateUUID,
