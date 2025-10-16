@@ -52,6 +52,14 @@ import { Think } from "ui/think";
 import { CanvasPanel, useCanvas } from "./canvas-panel";
 // getToolName already imported above, isToolUIPart already imported above
 
+const parseThreadIdFromPath = (pathname: string): string | null => {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments[0] !== "chat") {
+    return null;
+  }
+  return segments[1] ?? null;
+};
+
 type Props = {
   threadId: string;
   initialMessages: Array<UIMessage>;
@@ -359,6 +367,36 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     threadId,
   });
 
+  const hasPersistedThreadRef = useRef(initialMessages.length > 0);
+
+  const syncThreadUrl = useCallback(
+    (
+      source: "prepare" | "finish",
+      expectedId: string,
+      allowReplace: boolean,
+    ) => {
+      if (typeof window === "undefined") return;
+
+      const currentPath = window.location.pathname;
+      const expectedPath = `/chat/${expectedId}`;
+      const pathThreadId = parseThreadIdFromPath(currentPath);
+
+      if (pathThreadId && pathThreadId !== expectedId) {
+        console.warn("[chat-thread-id-mismatch]", {
+          source,
+          pathThreadId,
+          requestThreadId: expectedId,
+          componentThreadId: threadId,
+        });
+      }
+
+      if (allowReplace && currentPath !== expectedPath) {
+        window.history.replaceState({}, "", expectedPath);
+      }
+    },
+    [threadId],
+  );
+
   const [showParticles, setShowParticles] = useState(isFirstTime);
 
   const onFinish = useCallback(() => {
@@ -384,6 +422,9 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     } else if (latestRef.current.threadList[0]?.id !== threadId) {
       mutate("/api/thread");
     }
+
+    hasPersistedThreadRef.current = true;
+    syncThreadUrl("finish", threadId, true);
   }, []);
 
   const [input, setInput] = useState("");
@@ -401,10 +442,7 @@ export default function ChatBot({ threadId, initialMessages }: Props) {
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     transport: new DefaultChatTransport({
       prepareSendMessagesRequest: ({ messages, body, id }) => {
-        if (window.location.pathname !== `/chat/${threadId}`) {
-          console.log("replace-state");
-          window.history.replaceState({}, "", `/chat/${threadId}`);
-        }
+        syncThreadUrl("prepare", id, hasPersistedThreadRef.current);
         const lastMessage = messages.at(-1)!;
 
         const requestBody: ChatApiSchemaRequestBody = {

@@ -17,7 +17,7 @@ import {
   ChatMetadata,
   ManualToolConfirmTag,
 } from "app-types/chat";
-import { errorToString, exclude, objectFlow } from "lib/utils";
+import { errorToString, exclude, generateUUID, objectFlow } from "lib/utils";
 import logger from "logger";
 import {
   AllowedMCPServer,
@@ -626,6 +626,112 @@ export const convertToSavePart = <T extends UIMessagePart<any, any>>(
     })
     .unwrap();
 };
+
+export function normalizeToolUIPartFromHistory(part: UIMessagePart): {
+  part: UIMessagePart;
+  changed: boolean;
+} {
+  if (!isToolUIPart(part)) {
+    return { part, changed: false };
+  }
+
+  const normalized = { ...part } as ToolUIPart;
+  let changed = false;
+
+  if (!normalized.toolCallId) {
+    normalized.toolCallId = generateUUID();
+    changed = true;
+  }
+
+  if (
+    normalized.output !== undefined &&
+    normalized.output !== null &&
+    (!normalized.state ||
+      normalized.state === "input-available" ||
+      normalized.state === "input-streaming" ||
+      normalized.state === "call")
+  ) {
+    normalized.state = "output-available";
+    changed = true;
+  }
+
+  if (
+    normalized.output !== undefined &&
+    normalized.output !== null &&
+    normalized.providerExecuted !== true
+  ) {
+    normalized.providerExecuted = true;
+    changed = true;
+  }
+
+  return { part: normalized, changed };
+}
+
+export function ensureAssistantMessageHasRenderableParts(
+  message: UIMessage,
+  fallbackText: string,
+): {
+  message: UIMessage;
+  fallbackApplied: boolean;
+} {
+  if (message.parts && message.parts.length > 0) {
+    return { message, fallbackApplied: false };
+  }
+
+  return {
+    message: {
+      ...message,
+      parts: [
+        {
+          type: "text" as const,
+          text: fallbackText,
+        },
+      ],
+    },
+    fallbackApplied: true,
+  };
+}
+
+export function buildAssistantErrorStub(
+  baseMetadata: ChatMetadata,
+  error: {
+    type: string;
+    message: string;
+    details: unknown;
+  },
+  text = "The assistant encountered an error and could not complete the response.",
+): {
+  message: UIMessage;
+  metadata: ChatMetadata;
+  persistedAt: string;
+} {
+  const persistedAt = new Date().toISOString();
+
+  const metadata: ChatMetadata = {
+    ...baseMetadata,
+    errorInfo: {
+      type: error.type,
+      message: error.message,
+      details: error.details,
+      persistedAt,
+    },
+  };
+
+  return {
+    message: {
+      id: generateUUID(),
+      role: "assistant",
+      parts: [
+        {
+          type: "text" as const,
+          text,
+        },
+      ],
+    },
+    metadata,
+    persistedAt,
+  };
+}
 
 /**
  * Build UIMessage from streamText result for database persistence

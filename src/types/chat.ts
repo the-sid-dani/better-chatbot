@@ -10,6 +10,12 @@ export type ChatMetadata = {
   toolChoice?: "auto" | "none" | "manual";
   toolCount?: number;
   agentId?: string;
+  errorInfo?: {
+    type: string;
+    message: string;
+    details?: unknown;
+    persistedAt: string;
+  };
 };
 
 export type ChatModel = {

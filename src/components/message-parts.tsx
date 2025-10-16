@@ -67,6 +67,91 @@ type MessagePart = UIMessage["parts"][number];
 type TextMessagePart = Extract<MessagePart, { type: "text" }>;
 type AssistMessagePart = Extract<MessagePart, { type: "text" }>;
 
+const TOOL_INPUT_FALLBACK = {
+  notice: "Tool did not provide structured input.",
+} as const;
+
+const hasRenderableContent = (value: unknown): boolean => {
+  if (value === null || value === undefined) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (typeof value === "number" || typeof value === "boolean") return true;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "object") {
+    return Object.keys(value as Record<string, unknown>).length > 0;
+  }
+  return false;
+};
+
+const extractInputCandidate = (result: unknown): unknown => {
+  if (!result || typeof result !== "object") return null;
+  const payload = result as Record<string, unknown>;
+  const directKeys = [
+    "input",
+    "request",
+    "arguments",
+    "args",
+    "parameters",
+    "params",
+  ] as const;
+
+  for (const key of directKeys) {
+    const candidate = payload[key];
+    if (hasRenderableContent(candidate)) return candidate;
+  }
+
+  const payloadInput =
+    payload.payload &&
+    typeof payload.payload === "object" &&
+    (payload.payload as Record<string, unknown>).input;
+  if (hasRenderableContent(payloadInput)) {
+    return payloadInput;
+  }
+
+  const structured = payload.structuredContent as
+    | Record<string, unknown>
+    | undefined;
+  if (!structured) return null;
+
+  const structuredKeys = ["request", "input", "args", "parameters"] as const;
+  for (const key of structuredKeys) {
+    const candidate = structured[key];
+    if (hasRenderableContent(candidate)) return candidate;
+  }
+
+  const structuredResult = structured.result;
+  if (Array.isArray(structuredResult)) {
+    for (const entry of structuredResult) {
+      if (!entry || typeof entry !== "object") continue;
+      for (const key of [...directKeys, "payload"]) {
+        const candidate = (entry as Record<string, unknown>)[key];
+        if (hasRenderableContent(candidate)) {
+          return candidate;
+        }
+        if (
+          key === "payload" &&
+          candidate &&
+          typeof candidate === "object" &&
+          hasRenderableContent((candidate as Record<string, unknown>).input)
+        ) {
+          return (candidate as Record<string, unknown>).input;
+        }
+      }
+    }
+  }
+
+  return null;
+};
+
+const resolveToolInputForDisplay = (
+  rawInput: unknown,
+  toolResult: unknown,
+): unknown => {
+  if (hasRenderableContent(rawInput)) return rawInput;
+  const fallback = extractInputCandidate(toolResult);
+  if (hasRenderableContent(fallback)) return fallback;
+  return null;
+};
+
 interface UserMessagePartProps {
   part: TextMessagePart;
   isLast: boolean;
@@ -807,6 +892,11 @@ export const ToolMessagePart = memo(
       return null;
     }, [isCompleted, output, state, errorText]);
 
+    const requestPreview = useMemo(() => {
+      const resolved = resolveToolInputForDisplay(input, result);
+      return resolved ?? TOOL_INPUT_FALLBACK;
+    }, [input, result]);
+
     const isWorkflowTool = useMemo(
       () => VercelAIWorkflowToolStreamingResultTag.isMaybe(result),
       [result],
@@ -946,7 +1036,11 @@ export const ToolMessagePart = memo(
                         variant="ghost"
                         size="icon"
                         className="size-3 text-muted-foreground"
-                        onClick={() => copyInput(JSON.stringify(input))}
+                        onClick={() =>
+                          copyInput(
+                            JSON.stringify(requestPreview, null, 2) ?? "",
+                          )
+                        }
                       >
                         <Copy className="size-3" />
                       </Button>
@@ -954,7 +1048,7 @@ export const ToolMessagePart = memo(
                   </div>
                   {isExpanded && (
                     <div className="p-2 max-h-[300px] overflow-y-auto ">
-                      <JsonView data={input} />
+                      <JsonView data={requestPreview} />
                     </div>
                   )}
                 </div>
